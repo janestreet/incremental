@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# OASIS_START
+make configure CONFIGUREFLAGS="$*"
+# OASIS_STOP
