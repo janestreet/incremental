@@ -1,0 +1,22 @@
+# OASIS_START
+# DO NOT EDIT (digest: ee9e999b5f5de94cd43211ae540f4f79)
+version = "112.35.00"
+description = "Jane Street Capital's standard library overlay"
+requires = "core fieldslib sexplib threads"
+archive(byte) = "incremental_lib.cma"
+archive(byte, plugin) = "incremental_lib.cma"
+archive(native) = "incremental_lib.cmxa"
+archive(native, plugin) = "incremental_lib.cmxs"
+exists_if = "incremental_lib.cma"
+package "bench" (
+ version = "112.35.00"
+ description = "Jane Street Capital's standard library overlay"
+ requires = "core incremental_lib"
+ archive(byte) = "incremental_bench_lib.cma"
+ archive(byte, plugin) = "incremental_bench_lib.cma"
+ archive(native) = "incremental_bench_lib.cmxa"
+ archive(native, plugin) = "incremental_bench_lib.cmxs"
+ exists_if = "incremental_bench_lib.cma"
+)
+# OASIS_STOP
+
