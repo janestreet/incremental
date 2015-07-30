@@ -7,7 +7,12 @@ include Int.Replace_polymorphic_compare
    [incremental_debug], but apart from that they are identical.  Tests are run with both
    the production and debug lib, and users can choose to build with the debug library, if
    they suspect they found a bug in incremental. *)
-let debug = IFDEF DEBUG THEN true ELSE false ENDIF
+
+IFDEF DEBUG THEN
+let debug = true
+ELSE
+let debug = false
+ENDIF
 
 (* All debug messages throughout the code are guarded by [if verbose]. *)
 let verbose = false

@@ -2,7 +2,7 @@ OASISFormat:      0.3
 OCamlVersion:     >= 4.02.1
 FindlibVersion:   >= 1.3.2
 Name:             incremental
-Version:          112.35.00
+Version:          113.00.00
 Synopsis:         Library for incremental computations
 Synopsis:         Jane Street Capital's standard library overlay
 Authors:          Jane Street Group, LLC <opensource@janestreet.com>

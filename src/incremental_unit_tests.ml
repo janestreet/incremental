@@ -62,7 +62,7 @@ module Make () = struct
     let r = ref 0 in
     fun () ->
       incr r;
-      let dot_file = sprintf "/tmp/sweeks/z.dot.%d" !r in
+      let dot_file = sprintf "/tmp/z.dot.%d" !r in
       save_dot dot_file;
       let prog = "my-dot" in
       Unix.waitpid_exn (Unix.fork_exec ~prog ~args:[ prog; dot_file ] ());

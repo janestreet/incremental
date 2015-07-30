@@ -85,7 +85,7 @@
     because incremental values can be shared.  Extending the above example, we might have:
 
     {[
-      let w = map2 y z ~f:(fun y z -> y - z)
+      let w = map2 (Var.watch y) z ~f:(fun y z -> y - z)
     ]}
 
     Both the node for [y] and the node for [z] are shared.
