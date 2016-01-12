@@ -393,7 +393,7 @@
 *)
 
 open Core.Std
-open Import    let _ = _squelch_unused_module_warning_
+open! Import
 
 module type S = sig
   (** [type 'a t] is the type of incrementals that have a value of type ['a].
@@ -407,7 +407,7 @@ module type S = sig
         let t2 : a2 t = t1 >>| fun a1 -> (a1 : a1 :> a2)
       ]}
   *)
-  type 'a t with sexp_of
+  type 'a t [@@deriving sexp_of]
   type 'a incremental = 'a t
 
   include Invariant.S1 with type 'a t := 'a t
@@ -685,7 +685,7 @@ module type S = sig
       [after span] is [at (Time.add (now ()) span)]. *)
   module Before_or_after : sig
     type t = Before | After
-    with sexp_of
+    [@@deriving sexp_of]
   end
   val at    : Time.t      -> Before_or_after.t t
   val after : Time.Span.t -> Before_or_after.t t
@@ -735,7 +735,7 @@ module type S = sig
 
   module Var : sig
 
-    type 'a t with sexp_of
+    type 'a t [@@deriving sexp_of]
 
     (** By default, a variable is created in [Scope.top], on the theory that its value
         depends on external stimuli (via [Var.set]), not on the current scope.  However,
@@ -793,7 +793,7 @@ module type S = sig
   *)
   module Observer : sig
 
-    type 'a t with sexp_of
+    type 'a t [@@deriving sexp_of]
 
     include Invariant.S1 with type 'a t := 'a t
 
@@ -837,7 +837,7 @@ module type S = sig
         | Initialized of 'a
         | Changed of 'a * 'a  (** [Changed (old_value, new_value)] *)
         | Invalidated
-      with compare, sexp_of
+      [@@deriving compare, sexp_of]
     end
     val on_update_exn : 'a t -> f:('a Update.t -> unit) -> unit
 
@@ -892,7 +892,7 @@ module type S = sig
       | Changed of 'a * 'a  (** [Changed (old_value, new_value)] *)
       | Invalidated
       | Unnecessary
-    with compare, sexp_of
+    [@@deriving compare, sexp_of]
   end
   val on_update : 'a t -> f:('a Update.t -> unit) -> unit
 
@@ -911,7 +911,7 @@ module type S = sig
      be cutoff at a node based on the old value and the (possible) new value of the
      node. *)
   module Cutoff : sig
-    type 'a t with sexp_of
+    type 'a t [@@deriving sexp_of]
 
     include Invariant.S1 with type 'a t := 'a t
 
@@ -993,9 +993,9 @@ module type S = sig
     val within : t -> f:(unit -> 'a) -> 'a
   end
 
-  (** [lazy_from_fun f] is like [Lazy.lazy_from_fun f], except that the nodes created by
-      [f] will be created in the scope in which [lazy_from_fun] was called, rather than in
-      the scope of the piece of code that first forces the resulting lazy.  Not using this
+  (** [lazy_from_fun f] is like [Lazy.from_fun f], except that the nodes created by [f]
+      will be created in the scope in which [lazy_from_fun] was called, rather than in the
+      scope of the piece of code that first forces the resulting lazy.  Not using this
       function when defining lazy values is likely to result in exceptions being thrown by
       incremental.  As a rule of thumb, all [lazy e] that might create incremental nodes
       should be replaced by [lazy_from_fun (fun () -> e)].
@@ -1059,7 +1059,7 @@ module type S = sig
   *)
   module State : sig
 
-    type t with sexp_of
+    type t [@@deriving sexp_of]
 
     (** [invariant] checks invariants of all necessary nodes, as well as other data
         structures used for stabilization. *)
@@ -1098,7 +1098,7 @@ module type S = sig
 
         [stats] takes time proportional to the number of necessary nodes.
     *)
-    module Stats : sig type t with sexp_of end
+    module Stats : sig type t [@@deriving sexp_of] end
     val stats : t -> Stats.t
   end
 

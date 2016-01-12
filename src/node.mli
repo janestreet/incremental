@@ -29,7 +29,7 @@ open! Import
     which we deal with packed nodes. *)
 module Packed : sig
 
-  type t = Types.Packed_node.t with sexp_of
+  type t = Types.Packed_node.t [@@deriving sexp_of]
 
   include Invariant.S with type t := t
 
@@ -40,7 +40,7 @@ module Packed : sig
                     val next : t -> t Uopt.t
                   end) : sig
 
-    type t = Types.Packed_node.t Uopt.t with sexp_of
+    type t = Types.Packed_node.t Uopt.t [@@deriving sexp_of]
 
     include Invariant.S with type t := t
 

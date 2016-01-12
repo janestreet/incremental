@@ -58,7 +58,7 @@ type 'a t = 'a Types.Kind.t =
       * 'a1 Node.t * 'a2 Node.t * 'a3 Node.t * 'a4 Node.t * 'a5 Node.t * 'a6 Node.t
       * 'a7 Node.t * 'a8 Node.t * 'a9 Node.t
     -> 'a t
-with sexp_of
+[@@deriving sexp_of]
 
 let name : type a. a t -> string = function
   | Array_fold _           -> "Array_fold"
@@ -262,5 +262,5 @@ let slow_get_child : type a . a t -> index:_ -> _ =
       with_return (fun r ->
         iteri_children t ~f:(fun i child -> if i = index then r.return child);
         failwiths "Kind.slow_get_child got invalid index" (index, t)
-          <:sexp_of< int * _ t >>);
+          [%sexp_of: int * _ t]);
 ;;

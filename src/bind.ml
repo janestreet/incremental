@@ -1,5 +1,5 @@
 open Core.Std
-open Import    let _ = _squelch_unused_module_warning_
+open! Import
 open Types.Kind
 
 module Bind        = Types.Bind
@@ -24,7 +24,7 @@ type ('a, 'b) t = ('a, 'b) Bind.t =
      the right-hand side of [t], i.e. in [t.rhs_scope]. *)
   ; mutable all_nodes_created_on_rhs : Packed_node.t Uopt.t
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
 let same (t1 : (_, _) t) (t2 : (_, _) t) = phys_same t1 t2
 
@@ -44,7 +44,7 @@ let iter_nodes_created_on_rhs t ~f =
 ;;
 
 let invariant _invariant_a _invariant_b t =
-  Invariant.invariant _here_ t <:sexp_of< (_, _) t >> (fun () ->
+  Invariant.invariant [%here] t [%sexp_of: (_, _) t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~main:(check (fun (main : _ Node.t) ->

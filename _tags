@@ -1,3 +1,9 @@
-"src/import.ml": package(camlp4.macro)
+<**/*.ml{,i}>: warn(-40), no_alias_deps
+<**/*>: thread
+# This prevents the implicit addition of -ppx options by ocamlfind
+<**/*.ml{,i}>: predicate(ppx_driver)
+<src/*.ml>: for-pack(Incremental_lib)
+<src/*.ml{,i}>: pp(ppx-jane -dump-ast -inline-test-lib incremental)
+<src/*.ml{,i}>: pp_deps_for_src
 # OASIS_START
 # OASIS_STOP

@@ -1,0 +1,29 @@
+opam-version: "1.2"
+maintainer: "opensource@janestreet.com"
+authors: ["Jane Street Group, LLC <opensource@janestreet.com>"]
+homepage: "https://github.com/janestreet/incremental"
+bug-reports: "https://github.com/janestreet/incremental/issues"
+dev-repo: "https://github.com/janestreet/incremental.git"
+license: "Apache-2.0"
+build: [
+  ["./configure" "--prefix" prefix]
+  [make]
+]
+depends: [
+  "ocamlbuild" {build}
+  "oasis"      {build & >= "0.4"}
+  "ocamlfind"  {build & >= "1.3.2"}
+  "bin_prot"
+  "core"
+  "fieldslib"
+  "ppx_assert"
+  "ppx_bench"
+  "ppx_driver"
+  "ppx_expect"
+  "ppx_inline_test"
+  "ppx_jane"
+  "sexplib"
+  "typerep"
+  "variantslib"
+]
+available: [ ocaml-version >= "4.02.3" ]

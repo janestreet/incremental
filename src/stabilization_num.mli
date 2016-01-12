@@ -9,7 +9,7 @@
 open! Core.Std
 open! Import
 
-type t = private int with compare, sexp_of
+type t = private int [@@deriving compare, sexp_of]
 
 include Equal.    S with type t := t
 include Invariant.S with type t := t

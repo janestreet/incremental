@@ -1,92 +1,74 @@
-OASISFormat:      0.3
-OCamlVersion:     >= 4.02.1
-FindlibVersion:   >= 1.3.2
-Name:             incremental
-Version:          113.00.00
-Synopsis:         Library for incremental computations
-Synopsis:         Jane Street Capital's standard library overlay
-Authors:          Jane Street Group, LLC <opensource@janestreet.com>
-Copyrights:       (C) 2008-2015 Jane Street Group LLC <opensource@janestreet.com>
-Maintainers:      Jane Street Group, LLC <opensource@janestreet.com>
-License:          Apache-2.0
-LicenseFile:      LICENSE.txt
-Homepage:         https://github.com/janestreet/incremental
-Plugins:          StdFiles (0.3), DevFiles (0.3), META (0.3)
-XStdFilesAUTHORS: false
-XStdFilesREADME:  false
-BuildTools:       ocamlbuild, camlp4o
-
-Flag bench
-  Description: Compile and install the small bench program
-  Default:     false
+OASISFormat:           0.4
+OCamlVersion:          >= 4.02.3
+FindlibVersion:        >= 1.3.2
+Name:                  incremental
+Version:               113.24.00
+Synopsis:              Library for incremental computations
+Authors:               Jane Street Group, LLC <opensource@janestreet.com>
+Copyrights:            (C) 2008-2016 Jane Street Group LLC <opensource@janestreet.com>
+Maintainers:           Jane Street Group, LLC <opensource@janestreet.com>
+License:               Apache-2.0
+LicenseFile:           LICENSE.txt
+Homepage:              https://github.com/janestreet/incremental
+Plugins:               StdFiles (0.3), DevFiles (0.3), META (0.3)
+XStdFilesAUTHORS:      false
+XStdFilesREADME:       false
+BuildTools:            ocamlbuild
+AlphaFeatures:         ocamlbuild_more_args
+XOCamlbuildPluginTags: package(ppx_driver.ocamlbuild)
+FilesAB:               META.ab
+Description:
+  Part of Jane Street’s Core library
+  The Core suite of libraries is an industrial strength alternative to
+  OCaml's standard library that was developed by Jane Street, the
+  largest industrial user of OCaml.
 
 Library incremental_lib
-  Path:          src
-  FindlibName:   incremental_lib
-  Pack:          true
-  Modules:       Adjust_heights_heap,
-                 Alarm,
-                 Alarm_value,
-                 Array_fold,
-                 At,
-                 At_intervals,
-                 Before_or_after,
-                 Bind,
-                 Cutoff,
-                 Freeze,
-                 If_then_else,
-                 Import,
-                 Incremental,
-                 Incremental_intf,
-                 Incremental_unit_tests,
-                 Internal_observer,
-                 Join,
-                 Kind,
-                 Node,
-                 Node_id,
-                 Observer,
-                 On_update_handler,
-                 Raised_exn,
-                 Recompute_heap,
-                 Scope,
-                 Sexp_of,
-                 Should_not_use,
-                 Snapshot,
-                 Stabilization_num,
-                 State,
-                 Std,
-                 Step_function,
-                 Types,
-                 Unordered_array_fold,
-                 Uopt,
-                 Var
-  BuildDepends:  core,
-                 fieldslib,
-                 fieldslib.syntax,
-                 pa_ounit.syntax,
-                 pa_test.syntax,
-                 sexplib,
-                 sexplib.syntax,
-                 threads
-  XMETARequires: core,
-                 fieldslib,
-                 sexplib,
-                 threads
-
-Library incremental_bench_lib
-  Build$:        flag(bench)
-  Install$:      flag(bench)
-  Path:          bench/lib
-  FindlibName:   bench
-  FindlibParent: incremental_lib
-  Pack:          true
-  Modules:       Bench, Import
-  BuildDepends:  core, incremental_lib
-
-Executable incremental_bench
-  Build$:         flag(bench)
-  Install$:       flag(bench)
-  Path:           bench/bin
-  MainIs:         bench.ml
-  BuildDepends:   core, incremental_lib.bench
-  CompiledObject: best
+  Path:         src
+  Pack:         true
+  Modules:      Adjust_heights_heap,
+                Alarm,
+                Alarm_value,
+                Array_fold,
+                At,
+                At_intervals,
+                Before_or_after,
+                Bind,
+                Cutoff,
+                Freeze,
+                If_then_else,
+                Import,
+                Incremental,
+                Incremental_intf,
+                Incremental_unit_tests,
+                Internal_observer,
+                Join,
+                Kind,
+                Node,
+                Node_id,
+                Observer,
+                On_update_handler,
+                Raised_exn,
+                Recompute_heap,
+                Scope,
+                Sexp_of,
+                Should_not_use,
+                Snapshot,
+                Stabilization_num,
+                State,
+                Std,
+                Step_function,
+                Types,
+                Unordered_array_fold,
+                Uopt,
+                Var
+  BuildDepends: bin_prot,
+                core,
+                fieldslib,
+                ppx_assert.runtime-lib,
+                ppx_bench.runtime-lib,
+                ppx_expect.collector,
+                ppx_inline_test.runtime-lib,
+                sexplib,
+                typerep,
+                variantslib

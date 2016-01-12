@@ -1,5 +1,5 @@
 open Core.Std
-open Import    let _ = _squelch_unused_module_warning_
+open! Import
 open Types.Kind
 
 module Node = Types.Node
@@ -10,12 +10,12 @@ type 'a t = 'a Types.Join.t =
   ; lhs_change  : unit Node.t
   ; mutable rhs : 'a Node.t Uopt.t
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
 let same (t1 : _ t) (t2 : _ t) = phys_same t1 t2
 
 let invariant _invariant_a t =
-  Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
+  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~main:(check (fun (main : _ Node.t) ->

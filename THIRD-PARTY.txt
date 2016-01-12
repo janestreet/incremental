@@ -1,0 +1,18 @@
+The repository contains 3rd-party code in the following locations and
+under the following licenses:
+
+- type_conv, sexplib and bin_prot: based on Tywith, by Martin
+  Sandin.  License can be found in base/sexplib/LICENSE-Tywith.txt,
+  base/type_conv/LICENSE-Tywith.txt, and base/bin_prot/LICENSE-Tywith.txt.
+
+- Core's implementation of union-find: based on an implementation by
+  Henry Matthew Fluet, Suresh Jagannathan, and Stephen Weeks. License
+  can be found in base/core/MLton-license.
+
+- Various Core libraries are based on INRIA's OCaml
+  distribution. Relicensed under Apache 2.0, as permitted under the
+  Caml License for Consortium members:
+
+     http://caml.inria.fr/consortium/license.en.html
+
+  See also the disclaimer INRIA-DISCLAIMER.txt.

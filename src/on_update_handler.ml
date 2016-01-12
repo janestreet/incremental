@@ -1,5 +1,5 @@
-open Core.Std  let _ = _squelch_unused_module_warning_
-open Import    let _ = _squelch_unused_module_warning_
+open! Core.Std
+open! Import
 
 module Previous_update_kind = struct
   type t =
@@ -8,7 +8,7 @@ module Previous_update_kind = struct
     | Changed
     | Invalidated
     | Unnecessary
-  with sexp_of
+  [@@deriving sexp_of]
 end
 
 module Node_update = struct
@@ -17,7 +17,7 @@ module Node_update = struct
     | Changed of 'a * 'a
     | Invalidated
     | Unnecessary
-  with compare, sexp_of
+  [@@deriving compare, sexp_of]
 end
 
 type 'a t =
@@ -25,7 +25,7 @@ type 'a t =
   ; mutable previous_update_kind : Previous_update_kind.t
   ; created_at                   : Stabilization_num.t
   }
-with sexp_of
+[@@deriving sexp_of]
 
 let create f ~at:created_at =
   { f

@@ -131,7 +131,7 @@ module Make_with_timing_wheel_config (Timing_wheel_config : Timing_wheel_config)
 
     (* We override [sexp_of_t] to just show the value, rather than the internal
        representation. *)
-    let sexp_of_t sexp_of_a t = t.value |> <:sexp_of< a >>
+    let sexp_of_t sexp_of_a t = t.value |> [%sexp_of: a]
 
   end
 
@@ -144,7 +144,7 @@ module Make_with_timing_wheel_config (Timing_wheel_config : Timing_wheel_config)
         | Initialized of 'a
         | Changed of 'a * 'a
         | Invalidated
-      with compare, sexp_of
+      [@@deriving compare, sexp_of]
     end
 
     let on_update_exn t ~(f : _ Update.t -> unit) =
@@ -155,7 +155,7 @@ module Make_with_timing_wheel_config (Timing_wheel_config : Timing_wheel_config)
           | Invalidated      -> f Invalidated
           | Unnecessary ->
             failwiths "Incremental bug -- Observer.on_update_exn got unexpected update Unnecessary"
-              t <:sexp_of< _ t >>)
+              t [%sexp_of: _ t])
     ;;
 
     let disallow_future_use t = State.disallow_future_use state !t
@@ -164,7 +164,7 @@ module Make_with_timing_wheel_config (Timing_wheel_config : Timing_wheel_config)
 
     (* We override [sexp_of_t] to just show the value, rather than the internal
        representation. *)
-    let sexp_of_t sexp_of_a t = value t |> <:sexp_of< a Or_error.t >>
+    let sexp_of_t sexp_of_a t = value t |> [%sexp_of: a Or_error.t]
 
   end
 
@@ -201,12 +201,12 @@ module Make_with_timing_wheel_config (Timing_wheel_config : Timing_wheel_config)
      representation.  We only show the value if it is necessary and valid. *)
   let sexp_of_t sexp_of_a t =
     if not (is_valid t)
-    then "<invalid>" |> <:sexp_of< string >>
+    then "<invalid>" |> [%sexp_of: string]
     else if not (is_necessary t)
-    then "<unnecessary>" |> <:sexp_of< string >>
+    then "<unnecessary>" |> [%sexp_of: string]
     else if Uopt.is_none t.value_opt
-    then "<uncomputed>" |> <:sexp_of< string >>
-    else unsafe_value t |> <:sexp_of< a >>
+    then "<uncomputed>" |> [%sexp_of: string]
+    else unsafe_value t |> [%sexp_of: a]
   ;;
 end
 

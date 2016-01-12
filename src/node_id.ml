@@ -1,5 +1,5 @@
 open Core.Std
-open Import    let () = _squelch_unused_module_warning_
+open! Import
 
 include Int
 

@@ -13,10 +13,10 @@ module Node_update : sig
     | Changed of 'a * 'a
     | Invalidated
     | Unnecessary
-  with compare, sexp_of
+  [@@deriving compare, sexp_of]
 end
 
-type 'a t with sexp_of
+type 'a t [@@deriving sexp_of]
 
 val create : ('a Node_update.t -> unit) -> at:Stabilization_num.t -> 'a t
 

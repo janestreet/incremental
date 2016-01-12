@@ -10,4 +10,4 @@
     more transparent.
 *)
 
-type t with sexp_of
+type t [@@deriving sexp_of]

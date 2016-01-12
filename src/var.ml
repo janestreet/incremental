@@ -1,5 +1,5 @@
 open Core.Std
-open Import    let _ = _squelch_unused_module_warning_
+open! Import
 
 module Node = Types.Node
 
@@ -17,10 +17,10 @@ type 'a t = 'a Types.Var.t =
   ; mutable set_at                         : Stabilization_num.t
   ; watch                                  : 'a Node.t
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
 let invariant invariant_a t =
-  Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
+  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~value:(check invariant_a)
@@ -35,7 +35,7 @@ let invariant invariant_a t =
 
 
 module Packed = struct
-  type nonrec t = Should_not_use.t t with sexp_of
+  type nonrec t = Should_not_use.t t [@@deriving sexp_of]
 end
 
 let pack (type a) t = (Obj.magic (t : a t) : Should_not_use.t t)

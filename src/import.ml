@@ -1,3 +1,5 @@
+#import "debug.mlh"
+
 open Core.Std
 
 include Int.Replace_polymorphic_compare
@@ -8,18 +10,18 @@ include Int.Replace_polymorphic_compare
    the production and debug lib, and users can choose to build with the debug library, if
    they suspect they found a bug in incremental. *)
 
-IFDEF DEBUG THEN
+#if JSC_DEBUG
 let debug = true
-ELSE
+#else
 let debug = false
-ENDIF
+#endif
 
 (* All debug messages throughout the code are guarded by [if verbose]. *)
 let verbose = false
 
 let concat = String.concat
 
-let tag name a sexp_of_a = (name, a) |> <:sexp_of< string * a >>
+let tag name a sexp_of_a = (name, a) |> [%sexp_of: string * a]
 
 let () = Debug.should_print_backtrace := false
 
@@ -28,10 +30,9 @@ module Array = struct
 
   (* Not defining aliases in production mode, since they break type specialization of
      array accesses. *)
-  IFDEF DEBUG THEN
-    let unsafe_get = get
-    let unsafe_set = set
-  END
+#if JSC_DEBUG
+  let unsafe_get = get
+  let unsafe_set = set
+#endif
 end
 
-let _squelch_unused_module_warning_ = ()

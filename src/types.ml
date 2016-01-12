@@ -196,7 +196,7 @@ and Node : sig
     ; mutable user_info                         : Info.t option
     ; creation_backtrace                        : Backtrace.t option
     }
-  with sexp_of
+  [@@deriving sexp_of]
 
   val pack : _ t -> Packed_node.t
 
@@ -205,7 +205,7 @@ and Node : sig
 end = struct
   include Node
 
-  let sexp_of_t _ t = concat [ "n"; Node_id.to_string t.id ] |> <:sexp_of< string >>
+  let sexp_of_t _ t = concat [ "n"; Node_id.to_string t.id ] |> [%sexp_of: string]
 
   let pack (type a) t = (Obj.magic (t : a t) : Should_not_use.t t)
 
@@ -228,20 +228,20 @@ and Packed_internal_observer : sig
 end = Packed_internal_observer
 
 and Packed_node : sig
-  type t = Should_not_use.t Node.t with sexp_of
+  type t = Should_not_use.t Node.t [@@deriving sexp_of]
 end = struct
   include Packed_node
-  let sexp_of_t t = t |> <:sexp_of< _ Node.t >>
+  let sexp_of_t t = t |> [%sexp_of: _ Node.t]
 end
 
 and Scope : sig
-  type t = Top | Bind : (_, _) Bind.t -> t with sexp_of
+  type t = Top | Bind : (_, _) Bind.t -> t [@@deriving sexp_of]
 end = struct
   type t = Top | Bind : (_, _) Bind.t -> t
 
   let sexp_of_t = function
-    | Top -> "Top" |> <:sexp_of< string >>
-    | Bind bind -> bind.main |> <:sexp_of< _ Node.t >>
+    | Top -> "Top" |> [%sexp_of: string]
+    | Bind bind -> bind.main |> [%sexp_of: _ Node.t]
   ;;
 end
 

@@ -7,7 +7,7 @@
 open! Core.Std
 open! Import
 
-type t with sexp_of
+type t [@@deriving sexp_of]
 
 (** [create exn] makes a [t] using [exn] and [Backtrace.Exn.most_recent]. *)
 val create : exn -> t

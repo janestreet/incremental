@@ -1,5 +1,5 @@
 open Core.Std
-open Import    let _ = _squelch_unused_module_warning_
+open! Import
 
 module Node = Types.Node
 
@@ -8,10 +8,10 @@ type ('a, 'acc) t = ('a, 'acc) Types.Array_fold.t =
   ; f        : 'acc -> 'a -> 'acc
   ; children : 'a Node.t array
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
 let invariant invariant_a invariant_acc t =
-  Invariant.invariant _here_ t <:sexp_of< (_, _) t >> (fun () ->
+  Invariant.invariant [%here] t [%sexp_of: (_, _) t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~init:(check invariant_acc)

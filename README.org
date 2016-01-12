@@ -1,0 +1,14 @@
+A library for building self-adusting computations, following the work
+of [[http://www.umut-acar.org/self-adjusting-computation][Umut Acar et. al.]]. Incremental gives you a way of building complex
+computations that can update efficiently in response to their inputs.
+Incremental can be useful in a number of applications, including:
+
+- Building large calculations (of the kind you might build into a
+  spreadsheet) that can react efficiently to changing data.
+- Constructing views in GUI applications that can incorporate new data
+  efficiently.
+- Building online versions of existing combinatorial algorithms.
+
+You can find detailed documentation in of the library and how to use
+it in `incremental_intf.ml`.  You can also find an informal
+introduction to the library in this [[https://blogs.janestreet.com/introducing-incremental/%20][blog post]].

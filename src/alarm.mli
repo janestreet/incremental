@@ -5,7 +5,7 @@ open! Core.Std
 open! Import
 
 type t = Types.Alarm.t
-with sexp_of
+[@@deriving sexp_of]
 
 include Invariant.S with type t := t
 

@@ -14,12 +14,12 @@ type ('a, 'acc) t = ('a, 'acc) Types.Unordered_array_fold.t =
   ; mutable fold_value                          : 'acc Uopt.t
   ; mutable num_changes_since_last_full_compute : int
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
 let same (t1 : (_, _) t) (t2  : (_, _) t) = phys_same t1 t2
 
 let invariant invariant_a invariant_acc t =
-  Invariant.invariant _here_ t <:sexp_of< (_, _) t >> (fun () ->
+  Invariant.invariant [%here] t [%sexp_of: (_, _) t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~main:(check (fun (main : _ Node.t) ->
@@ -37,7 +37,7 @@ let invariant invariant_a invariant_acc t =
           then assert (Uopt.is_some child.value_opt))))
       ~fold_value:(check (fun fold_value ->
         Uopt.invariant invariant_acc fold_value;
-        <:test_result< bool >> (Uopt.is_some fold_value)
+        [%test_result: bool] (Uopt.is_some fold_value)
           ~expect:(t.num_changes_since_last_full_compute
                    < t.full_compute_every_n_changes)))
       ~num_changes_since_last_full_compute:
@@ -72,7 +72,7 @@ let full_compute { init; f; children; _ } =
 
 let compute t =
   if verbose
-  then Debug.ams _here_ "Unordered_array_fold.compute" t <:sexp_of< (_, _) t >>;
+  then Debug.ams [%here] "Unordered_array_fold.compute" t [%sexp_of: (_, _) t];
   if t.num_changes_since_last_full_compute = t.full_compute_every_n_changes then begin
     t.num_changes_since_last_full_compute <- 0;
     t.fold_value <- Uopt.some (full_compute t);

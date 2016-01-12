@@ -93,7 +93,7 @@ type 'a t = 'a Types.Node.t =
   ; mutable user_info                         : Info.t option
   ; creation_backtrace                        : Backtrace.t option
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
 let same (t1 : _ t) (t2 : _ t) = phys_same t1 t2
 
@@ -256,7 +256,7 @@ let fold_observers t ~init ~f =
 let iter_observers t ~f = fold_observers t ~init:() ~f:(fun () observer -> f observer)
 
 let invariant (type a) (invariant_a : a -> unit) (t : a t) =
-  Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
+  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
     assert (Bool.equal (needs_to_be_computed t) (is_in_recompute_heap t));
     if is_necessary t then begin
       assert (t.height > Scope.height t.created_in);
@@ -284,7 +284,7 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
         then assert (Stabilization_num.compare changed_at t.recomputed_at <= 0)))
       ~num_on_update_handlers:
         (check
-           (<:test_result< int >>
+           ([%test_result: int]
               ~expect:(List.length t.on_update_handlers
                        + fold_observers t ~init:0
                            ~f:(fun n { on_update_handlers; _ } ->
@@ -294,12 +294,12 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
         assert (num_parents <= 1 + Array.length t.parent1_and_beyond)))
       ~parent1_and_beyond:(check (fun parent1_and_beyond ->
         for parent_index = 1 to Array.length parent1_and_beyond do
-          <:test_eq< bool >>
+          [%test_eq: bool]
             (parent_index < t.num_parents)
             (Uopt.is_some parent1_and_beyond.( parent_index - 1 ));
         done))
       ~parent0:(check (fun parent0 ->
-        <:test_eq< bool >> (t.num_parents > 0) (Uopt.is_some parent0)))
+        [%test_eq: bool] (t.num_parents > 0) (Uopt.is_some parent0)))
       ~created_in:(check Scope.invariant)
       ~next_node_in_same_scope:(check (fun next_node_in_same_scope ->
         if Scope.is_top t.created_in || not (is_valid t)
@@ -347,7 +347,7 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
       ~on_update_handlers:ignore
       ~user_info:ignore
       ~my_parent_index_in_child_at_index:(check (fun my_parent_index_in_child_at_index ->
-        <:test_result< int >> (Array.length my_parent_index_in_child_at_index)
+        [%test_result: int] (Array.length my_parent_index_in_child_at_index)
           ~expect:(max_num_children t);
         if is_necessary t
         then
@@ -355,7 +355,7 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
             assert (same t (get_parent child
                               ~index:(my_parent_index_in_child_at_index.( child_index )))))))
       ~my_child_index_in_parent_at_index:(check (fun my_child_index_in_parent_at_index ->
-        <:test_result< int >> (Array.length my_child_index_in_parent_at_index)
+        [%test_result: int] (Array.length my_child_index_in_parent_at_index)
           ~expect:(Array.length t.parent1_and_beyond + 1);
         iteri_parents t ~f:(fun parent_index parent ->
           assert (same t
@@ -371,7 +371,7 @@ let unsafe_value t = Uopt.unsafe_value t.value_opt
 let value_exn t =
   if Uopt.is_some t.value_opt
   then Uopt.unsafe_value t.value_opt
-  else failwiths "attempt to get value of an invalid node" t <:sexp_of< _ t >>
+  else failwiths "attempt to get value of an invalid node" t [%sexp_of: _ t]
 ;;
 
 let get_cutoff t        = t.cutoff
@@ -389,7 +389,7 @@ let on_update t on_update_handler =
 ;;
 
 let run_on_update_handlers t node_update ~now =
-  if verbose then Debug.ams _here_ "run_on_update_handlers" t <:sexp_of< _ t >>;
+  if verbose then Debug.ams [%here] "run_on_update_handlers" t [%sexp_of: _ t];
   let r = ref t.on_update_handlers in
   while not (List.is_empty !r) do
     match !r with
@@ -461,7 +461,7 @@ let create created_in kind =
                                            else None)
     }
   in
-  if verbose then Debug.ams _here_ "created node" t <:sexp_of< _ t >>;
+  if verbose then Debug.ams [%here] "created node" t [%sexp_of: _ t];
   Scope.add_node created_in t;
   (* [invariant] does not yet hold here because many uses of [Node.create] use [kind =
      Uninitialized], and then mutate [t.kind] later. *)
@@ -528,8 +528,8 @@ let remove_parent
   : type a b. child:a t -> parent:b t -> child_index:int -> unit =
   fun ~child ~parent ~child_index ->
     if verbose
-    then Debug.ams _here_ "remove_parent" (`child child, `parent parent)
-           <:sexp_of< [ `child of _ t ] * [ `parent of _ t ] >>;
+    then Debug.ams [%here] "remove_parent" (`child child, `parent parent)
+           [%sexp_of: [ `child of _ t ] * [ `parent of _ t ]];
     if debug then assert (child.num_parents >= 1);
     let parent_index = parent.my_parent_index_in_child_at_index.( child_index ) in
     if debug then assert (same parent (get_parent child ~index:parent_index));
@@ -548,7 +548,7 @@ module Packed = struct
 
   type t = Packed_node.t
 
-  let sexp_of_t t = t |> <:sexp_of< _ t >>
+  let sexp_of_t t = t |> [%sexp_of: _ t]
 
   let invariant t = invariant ignore t
 
@@ -577,7 +577,7 @@ module Packed = struct
 
     let to_list t = List.rev (fold t ~init:[] ~f:(fun ac n -> n :: ac))
 
-    let sexp_of_t t = to_list t |> <:sexp_of< Packed_node.t list >>
+    let sexp_of_t t = to_list t |> [%sexp_of: Packed_node.t list]
 
   end
 

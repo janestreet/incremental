@@ -17,8 +17,8 @@ let invariant invariant_a t = if is_some t then invariant_a t
 
 let sexp_of_t sexp_of_a t =
   if is_none t
-  then "None" |> <:sexp_of< string >>
-  else tag "Some" t <:sexp_of< a >>
+  then "None" |> [%sexp_of: string]
+  else tag "Some" t [%sexp_of: a]
 ;;
 
 let some a = a
@@ -27,10 +27,10 @@ let value_exn t = if is_none t then failwith "Uopt.value_exn" else t
 
 let unsafe_value t = if debug then value_exn t else t
 
-TEST = is_none none
-TEST = not (is_some none)
-TEST = not (is_none (some 13))
-TEST = is_some (some 13)
-TEST = Exn.does_raise (fun () -> value_exn none)
-TEST = value_exn (some 13) = 13
-TEST = unsafe_value (some 13) = 13
+let%test _ = is_none none
+let%test _ = not (is_some none)
+let%test _ = not (is_none (some 13))
+let%test _ = is_some (some 13)
+let%test _ = Exn.does_raise (fun () -> value_exn none)
+let%test _ = value_exn (some 13) = 13
+let%test _ = unsafe_value (some 13) = 13

@@ -1,2 +1,2 @@
 type t = Before | After
-with sexp_of
+[@@deriving sexp_of]

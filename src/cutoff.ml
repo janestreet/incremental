@@ -1,5 +1,5 @@
 open Core.Std
-open Import    let () = _squelch_unused_module_warning_
+open! Import
 
 type 'a t =
   (* We specialize some cutoffs to to avoid an indirect function call; in particular we
@@ -10,10 +10,10 @@ type 'a t =
   | Phys_equal
   | Compare of ('a -> 'a -> int)
   | F of (old_value:'a -> new_value:'a -> bool)
-with sexp_of
+[@@deriving sexp_of]
 
 let invariant _ t =
-  Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
+  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
     match t with
     | Always     -> ()
     | Never      -> ()

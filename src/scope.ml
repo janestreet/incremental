@@ -1,5 +1,5 @@
 open Core.Std
-open Import    let _ = _squelch_unused_module_warning_
+open! Import
 
 module Node = Types.Node
 
@@ -33,7 +33,7 @@ let is_necessary = function
 ;;
 
 let add_node t node =
-  if verbose then Debug.ams _here_ "Scope.add_node" (node, t) <:sexp_of< _ Node.t * t >>;
+  if verbose then Debug.ams [%here] "Scope.add_node" (node, t) [%sexp_of: _ Node.t * t];
   match t with
   | Top -> ()
   | Bind bind ->

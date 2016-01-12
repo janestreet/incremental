@@ -1,12 +1,12 @@
 open Core.Std
-open Import    let _ = _squelch_unused_module_warning_
+open! Import
 open Types.Internal_observer
 
 module Packed_ = struct
   include Types.Packed_internal_observer
 
   let sexp_of_t (T internal_observer) =
-    internal_observer.observing |> <:sexp_of< _ Types.Node.t >>
+    internal_observer.observing |> [%sexp_of: _ Types.Node.t]
   ;;
 
   let prev_in_all (T t) = t.prev_in_all
@@ -18,7 +18,7 @@ end
 
 module State = struct
   type t = Types.Internal_observer.State.t = Created | In_use | Disallowed | Unlinked
-  with sexp_of
+  [@@deriving sexp_of]
 end
 
 type 'a t = 'a Types.Internal_observer.t =
@@ -40,9 +40,9 @@ type 'a t = 'a Types.Internal_observer.t =
   ; mutable prev_in_observing  : 'a t sexp_opaque Uopt.t
   ; mutable next_in_observing  : 'a t sexp_opaque Uopt.t
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
-type 'a internal_observer = 'a t with sexp_of
+type 'a internal_observer = 'a t [@@deriving sexp_of]
 
 let use_is_allowed t =
   match t.state with
@@ -55,7 +55,7 @@ let same (t1 : _ t) (t2 : _ t) = phys_same t1 t2
 let same_as_packed (t1 : _ t) (Packed_.T t2) = same t1 t2
 
 let invariant invariant_a t =
-  Invariant.invariant _here_ t <:sexp_of< _ t >> (fun () ->
+  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~state:ignore
@@ -106,19 +106,19 @@ let invariant invariant_a t =
 let value_exn t =
   match t.state with
   | Created ->
-    failwiths "Observer.value_exn called without stabilizing" t <:sexp_of< _ t >>;
+    failwiths "Observer.value_exn called without stabilizing" t [%sexp_of: _ t];
   | Disallowed | Unlinked ->
-    failwiths "Observer.value_exn called after disallow_future_use" t <:sexp_of< _ t >>;
+    failwiths "Observer.value_exn called after disallow_future_use" t [%sexp_of: _ t];
   | In_use ->
     let uopt = t.observing.value_opt in
     if Uopt.is_none uopt
-    then failwiths "attempt to get value of an invalid node" t <:sexp_of< _ t >>;
+    then failwiths "attempt to get value of an invalid node" t [%sexp_of: _ t];
     Uopt.unsafe_value uopt
 ;;
 
 let on_update_exn t on_update_handler =
   match t.state with
-  | Disallowed | Unlinked -> failwiths "on_update disallowed" t <:sexp_of< _ t >>
+  | Disallowed | Unlinked -> failwiths "on_update disallowed" t [%sexp_of: _ t]
   | Created | In_use ->
     t.on_update_handlers <- on_update_handler :: t.on_update_handlers;
     match t.state with
@@ -165,7 +165,7 @@ module Packed = struct
   include Packed_
 
   let sexp_of_t (T internal_observer) =
-    internal_observer |> <:sexp_of< _ internal_observer >>
+    internal_observer |> [%sexp_of: _ internal_observer]
   ;;
 
   let invariant (T t) = invariant ignore t

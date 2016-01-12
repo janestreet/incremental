@@ -1,5 +1,5 @@
 open Core.Std
-open Import    let _ = _squelch_unused_module_warning_
+open! Import
 open Types.Kind
 
 module Node = Types.Node
@@ -10,10 +10,10 @@ type t = Types.At_intervals.t =
   ; interval      : Time.Span.t
   ; mutable alarm : Alarm.t
   }
-with fields, sexp_of
+[@@deriving fields, sexp_of]
 
 let invariant t =
-  Invariant.invariant _here_ t <:sexp_of< t >> (fun () ->
+  Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~main:(check (fun (main : _ Node.t) ->

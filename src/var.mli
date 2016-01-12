@@ -12,7 +12,7 @@ include Invariant.S1 with type 'a t := 'a t
 include Sexp_of.  S1 with type 'a t := 'a t
 
 module Packed : sig
-  type nonrec t = Should_not_use.t t with sexp_of
+  type nonrec t = Should_not_use.t t [@@deriving sexp_of]
 end
 
 val pack : _ t -> Packed.t

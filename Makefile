@@ -1,24 +1,20 @@
 # Generic Makefile for oasis project
 
-# Set to setup.exe for the release
 SETUP := setup.exe
+NAME := incremental
+PREFIX = $(shell grep ^prefix= setup.data | cut -d\" -f 2)
 
 # Default rule
 default: build
 
-# Setup for the development version
-setup-dev.exe: _oasis setup.ml
-	grep -v '^#' setup.ml > setup_dev.ml
-	ocamlfind ocamlopt -o $@ -linkpkg -package ocamlbuild,oasis.dynrun setup_dev.ml || 	  ocamlfind ocamlc -o $@ -linkpkg -package ocamlbuild,oasis.dynrun setup_dev.ml || true
-	rm -f setup_dev.*
-
-# Setup for the release
-setup.exe: setup.ml
-	ocamlopt.opt -o $@ $< || ocamlopt -o $@ $< || ocamlc -o $@ $<
-	rm -f setup.cmx setup.cmi setup.o setup.obj setup.cmo
+setup.exe: _oasis setup.ml
+	ocamlfind ocamlopt -o $@ -linkpkg -package ocamlbuild,oasis.dynrun setup.ml || \
+	  ocamlfind ocamlc -o $@ -linkpkg -package ocamlbuild,oasis.dynrun setup.ml || true
+	for f in setup.*; do [ $$f = $@ -o $$f = setup.ml ] || rm -f $$f; done
 
 build: $(SETUP) setup.data
 	./$(SETUP) -build $(BUILDFLAGS)
+	$(MAKE) $(NAME).install
 
 doc: $(SETUP) setup.data build
 	./$(SETUP) -doc $(DOCFLAGS)
@@ -28,15 +24,34 @@ test: $(SETUP) setup.data build
 
 all: $(SETUP)
 	./$(SETUP) -all $(ALLFLAGS)
+	$(MAKE) $(NAME).install
 
-install: $(SETUP) setup.data
-	./$(SETUP) -install $(INSTALLFLAGS)
+$(NAME).install: js-utils/gen_install.ml setup.log setup.data
+	ocaml -I js-utils js-utils/gen_install.ml
 
-uninstall: $(SETUP) setup.data
-	./$(SETUP) -uninstall $(UNINSTALLFLAGS)
+install: $(NAME).install
+	opam-installer -i --prefix $(PREFIX) $(NAME).install
 
-reinstall: $(SETUP) setup.data
-	./$(SETUP) -reinstall $(REINSTALLFLAGS)
+uninstall: $(NAME).install
+	opam-installer -u --prefix $(PREFIX) $(NAME).install
+
+reinstall: $(NAME).install
+	opam-installer -u --prefix $(PREFIX) $(NAME).install &> /dev/null || true
+	opam-installer -i --prefix $(PREFIX) $(NAME).install
+
+bin.tar.gz: $(NAME).install
+	rm -rf _install
+	mkdir _install
+	opam-installer -i --prefix _install $(NAME).install
+	tar czf bin.tar.gz -C _install .
+	rm -rf _install
+
+bin.lzo: $(NAME).install
+	rm -rf _install
+	mkdir _install
+	opam-installer -i --prefix _install $(NAME).install
+	cd _install && lzop -1 -P -o ../bin.lzo `find . -type f`
+	rm -rf _install
 
 clean: $(SETUP)
 	./$(SETUP) -clean $(CLEANFLAGS)

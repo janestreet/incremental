@@ -1,7 +1,7 @@
 open Core.Std
-open Import    let _ = _squelch_unused_module_warning_
+open! Import
 
-type 'a t = 'a Internal_observer.t ref with sexp_of
+type 'a t = 'a Internal_observer.t ref [@@deriving sexp_of]
 
 let invariant invariant_a t = Internal_observer.invariant invariant_a !t
 

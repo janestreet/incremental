@@ -7,7 +7,7 @@
 open! Core.Std
 open! Import
 
-type 'a t with sexp_of
+type 'a t [@@deriving sexp_of]
 
 include Invariant.S1 with type 'a t := 'a t
 

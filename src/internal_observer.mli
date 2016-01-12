@@ -26,7 +26,7 @@ val unlink : _ t -> unit
 
 module Packed : sig
   type t = Types.Packed_internal_observer.t = T : _ Types.Internal_observer.t -> t
-  with sexp_of
+  [@@deriving sexp_of]
 
   include Invariant.S with type t := t
 
