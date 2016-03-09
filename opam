@@ -10,12 +10,13 @@ build: [
   [make]
 ]
 depends: [
-  "ocamlbuild" {build}
-  "oasis"      {build & >= "0.4"}
-  "ocamlfind"  {build & >= "1.3.2"}
+  "ocamlbuild"         {build}
+  "oasis"              {build & >= "0.4"}
+  "ocamlfind"          {build & >= "1.3.2"}
   "bin_prot"
   "core"
   "fieldslib"
+  "incremental_kernel"
   "ppx_assert"
   "ppx_bench"
   "ppx_driver"

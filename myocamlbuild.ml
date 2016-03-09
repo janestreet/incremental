@@ -23,14 +23,8 @@ let js_hacks = function
     pflag ["ocaml"; "ocamldep"] "predicate" (fun s -> S [A "-predicates"; A s])
   | _ -> ()
 
-let setup_preprocessor_deps = function
-  | After_rules ->
-    dep ["pp_deps_for_src"] ["src/debug.mlh"];
-  | _ -> ()
-
 let () =
   Ocamlbuild_plugin.dispatch (fun hook ->
     js_hacks hook;
-    setup_preprocessor_deps hook;
     Ppx_driver_ocamlbuild.dispatch hook;
     dispatch_default hook)
