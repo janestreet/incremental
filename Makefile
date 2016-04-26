@@ -26,8 +26,8 @@ all: $(SETUP)
 	./$(SETUP) -all $(ALLFLAGS)
 	$(MAKE) $(NAME).install
 
-$(NAME).install: js-utils/gen_install.ml setup.log setup.data
-	ocaml -I js-utils js-utils/gen_install.ml
+$(NAME).install: install.ml setup.log setup.data
+	ocaml install.ml
 
 install: $(NAME).install
 	opam-installer -i --prefix $(PREFIX) $(NAME).install
