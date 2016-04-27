@@ -27,7 +27,7 @@ all: $(SETUP)
 	$(MAKE) $(NAME).install
 
 $(NAME).install: install.ml setup.log setup.data
-	ocaml install.ml
+	ocaml -I "$(OCAML_TOPLEVEL_PATH)" install.ml
 
 install: $(NAME).install
 	opam-installer -i --prefix $(PREFIX) $(NAME).install
