@@ -122,6 +122,8 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
 
         let pack = pack
 
+        module Let_syntax = Let_syntax
+
         module State = struct
 
           open State
