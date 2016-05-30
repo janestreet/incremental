@@ -975,94 +975,97 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           check [%here]
         ;;
 
-        let join = join
+        module Join(X : sig val join : 'a t t -> 'a t end) = struct
+          let join = X.join
+          let%test_unit _ = (* [join] of a constant *)
+            let o = observe (join (const (const 1))) in
+            stabilize_ [%here];
+            assert (value o = 1)
+          ;;
 
-        let%test_unit _ = (* [join] of a constant *)
-          let o = observe (join (const (const 1))) in
-          stabilize_ [%here];
-          assert (value o = 1)
-        ;;
+          let%test_unit _ = (* graph changes only *)
+            let a = const 3 in
+            let b = const 4 in
+            let x = Var.create_ [%here] a in
+            let o = observe (join (watch x)) in
+            let check where expect =
+              stabilize_ where;
+              [%test_result: int] (value o) ~expect;
+            in
+            check [%here] 3;
+            Var.set x b;
+            check [%here] 4;
+            Var.set x a;
+            check [%here] 3
+          ;;
 
-        let%test_unit _ = (* graph changes only *)
-          let a = const 3 in
-          let b = const 4 in
-          let x = Var.create_ [%here] a in
-          let o = observe (join (watch x)) in
-          let check where expect =
-            stabilize_ where;
-            [%test_result: int] (value o) ~expect;
-          in
-          check [%here] 3;
-          Var.set x b;
-          check [%here] 4;
-          Var.set x a;
-          check [%here] 3
-        ;;
+          let%test_unit _ =
+            let v1 = Var.create_ [%here] 1 in
+            let v2 = Var.create_ [%here] 2 in
+            let v3 = Var.create_ [%here] (Var.watch v1) in
+            let o = observe (join (Var.watch v3)) in
+            stabilize_ [%here];
+            assert (value o = 1);
+            Var.set v1 13;
+            stabilize_ [%here];
+            assert (value o = 13);
+            Var.set v3 (Var.watch v2);
+            stabilize_ [%here];
+            assert (value o = 2);
+            Var.set v3 (Var.watch v1);
+            Var.set v1 14;
+            stabilize_ [%here];
+            assert (value o = 14)
+          ;;
 
-        let%test_unit _ =
-          let v1 = Var.create_ [%here] 1 in
-          let v2 = Var.create_ [%here] 2 in
-          let v3 = Var.create_ [%here] (Var.watch v1) in
-          let o = observe (join (Var.watch v3)) in
-          stabilize_ [%here];
-          assert (value o = 1);
-          Var.set v1 13;
-          stabilize_ [%here];
-          assert (value o = 13);
-          Var.set v3 (Var.watch v2);
-          stabilize_ [%here];
-          assert (value o = 2);
-          Var.set v3 (Var.watch v1);
-          Var.set v1 14;
-          stabilize_ [%here];
-          assert (value o = 14)
-        ;;
+          let%test_unit _ = (* an invalid unused rhs doesn't invalidate the [join] *)
+            let x = Var.create_ [%here] (const 0); in
+            let lhs = Var.create_ [%here] 1 in
+            let o1 =
+              observe (bind (watch lhs) (fun i -> Var.set x (const i); return ()))
+            in
+            stabilize_ [%here];
+            let o2 = observe (join (make_high (Var.watch x))) in
+            stabilize_ [%here];
+            Var.set lhs 2; (* invalidate *)
+            Var.set x (const 3);
+            stabilize_ [%here];
+            assert (value o2 = 3);
+            disallow_future_use o1;
+            disallow_future_use o2
+          ;;
 
-        let%test_unit _ = (* an invalid unused rhs doesn't invalidate the [join] *)
-          let x = Var.create_ [%here] (const 0); in
-          let lhs = Var.create_ [%here] 1 in
-          let o1 =
-            observe (bind (watch lhs) (fun i -> Var.set x (const i); return ()))
-          in
-          stabilize_ [%here];
-          let o2 = observe (join (make_high (Var.watch x))) in
-          stabilize_ [%here];
-          Var.set lhs 2; (* invalidate *)
-          Var.set x (const 3);
-          stabilize_ [%here];
-          assert (value o2 = 3);
-          disallow_future_use o1;
-          disallow_future_use o2
-        ;;
+          let%test_unit _ = (* checking that join can be invalidated *)
+            let join = join (const invalid) in
+            let o = observe join in
+            stabilize_ [%here];
+            disallow_future_use o;
+            assert (skip_invalidity_check || not (is_valid join));
+          ;;
 
-        let%test_unit _ = (* checking that join can be invalidated *)
-          let join = join (const invalid) in
-          let o = observe join in
-          stabilize_ [%here];
-          disallow_future_use o;
-          assert (skip_invalidity_check || not (is_valid join));
-        ;;
+          let%test_unit _ =
+            (* changing the rhs from a node to its ancestor, which causes problems if
+               we leave the node with a broken invariant while adding the ancestor. *)
+            let num_calls = ref 0 in
+            let rhs_var = Var.create 13 in
+            let first = map (watch rhs_var) ~f:(fun i -> incr num_calls; i + 1) in
+            let second  = map first ~f:(fun i -> i + 1) in
+            let lhs_var = Var.create first in
+            let o = observe (join (watch lhs_var)) in
+            stabilize_ [%here];
+            [%test_result: int] !num_calls ~expect:1;
+            Var.set lhs_var second;
+            stabilize_ [%here];
+            [%test_result: int] !num_calls ~expect:1;
+            disallow_future_use o;
+            stabilize_ [%here];
+            Var.set rhs_var 14;
+            stabilize_ [%here];
+            [%test_result: int] !num_calls ~expect:1
+          ;;
+        end
 
-        let%test_unit _ =
-          (* changing the rhs from a node to its ancestor, which causes problems if
-             we leave the node with a broken invariant while adding the ancestor. *)
-          let num_calls = ref 0 in
-          let rhs_var = Var.create 13 in
-          let first = map (watch rhs_var) ~f:(fun i -> incr num_calls; i + 1) in
-          let second  = map first ~f:(fun i -> i + 1) in
-          let lhs_var = Var.create first in
-          let o = observe (join (watch lhs_var)) in
-          stabilize_ [%here];
-          [%test_result: int] !num_calls ~expect:1;
-          Var.set lhs_var second;
-          stabilize_ [%here];
-          [%test_result: int] !num_calls ~expect:1;
-          disallow_future_use o;
-          stabilize_ [%here];
-          Var.set rhs_var 14;
-          stabilize_ [%here];
-          [%test_result: int] !num_calls ~expect:1
-        ;;
+        include Join(struct let join = join end)
 
         let if_ = if_
 
@@ -3387,6 +3390,402 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           end;
         ;;
 
+        module Expert = Expert
+        module E = Expert
+
+        module Expert_test = struct
+          (* This tests add_dependency/remove_dependency, invalidity (in particular a node
+             becomes invalid before being replaced by a valid one). *)
+          include Join(struct
+            let join : type a. a t t -> a t = fun t ->
+              let prev_rhs = ref None in
+              let join = E.Node.create (fun () ->
+                E.Dependency.value (Option.value_exn !prev_rhs))
+              in
+              let lhs_change = map t ~f:(fun rhs ->
+                let rhs_dep = E.Dependency.create rhs in
+                E.Node.add_dependency join rhs_dep;
+                Option.iter !prev_rhs ~f:(fun v ->
+                  E.Node.remove_dependency join v);
+                prev_rhs := Some rhs_dep)
+              in
+              E.Node.add_dependency join (E.Dependency.create lhs_change);
+              E.Node.watch join
+            ;;
+          end)
+
+          let%test_unit _ = (* plugging an already invalid incremental node make
+                               the expert node invalid *)
+            let t = E.Node.create ignore in
+            E.Node.add_dependency t (E.Dependency.create invalid);
+            assert (is_invalid (E.Node.watch t));
+          ;;
+
+          let%test_unit _ = (* [invalidate] does invalidate *)
+            let var = Var.create `Valid in
+            let result = E.Node.create ignore in
+            let result_incr = E.Node.watch result in
+            let lhs_change =
+              map (Var.watch var) ~f:(function
+                | `Valid -> ()
+                | `Invalid -> E.Node.invalidate result)
+            in
+            E.Node.add_dependency result (E.Dependency.create lhs_change);
+            let o = observe result_incr in
+            stabilize_ [%here];
+            Observer.disallow_future_use o;
+            assert (is_valid result_incr);
+            Var.set var `Invalid;
+            assert (is_invalid result_incr)
+          ;;
+
+          (* This tests
+             - whether we can actually write such a thing with the intf of incremental
+             - add_dependency/remove_dependency with an actually variable set of
+               children, unlike join
+             - incremental doesn't needlessly schedule certain nodes, destroying the good
+               complexities we're trying to get.
+             - behavior when observability if turned off and on
+          *)
+          let map_filter_mapi : type k v1 v2.
+            on_event:([ `Left of k
+                      | `Lhs_change
+                      | `Main
+                      | `On_change of k * v2 option
+                      | `Per_key of k
+                      | `Right of k
+                      | `Unequal of k ] ->
+                      unit)
+            -> (k, v1, 'comparator) Map.t t
+            -> f:(k -> v1 t -> v2 option t)
+            -> (k, v2, 'comparator) Map.t t = fun ~on_event lhs ~f ->
+            let prev_map = ref None in
+            let prev_nodes = ref None in
+            let acc = ref None in
+            let result =
+              E.Node.create (fun () -> on_event `Main; Option.value_exn !acc)
+            in
+            let rec lhs_change = lazy (map lhs ~f:(fun map ->
+              on_event `Lhs_change;
+              let empty_map = Map.empty ~comparator:(Map.comparator map) in
+              let symmetric_diff =
+                Map.symmetric_diff ~data_equal:phys_equal
+                  (Option.value !prev_map ~default:empty_map) map
+              in
+              let new_nodes =
+                Sequence.fold symmetric_diff
+                  ~init:(Option.value !prev_nodes ~default:empty_map)
+                  ~f:(fun nodes (key, changed) ->
+                    match changed with
+                    | `Unequal _ ->
+                      on_event (`Unequal key);
+                      let node, _dep = Map.find_exn nodes key in
+                      E.Node.make_stale node;
+                      nodes
+                    | `Left _ ->
+                      on_event (`Left key);
+                      let (node, dep) = Map.find_exn nodes key in
+                      let nodes = Map.remove nodes key in
+                      E.Node.remove_dependency result dep;
+                      acc := Some (Map.remove (Option.value_exn !acc) key);
+                      E.Node.invalidate node;
+                      nodes
+                    | `Right _ ->
+                      on_event (`Right key);
+                      let node = E.Node.create (fun () ->
+                        on_event (`Per_key key);
+                        Map.find_exn (Option.value_exn !prev_map) key
+                      ) in
+                      E.Node.add_dependency node (E.Dependency.create (force lhs_change));
+                      let user_function_dep =
+                        E.Dependency.create
+                          (f key (E.Node.watch node))
+                          ~on_change:(fun opt ->
+                            on_event (`On_change (key, opt));
+                             let old = Option.value !acc ~default:empty_map in
+                             acc := Some (
+                               match opt with
+                               | None -> if Map.mem old key then Map.remove old key else old
+                               | Some v -> Map.add old ~key ~data:v))
+                      in
+                      E.Node.add_dependency result user_function_dep;
+                      Map.add nodes ~key ~data:(node, user_function_dep))
+                in
+                prev_nodes := Some new_nodes;
+                prev_map := Some map;
+              ))
+            in
+            E.Node.add_dependency result (E.Dependency.create (force lhs_change));
+            E.Node.watch result
+          ;;
+
+          let%test_unit _ =
+            let module M =
+              On_update_queue (struct
+                type 'a t =
+                  [ `Left of string
+                  | `Lhs_change
+                  | `Main
+                  | `On_change of string * int option
+                  | `Per_key of string
+                  | `Right of string
+                  | `Unequal of string ]
+                  [@@deriving compare, sexp_of]
+              end)
+            in
+            let push, check = M.on_update_queue () in
+            let var = Var.create (String.Map.of_alist_exn ["a", 1; "b", 2; "c", 3]) in
+            let increment = Var.create 1 in
+            let assert_incremental_computation_is_correct observer =
+              let from_scratch =
+                let map = Var.latest_value var in
+                let j = Var.latest_value increment in
+                Map.filter_mapi map ~f:(fun ~key:_ ~data:i ->
+                  if (i + j) mod 10 = 0 then None
+                  else Some (i + j))
+              in
+              [%test_result: int String.Map.t] (value observer) ~expect:from_scratch;
+            in
+            let result =
+              map_filter_mapi ~on_event:push (Var.watch var)
+                ~f:(fun _key value_incr ->
+                  map2 value_incr (Var.watch increment) ~f:(fun i j ->
+                    if (i + j) mod 10 = 0 then None
+                    else Some (i + j)))
+            in
+            let o = observe result in
+            stabilize_ [%here];
+            assert_incremental_computation_is_correct o;
+            check [ `Lhs_change
+                  ; `Right "a"
+                  ; `Right "b"
+                  ; `Right "c"
+                  ; `Per_key "c"
+                  ; `Per_key "b"
+                  ; `Per_key "a"
+                  ; `On_change ("a", Some 2)
+                  ; `On_change ("b", Some 3)
+                  ; `On_change ("c", Some 4)
+                  ; `Main
+                  ];
+
+            let update f = Var.set var (f (Var.value var)) in
+
+            update (fun map -> Map.add map ~key:"b2" ~data:12);
+            stabilize_ [%here];
+            assert_incremental_computation_is_correct o;
+            check [ `Lhs_change
+                  ; `Right "b2"
+                  ; `Per_key "b2"
+                  ; `On_change ("b2", Some 13)
+                  ; `Main
+                  ];
+
+            update (fun map -> Map.add map ~key:"b2" ~data:18);
+            stabilize_ [%here];
+            assert_incremental_computation_is_correct o;
+            check [ `Lhs_change
+                  ; `Unequal "b2"
+                  ; `Per_key "b2"
+                  ; `On_change ("b2", Some 19)
+                  ; `Main
+                  ];
+
+            update (fun map -> Map.add map ~key:"b2" ~data:19);
+            stabilize_ [%here];
+            assert_incremental_computation_is_correct o;
+            check [ `Lhs_change
+                  ; `Unequal "b2"
+                  ; `Per_key "b2"
+                  ; `On_change ("b2", None)
+                  ; `Main
+                  ];
+
+            update (fun map -> Map.add map ~key:"b2" ~data:18);
+            stabilize_ [%here];
+            assert_incremental_computation_is_correct o;
+            check [ `Lhs_change
+                  ; `Unequal "b2"
+                  ; `Per_key "b2"
+                  ; `On_change ("b2", Some 19)
+                  ; `Main
+                  ];
+
+            update (fun map -> Map.remove map "b2");
+            stabilize_ [%here];
+            assert_incremental_computation_is_correct o;
+            check [ `Lhs_change
+                  ; `Left "b2"
+                  ; `Main
+                  ];
+
+            Var.set increment 9;
+            stabilize_ [%here];
+            assert_incremental_computation_is_correct o;
+            check [ `On_change ("a", None)
+                  ; `On_change ("c", Some 12)
+                  ; `On_change ("b", Some 11)
+                  ; `Main
+                  ];
+
+            update (fun map -> Map.remove map "a");
+            stabilize_ [%here];
+            assert_incremental_computation_is_correct o;
+            check [ `Lhs_change
+                  ; `Left "a"
+                  ; `Main
+                  ];
+
+            update (fun map -> Map.add (Map.remove (Map.remove map "b") "c") ~key:"a" ~data:2);
+            stabilize_ [%here];
+            assert_incremental_computation_is_correct o;
+            check [ `Lhs_change
+                  ; `Right "a"
+                  ; `Left "b"
+                  ; `Left "c"
+                  ; `Per_key "a"
+                  ; `On_change ("a", Some 11)
+                  ; `Main
+                  ];
+
+            disallow_future_use o;
+            stabilize_ [%here];
+            check [];
+            update (fun map -> Map.add map ~key:"a" ~data:3);
+            stabilize_ [%here];
+            check [];
+            let o = observe result in
+            stabilize_ [%here];
+            assert_incremental_computation_is_correct o;
+            check [ `Lhs_change
+                  ; `Unequal "a"
+                  ; `Per_key "a"
+                  ; `On_change ("a", Some 12)
+                  ; `Main
+                  ];
+          ;;
+
+          (* This one checks
+             - expressivity of the interface, again
+             - on_observability_change callback
+          *)
+          let staged_eq : type a.
+            on_event:([ `Scheduling
+                      | `Is_eq of a
+                      | `Add_reverse_dep of a
+                      | `Remove_reverse_dep of a ] -> unit)
+            -> a Hashtbl.Hashable.t
+            -> a t
+            -> (a -> bool t) Staged.t =
+            fun ~on_event hashable incr ->
+              let last = ref None in
+              let reverse_dependencies = Hashtbl.create ~hashable () in
+              let scheduling_node =
+                I.map incr ~f:(fun v ->
+                  on_event `Scheduling;
+                  Option.iter !last ~f:(fun old_v ->
+                    Option.iter (Hashtbl.find reverse_dependencies old_v) ~f:E.Node.make_stale);
+                  Option.iter (Hashtbl.find reverse_dependencies v) ~f:E.Node.make_stale;
+                  last := Some v)
+              in
+              Staged.stage (fun a ->
+                let rec result = lazy (
+                  E.Node.create (fun () ->
+                    let v = Option.value_exn !last in
+                    on_event (`Is_eq a); (hashable.compare a v) = 0)
+                    ~on_observability_change:(fun ~is_now_observable ->
+                      if is_now_observable
+                      then begin
+                        on_event (`Add_reverse_dep a);
+                        Hashtbl.add_exn reverse_dependencies ~key:a ~data:(force result)
+                      end else begin
+                        on_event (`Remove_reverse_dep a);
+                        Hashtbl.remove reverse_dependencies a
+                      end))
+                in
+                let dep = E.Dependency.create scheduling_node in
+                E.Node.add_dependency (force result) dep;
+                E.Node.watch (force result)
+              )
+          ;;
+
+          let%test_unit _ =
+            let module M =
+              On_update_queue (struct
+                type 'a t =
+                  [ `Scheduling
+                  | `Is_eq of int
+                  | `Add_reverse_dep of int
+                  | `Remove_reverse_dep of int ]
+                [@@deriving compare, sexp_of]
+              end)
+            in
+            let push, check = M.on_update_queue () in
+            let var = Var.create 2 in
+            let switch = Var.create true in
+            let input = if_ (Var.watch switch) ~then_:(Var.watch var) ~else_:invalid in
+            let is_focused = Staged.unstage (staged_eq Int.hashable ~on_event:push input) in
+            let all = all (List.init 5 ~f:is_focused) in
+            let assert_incremental_computation_is_correct observer =
+              let from_scratch = List.init 5 ~f:((=) (Var.latest_value var)) in
+              [%test_result: bool list] (value observer) ~expect:from_scratch;
+            in
+            let o = observe all in
+
+            stabilize_ [%here];
+            assert_incremental_computation_is_correct o;
+            check [ `Add_reverse_dep 4
+                  ; `Add_reverse_dep 3
+                  ; `Add_reverse_dep 2
+                  ; `Add_reverse_dep 1
+                  ; `Add_reverse_dep 0
+                  ; `Scheduling
+                  ; `Is_eq 0
+                  ; `Is_eq 1
+                  ; `Is_eq 2
+                  ; `Is_eq 3
+                  ; `Is_eq 4
+                  ];
+
+            Var.set var 0;
+            stabilize_ [%here];
+            assert_incremental_computation_is_correct o;
+            check [ `Scheduling
+                  ; `Is_eq 0
+                  ; `Is_eq 2
+                  ];
+
+            disallow_future_use o;
+            stabilize_ [%here];
+            check [ `Remove_reverse_dep 4
+                  ; `Remove_reverse_dep 3
+                  ; `Remove_reverse_dep 2
+                  ; `Remove_reverse_dep 1
+                  ; `Remove_reverse_dep 0
+                  ];
+
+            Var.set var 1;
+            stabilize_ [%here];
+            check [];
+            let o = observe all in
+            stabilize_ [%here];
+            assert_incremental_computation_is_correct o;
+            check [ `Add_reverse_dep 4
+                  ; `Add_reverse_dep 3
+                  ; `Add_reverse_dep 2
+                  ; `Add_reverse_dep 1
+                  ; `Add_reverse_dep 0
+                  ; `Scheduling
+                  ; `Is_eq 1
+                  ; `Is_eq 0
+                  ];
+
+            Var.set switch false;
+            stabilize_ [%here];
+            assert (skip_invalidity_check || not (is_valid all));
+            disallow_future_use o;
+          ;;
+        end
       end :
                  (* This signature constraint is here to remind us to add a unit test
                     whenever Incremental's interface changes. *)
