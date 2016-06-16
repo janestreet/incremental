@@ -3468,6 +3468,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
             let rec lhs_change = lazy (map lhs ~f:(fun map ->
               on_event `Lhs_change;
               let empty_map = Map.empty ~comparator:(Map.comparator map) in
+              if Option.is_none !acc then acc := Some empty_map;
               let symmetric_diff =
                 Map.symmetric_diff ~data_equal:phys_equal
                   (Option.value !prev_map ~default:empty_map) map
@@ -3502,7 +3503,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
                           (f key (E.Node.watch node))
                           ~on_change:(fun opt ->
                             on_event (`On_change (key, opt));
-                             let old = Option.value !acc ~default:empty_map in
+                             let old = Option.value_exn !acc in
                              acc := Some (
                                match opt with
                                | None -> if Map.mem old key then Map.remove old key else old
