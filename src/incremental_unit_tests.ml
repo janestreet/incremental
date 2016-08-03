@@ -34,7 +34,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
     let invalid =
       let r = ref None in
       let x = Var.create 13 in
-      let o = observe (bind (watch x) (fun i -> r := Some (const i); return ())) in
+      let o = observe (bind (watch x) ~f:(fun i -> r := Some (const i); return ())) in
       stabilize ();
       let t = Option.value_exn !r in
       Var.set x 14;
@@ -463,7 +463,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
 
           let%test_unit _ = (* [create] during stabilization *)
             let o =
-              observe (bind (const 13) (fun i ->
+              observe (bind (const 13) ~f:(fun i ->
                 let v = create_ [%here] i in
                 watch v))
             in
@@ -473,7 +473,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
 
           let%test_unit _ = (* [create] and [set] during stabilization *)
             let o =
-              observe (bind (const 13) (fun i ->
+              observe (bind (const 13) ~f:(fun i ->
                 let v = create_ [%here] i in
                 let t = watch v in
                 set v 15;
@@ -488,7 +488,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
               let lhs = Var.create 0 in
               let rhs = ref (const 0) in
               let o = observe (
-                bind (watch lhs) (fun i ->
+                bind (watch lhs) ~f:(fun i ->
                   rhs := Var.watch (create_ [%here] ~use_current_scope i);
                   !rhs)) in
               stabilize_ [%here];
@@ -654,7 +654,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
         ;;
 
         let%test _ =
-          is_invalidated_on_bind_rhs (fun i -> bind (const i) (fun _ -> (const i)))
+          is_invalidated_on_bind_rhs (fun i -> bind (const i) ~f:(fun _ -> (const i)))
         ;;
 
         let%test_unit _ = (* bind created with an invalid rhs *)
@@ -678,7 +678,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           let x = Var.create_ [%here] 13 in
           let r = ref None in
           let o1 =
-            observe (bind (Var.watch x) (fun _ ->
+            observe (bind (Var.watch x) ~f:(fun _ ->
               r := Some (map invalid ~f:Fn.id); return ()))
           in
           stabilize_ [%here];
@@ -726,7 +726,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           let x = Var.create_ [%here] true in
           let a = const 3 in
           let b = const 4 in
-          let o = observe (bind (watch x) (fun bool -> if bool then a else b)) in
+          let o = observe (bind (watch x) ~f:(fun bool -> if bool then a else b)) in
           let check where expect =
             stabilize_ where;
             [%test_eq: int] (value o) expect;
@@ -745,7 +745,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           let o1 = observe (watch x1) in
           let x2 = Var.create_ [%here] true in
           let o2 = observe (watch x2) in
-          let t = bind (watch x2) (fun b -> if b then watch x0 else watch x1) in
+          let t = bind (watch x2) ~f:(fun b -> if b then watch x0 else watch x1) in
           let t_o = observe t in
           let check () =
             stabilize_ [%here];
@@ -796,9 +796,9 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
 
         let%test_unit _ = (* topological overload many *)
           let rec copy_true c1 =
-            bind c1 (fun x -> if x then c1           else copy_false c1)
+            bind c1 ~f:(fun x -> if x then c1           else copy_false c1)
           and copy_false c1 =
-            bind c1 (fun x -> if x then copy_true c1 else c1           )
+            bind c1 ~f:(fun x -> if x then copy_true c1 else c1           )
           in
           let x1 = Var.create_ [%here] false in
           let rec loop cur i =
@@ -824,7 +824,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           let cfg = Var.create_ [%here] (0.5, 0.5) in
           let nav =
             observe
-              (bind (Var.watch cfg) (fun (ibm_mult, msft_mult) ->
+              (bind (Var.watch cfg) ~f:(fun (ibm_mult, msft_mult) ->
                  let x = map (Var.watch ibm) ~f:(fun ibm -> ibm *. ibm_mult) in
                  let y = map (Var.watch msft) ~f:(fun msft -> msft *. msft_mult) in
                  sum [| x; y |] ~zero:0. ~add:(+.) ~sub:(-.)
@@ -844,7 +844,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
             then watch x
             else chain (i - 1) >>| fun i -> i + 1
           in
-          let b = bind (watch x) chain in
+          let b = bind (watch x) ~f:chain in
           let rec dag i =
             if i = 0
             then b
@@ -871,13 +871,13 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           let r = ref None in
           let lhs = Var.create_ [%here] 1; in
           let o1 =
-            observe (bind (watch lhs) (fun i -> r := Some (const i); return ()))
+            observe (bind (watch lhs) ~f:(fun i -> r := Some (const i); return ()))
           in
           stabilize_ [%here];
           let else_ = Option.value_exn !r in
           let test = Var.create_ [%here] false in
           let o2 = observe (bind (make_high (watch test))
-                              (fun test ->
+                              ~f:(fun test ->
                                  if test then const 13 else else_))
           in
           stabilize_ [%here];
@@ -920,7 +920,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           let rhs_false = map (watch rhs_var) ~f:(fun i -> incr num_calls; i + 1) in
           let rhs_true  = map rhs_false ~f:(fun i -> i + 1) in
           let o =
-            observe (bind (watch lhs_var) (fun b -> if b then rhs_true else rhs_false))
+            observe (bind (watch lhs_var) ~f:(fun b -> if b then rhs_true else rhs_false))
           in
           stabilize_ [%here];
           [%test_result: int] !num_calls ~expect:1;
@@ -945,10 +945,10 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           let v4 = Var.create_ [%here] 4 in
           let o =
             observe
-              (bind4 (watch v1) (watch v2) (watch v3) (watch v4) (fun x1 x2 x3 x4 ->
-                 bind3 (watch v2) (watch v3) (watch v4) (fun y2 y3 y4 ->
-                   bind2 (watch v3) (watch v4) (fun z3 z4 ->
-                     bind (watch v4) (fun w4 ->
+              (bind4 (watch v1) (watch v2) (watch v3) (watch v4) ~f:(fun x1 x2 x3 x4 ->
+                 bind3 (watch v2) (watch v3) (watch v4) ~f:(fun y2 y3 y4 ->
+                   bind2 (watch v3) (watch v4) ~f:(fun z3 z4 ->
+                     bind (watch v4) ~f:(fun w4 ->
                        return (x1 + x2 + x3 + x4 + y2 + y3 + y4 + z3 + z4 + w4))))))
           in
           let check where =
@@ -1022,7 +1022,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
             let x = Var.create_ [%here] (const 0); in
             let lhs = Var.create_ [%here] 1 in
             let o1 =
-              observe (bind (watch lhs) (fun i -> Var.set x (const i); return ()))
+              observe (bind (watch lhs) ~f:(fun i -> Var.set x (const i); return ()))
             in
             stabilize_ [%here];
             let o2 = observe (join (make_high (Var.watch x))) in
@@ -1137,7 +1137,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           let r = ref None in
           let lhs = Var.create_ [%here] 1; in
           let o1 =
-            observe (bind (watch lhs) (fun i -> r := Some (const i); return ()))
+            observe (bind (watch lhs) ~f:(fun i -> r := Some (const i); return ()))
           in
           stabilize_ [%here];
           let else_ = Option.value_exn !r in
@@ -1239,7 +1239,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           assert (value y = 13);
           assert (is_const f);
           let u = Var.create_ [%here] 1 in
-          let z = observe (bind (Var.watch u) (fun _ -> freeze (Var.watch x))) in
+          let z = observe (bind (Var.watch u) ~f:(fun _ -> freeze (Var.watch x))) in
           stabilize_ [%here];
           assert (value z = 13);
           Var.set u 2;
@@ -1357,7 +1357,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
         let%test_unit _ = (* a freeze that is invalidated before it is frozen. *)
           let r = ref None in
           let x = Var.create_ [%here] 13 in
-          let o = observe (bind (watch x) (fun i -> r := Some (const i); return ())) in
+          let o = observe (bind (watch x) ~f:(fun i -> r := Some (const i); return ())) in
           stabilize_ [%here];
           let f = freeze (Option.value_exn !r) ~when_:(fun _ -> false) in
           Var.set x 14;
@@ -1370,7 +1370,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           (* a freeze that is stabilized and invalidated before it is frozen. *)
           let r = ref None in
           let x = Var.create_ [%here] 13 in
-          let o = observe (bind (watch x) (fun i -> r := Some (const i); return ())) in
+          let o = observe (bind (watch x) ~f:(fun i -> r := Some (const i); return ())) in
           stabilize_ [%here];
           let f = freeze (Option.value_exn !r) ~when_:(fun _ -> false) in
           stabilize_ [%here];
@@ -2194,7 +2194,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
               let num_alarms = State.(timing_wheel_length t) in
               let x = Var.create_ [%here] 0 in
               let o =
-                observe (bind (Var.watch x) (fun i ->
+                observe (bind (Var.watch x) ~f:(fun i ->
                   if i >= 0
                   then create_time_based_incremental ()
                   else return ()))
@@ -2451,7 +2451,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
             let x = Var.create 0 in
             let r = ref None in
             let o1 =
-              observe (bind (watch x) (fun i -> let t = const i in r := Some t; t))
+              observe (bind (watch x) ~f:(fun i -> let t = const i in r := Some t; t))
             in
             stabilize_ [%here];
             let o2 = observe (Option.value_exn !r) in
@@ -2893,7 +2893,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           let v = Var.create_ [%here] 13 in
           let r = ref None in
           let o =
-            observe (bind (watch v) (fun i -> r := Some (const i); return ()))
+            observe (bind (watch v) ~f:(fun i -> r := Some (const i); return ()))
           in
           stabilize_ [%here];
           let i = Option.value_exn !r in
@@ -2911,7 +2911,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           let v = Var.create_ [%here] 13 in
           let r = ref None in
           let o1 =
-            observe (bind (watch v) (fun i -> r := Some (const i); return ()))
+            observe (bind (watch v) ~f:(fun i -> r := Some (const i); return ()))
           in
           stabilize_ [%here];
           let i = Option.value_exn !r in
@@ -2932,7 +2932,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           let w = Var.create_ [%here] 14 in
           let r = ref None in
           let o1 =
-            observe (bind (watch v) (fun _ ->
+            observe (bind (watch v) ~f:(fun _ ->
               r := Some (watch w >>| Fn.id);
               return ()))
           in
@@ -3160,7 +3160,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
             let r = ref None in
             let x = Var.create_ [%here] 13 in
             let o =
-              observe (bind (watch x) (fun i ->
+              observe (bind (watch x) ~f:(fun i ->
                 r := Some (within s ~f:(fun () -> const i));
                 return ()))
             in
@@ -3180,7 +3180,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
             let r = ref None in
             let x = Var.create_ [%here] 13 in
             let o1 =
-              observe (bind (watch x) (fun _i ->
+              observe (bind (watch x) ~f:(fun _i ->
                 r := Some (current ());
                 return ()))
             in
@@ -3211,7 +3211,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
         let%test_unit _ = (* nodes created when forcing are in the right scope *)
           let l = lazy_from_fun (fun () -> const 13) in
           let x = Var.create_ [%here] 13 in
-          let o = observe (bind (watch x) (fun _i -> force l)) in
+          let o = observe (bind (watch x) ~f:(fun _i -> force l)) in
           stabilize_ [%here];
           assert (value o = 13);
           Var.set x 14;
@@ -3233,13 +3233,13 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           let o =
             observe (
               (bind (bind (watch x)
-                       (fun i1 ->
+                       ~f:(fun i1 ->
                           let f i2 =
                             incr num_calls;
                             map (watch y) ~f:(fun i3 -> i1 + i2 + i3)
                           in
                           return (unstage (memoize_fun Int.hashable f))))
-                 (fun f -> bind (watch z) f)))
+                 ~f:(fun f -> bind (watch z) ~f)))
           in
           stabilize_ [%here];
           [%test_eq: int] (value o) 42;
@@ -3364,7 +3364,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
             let vb = Var.create 0 in
             let r = ref None in
             let o1 =
-              observe (bind (watch va) (fun a ->
+              observe (bind (watch va) ~f:(fun a ->
                 let t = map (watch vb) ~f:(fun b -> a + b) in
                 if a = 0 then r := Some t;
                 t))
@@ -3865,7 +3865,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
         let module I = Make () in
         let open I in
         let r = ref None in
-        let value_at = bind (const ()) (fun () -> Option.value_exn !r) in
+        let value_at = bind (const ()) ~f:(fun () -> Option.value_exn !r) in
         let s =
           ok_exn (snapshot value_at ~at:(Time.add (now ()) (sec 1.)) ~before:13)
         in
