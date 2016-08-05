@@ -1,0 +1,21 @@
+(rule
+  ((targets (incremental_debug.ml))
+   (deps (../src/incremental_lib.pack-order
+          (glob_files ../src/*.ml)
+          (glob_files ../src/*.mli)
+          ${ROOT}/lib/incremental_kernel/debug_lib/generate_debug_lib.sh
+          ))
+   (action "
+${ROOT}/lib/incremental_kernel/debug_lib/generate_debug_lib.sh \
+  incremental_lib \
+  incremental_debug \
+  sed -e s/Incremental_kernel/Incremental_kernel_debug/g")))
+
+(library
+ ((name incremental_debug)
+  (libraries
+   (core
+    incremental_lib
+    incremental_kernel_debug))
+  (inline_tests ((flags (-stop-on-error))))
+  (wrapped false)))
