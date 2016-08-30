@@ -11,7 +11,7 @@ build: [
 ]
 depends: [
   "ocamlbuild"         {build}
-  "oasis"              {build & >= "0.4"}
+  "oasis"              {build & >= "0.4" & < "0.4.7"}
   "ocamlfind"          {build & >= "1.3.2"}
   "bin_prot"
   "core"
