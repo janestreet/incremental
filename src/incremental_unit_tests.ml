@@ -3998,7 +3998,8 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
             let bind_lhs_change_should_invalidate_rhs = true
             let timing_wheel_config =
               Timing_wheel_ns.Config.create
-                ~alarm_precision:(Time_ns.Span.of_sec 0.01)
+                ~alarm_precision:(Time_ns.Span.of_sec 0.01
+                                  |> Timing_wheel_ns.Alarm_precision.of_span)
                 ~level_bits:(Timing_wheel_ns.Level_bits.create_exn
                                [ 11; 10; 10; 10; 10; 10 ])
                 ()
