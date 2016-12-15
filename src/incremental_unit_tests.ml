@@ -878,7 +878,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           let test = Var.create_ [%here] false in
           let o2 = observe (bind (make_high (watch test))
                               ~f:(fun test ->
-                                 if test then const 13 else else_))
+                                if test then const 13 else else_))
           in
           stabilize_ [%here];
           Var.set lhs 2; (* invalidates [else_]. *)
@@ -3234,11 +3234,11 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
             observe (
               (bind (bind (watch x)
                        ~f:(fun i1 ->
-                          let f i2 =
-                            incr num_calls;
-                            map (watch y) ~f:(fun i3 -> i1 + i2 + i3)
-                          in
-                          return (unstage (memoize_fun Int.hashable f))))
+                         let f i2 =
+                           incr num_calls;
+                           map (watch y) ~f:(fun i3 -> i1 + i2 + i3)
+                         in
+                         return (unstage (memoize_fun Int.hashable f))))
                  ~f:(fun f -> bind (watch z) ~f)))
           in
           stabilize_ [%here];
@@ -3397,22 +3397,22 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           (* This tests add_dependency/remove_dependency, invalidity (in particular a node
              becomes invalid before being replaced by a valid one). *)
           include Join(struct
-            let join : type a. a t t -> a t = fun t ->
-              let prev_rhs = ref None in
-              let join = E.Node.create (fun () ->
-                E.Dependency.value (Option.value_exn !prev_rhs))
-              in
-              let lhs_change = map t ~f:(fun rhs ->
-                let rhs_dep = E.Dependency.create rhs in
-                E.Node.add_dependency join rhs_dep;
-                Option.iter !prev_rhs ~f:(fun v ->
-                  E.Node.remove_dependency join v);
-                prev_rhs := Some rhs_dep)
-              in
-              E.Node.add_dependency join (E.Dependency.create lhs_change);
-              E.Node.watch join
-            ;;
-          end)
+              let join : type a. a t t -> a t = fun t ->
+                let prev_rhs = ref None in
+                let join = E.Node.create (fun () ->
+                  E.Dependency.value (Option.value_exn !prev_rhs))
+                in
+                let lhs_change = map t ~f:(fun rhs ->
+                  let rhs_dep = E.Dependency.create rhs in
+                  E.Node.add_dependency join rhs_dep;
+                  Option.iter !prev_rhs ~f:(fun v ->
+                    E.Node.remove_dependency join v);
+                  prev_rhs := Some rhs_dep)
+                in
+                E.Node.add_dependency join (E.Dependency.create lhs_change);
+                E.Node.watch join
+              ;;
+            end)
 
           let%test_unit _ = (* plugging an already invalid incremental node make
                                the expert node invalid *)
@@ -3442,9 +3442,9 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           (* This tests
              - whether we can actually write such a thing with the intf of incremental
              - add_dependency/remove_dependency with an actually variable set of
-               children, unlike join
+             children, unlike join
              - incremental doesn't needlessly schedule certain nodes, destroying the good
-               complexities we're trying to get.
+             complexities we're trying to get.
              - behavior when observability if turned off and on
           *)
           let map_filter_mapi : type k v1 v2.
@@ -3503,18 +3503,18 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
                           (f key (E.Node.watch node))
                           ~on_change:(fun opt ->
                             on_event (`On_change (key, opt));
-                             let old = Option.value_exn !acc in
-                             acc := Some (
-                               match opt with
-                               | None -> if Map.mem old key then Map.remove old key else old
-                               | Some v -> Map.add old ~key ~data:v))
+                            let old = Option.value_exn !acc in
+                            acc := Some (
+                              match opt with
+                              | None -> if Map.mem old key then Map.remove old key else old
+                              | Some v -> Map.add old ~key ~data:v))
                       in
                       E.Node.add_dependency result user_function_dep;
                       Map.add nodes ~key ~data:(node, user_function_dep))
-                in
-                prev_nodes := Some new_nodes;
-                prev_map := Some map;
-              ))
+              in
+              prev_nodes := Some new_nodes;
+              prev_map := Some map;
+            ))
             in
             E.Node.add_dependency result (E.Dependency.create (force lhs_change));
             E.Node.watch result
@@ -3531,7 +3531,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
                   | `Per_key of string
                   | `Right of string
                   | `Unequal of string ]
-                  [@@deriving compare, sexp_of]
+                [@@deriving compare, sexp_of]
               end)
             in
             let push, check = M.on_update_queue () in
@@ -3998,8 +3998,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
             let bind_lhs_change_should_invalidate_rhs = true
             let timing_wheel_config =
               Timing_wheel_ns.Config.create
-                ~alarm_precision:(Time_ns.Span.of_sec 0.01
-                                  |> Timing_wheel_ns.Alarm_precision.of_span)
+                ~alarm_precision:(Alarm_precision.(mul about_one_millisecond ~pow2:3))
                 ~level_bits:(Timing_wheel_ns.Level_bits.create_exn
                                [ 11; 10; 10; 10; 10; 10 ])
                 ()

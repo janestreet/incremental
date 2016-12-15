@@ -1,7 +1,3 @@
-_build/
-/setup.data
-/setup.log
-/*.exe
-/*.docdir
-/*.native
-/*.byte
+_build
+*.install
+

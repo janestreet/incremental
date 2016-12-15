@@ -6,28 +6,21 @@ bug-reports: "https://github.com/janestreet/incremental/issues"
 dev-repo: "https://github.com/janestreet/incremental.git"
 license: "Apache-2.0"
 build: [
-  ["./configure" "--prefix" prefix]
-  [make]
+  ["jbuilder" "build-package" "incremental" "-j" jobs]
 ]
 depends: [
-  "ocamlbuild"         {build}
-  "oasis"              {build & >= "0.4"}
-  "ocamlfind"          {build & >= "1.3.2"}
-  "bin_prot"
   "core"
-  "fieldslib"
   "incremental_kernel"
-  "js-build-tools"     {build}
-  "ppx_assert"
-  "ppx_bench"
+  "jbuilder"
   "ppx_driver"
-  "ppx_expect"
-  "ppx_hash"
-  "ppx_inline_test"
   "ppx_jane"
-  "sexplib"
-  "typerep"
-  "variantslib"
 ]
 available: [ ocaml-version >= "4.03.0" ]
-conflicts: [ "oasis" {= "0.4.7"} ]
+descr: "
+Library for incremental computations
+
+Part of Jane Street\226\128\153s Core library
+The Core suite of libraries is an industrial strength alternative to
+OCaml's standard library that was developed by Jane Street, the
+largest industrial user of OCaml.
+"

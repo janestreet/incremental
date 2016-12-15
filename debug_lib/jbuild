@@ -18,4 +18,4 @@ ${ROOT}/lib/incremental_kernel/debug_lib/generate_debug_lib.sh \
     incremental_lib
     incremental_kernel_debug))
   (inline_tests ((flags (-stop-on-error))))
-  (wrapped false)))
+))

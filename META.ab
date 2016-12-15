@@ -1,8 +1,0 @@
-version = "$(pkg_version)"
-description = "Library for incremental computations"
-requires = "bin_prot core fieldslib incremental_kernel ppx_assert.runtime-lib ppx_bench.runtime-lib ppx_expect.collector ppx_hash.runtime-lib ppx_inline_test.runtime-lib sexplib typerep variantslib"
-archive(byte  ) = "incremental_lib.cma"
-archive(native) = "incremental_lib.cmxa"
-plugin(byte  ) = "incremental_lib.cma"
-plugin(native) = "incremental_lib.cmxs"
-exists_if = "incremental_lib.cma"

@@ -3,5 +3,7 @@
   (public_name incremental)
   (libraries (incremental_kernel core))
   (inline_tests ((flags (-stop-on-error))))
-  (preprocess (((pps (JANE -check-doc-comments)) All)))
+  (preprocess (pps (ppx_jane -check-doc-comments)))
   ))
+
+(enforce_style ())
