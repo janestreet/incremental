@@ -2386,7 +2386,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
               let cpu_used () =
                 let module R = Unix.Resource_usage in
                 let { R. utime; stime; _ } = R.get `Self in
-                Time.Span.of_float (utime +. stime)
+                Time.Span.of_sec (utime +. stime)
               in
               let before = cpu_used () in
               (* Don't use [stabilize_], which runs the invariant, which is too slow
@@ -3325,7 +3325,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
               let cpu_used () =
                 let module R = Unix.Resource_usage in
                 let { R. utime; stime; _ } = R.get `Self in
-                Time.Span.of_float (utime +. stime)
+                Time.Span.of_sec (utime +. stime)
               in
               let before = cpu_used () in
               (* Don't use [stabilize_], which runs the invariant, which is too slow
