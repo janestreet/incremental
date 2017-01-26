@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 let () = Incremental_kernel.Import.sexp_of_time_ns := Time_ns.sexp_of_t
 let () = Incremental_kernel.Import.sexp_of_time_ns_span := Time_ns.Span.sexp_of_t

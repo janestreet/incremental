@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 module type S = sig
   include Incremental_kernel.Incremental_intf.S_abstract_times with module Time := Time

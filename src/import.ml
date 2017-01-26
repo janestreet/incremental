@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 include Int.Replace_polymorphic_compare
 
 let debug   = Incremental_kernel.Import.debug
