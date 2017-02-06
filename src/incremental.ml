@@ -1,7 +1,7 @@
 open Core
 
-let () = Incremental_kernel.Import.sexp_of_time_ns := Time_ns.sexp_of_t
-let () = Incremental_kernel.Import.sexp_of_time_ns_span := Time_ns.Span.sexp_of_t
+let () = Incremental_kernel.Private.Import.sexp_of_time_ns := Time_ns.sexp_of_t
+let () = Incremental_kernel.Private.Import.sexp_of_time_ns_span := Time_ns.Span.sexp_of_t
 
 module Extra_state = struct
   module Packed_weak_hashtbl = struct
@@ -29,7 +29,7 @@ module type Incremental_config = Config.Incremental_config
 
 module Make_with_config (C : Incremental_config) () = struct
 
-  include Incremental_kernel.Std.Incremental.Make_with_config (struct
+  include Incremental_kernel.Incremental.Make_with_config (struct
       let bind_lhs_change_should_invalidate_rhs = C.bind_lhs_change_should_invalidate_rhs
 
       (* Make sure [start] is rounded to the nearest microsecond.  Otherwise, if you
