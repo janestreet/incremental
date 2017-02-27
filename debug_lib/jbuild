@@ -19,3 +19,5 @@ ${ROOT}/lib/incremental_kernel/debug_lib/generate_debug_lib.sh \
     incremental_kernel_debug))
   (inline_tests ((flags (-stop-on-error))))
 ))
+
+(jbuild_version jane_street)
