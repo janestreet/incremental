@@ -1,6 +1,5 @@
 open Core
 open Import
-open Std
 
 let does_raise = Exn.does_raise
 
@@ -78,7 +77,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
         let dot_file = sprintf "/tmp/%s/z.dot.%d" (Unix.getlogin ()) !r in
         save_dot dot_file;
         let prog = "my-dot" in
-        Unix.waitpid_exn (Unix.fork_exec ~prog ~args:[ prog; dot_file ] ());
+        Unix.waitpid_exn (Unix.fork_exec ~prog ~argv:[ prog; dot_file ] ());
     ;;
 
     let _ = save_dot_
