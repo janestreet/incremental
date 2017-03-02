@@ -2,10 +2,8 @@
  ((name incremental_lib)
   (public_name incremental)
   (libraries (incremental_kernel core))
-  (inline_tests ((flags (-stop-on-error))))
   (preprocess (pps (ppx_jane -check-doc-comments)))
   ))
 
-(enforce_style ())
 
 (jbuild_version jane_street)
