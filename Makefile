@@ -1,9 +1,8 @@
 INSTALL_ARGS := $(if $(PREFIX),--prefix $(PREFIX),)
-NAME := incremental
 
 # Default rule
 default:
-	jbuilder build-package $(NAME)
+	jbuilder build @install
 
 install:
 	jbuilder install $(INSTALL_ARGS)
