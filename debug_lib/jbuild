@@ -5,11 +5,11 @@
           (glob_files ../src/*.mli)
           ${ROOT}/lib/incremental_kernel/debug_lib/generate_debug_lib.sh
           ))
-   (action "
+   (action (bash "
 ${ROOT}/lib/incremental_kernel/debug_lib/generate_debug_lib.sh \
   incremental_lib \
   incremental_debug \
-  sed -e s/Incremental_kernel/Incremental_kernel_debug/g")))
+  sed -e s/Incremental_kernel/Incremental_kernel_debug/g"))))
 
 (library
  ((name incremental_debug)
