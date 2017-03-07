@@ -20,4 +20,4 @@ ${ROOT}/lib/incremental_kernel/debug_lib/generate_debug_lib.sh \
   (preprocess (pps (ppx_jane ppx_driver.runner)))
 ))
 
-(jbuild_version jane_street)
+(jbuild_version 1)
