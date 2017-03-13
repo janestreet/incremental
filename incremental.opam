@@ -11,16 +11,16 @@ build: [
 depends: [
   "core"
   "incremental_kernel"
-  "jbuilder"                {build}
+  "jbuilder"                {build & >= "1.0+beta2"}
   "ppx_driver"
   "ppx_jane"
-  "ocaml-migrate-parsetree"
+  "ocaml-migrate-parsetree" {>= "0.4"}
 ]
 available: [ ocaml-version >= "4.03.0" ]
 descr: "
 Library for incremental computations
 
-Part of Jane Street\226\128\153s Core library
+Part of Jane Street's Core library
 The Core suite of libraries is an industrial strength alternative to
 OCaml's standard library that was developed by Jane Street, the
 largest industrial user of OCaml.
