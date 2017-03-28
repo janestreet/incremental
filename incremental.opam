@@ -3,7 +3,7 @@ maintainer: "opensource@janestreet.com"
 authors: ["Jane Street Group, LLC <opensource@janestreet.com>"]
 homepage: "https://github.com/janestreet/incremental"
 bug-reports: "https://github.com/janestreet/incremental/issues"
-dev-repo: "https://github.com/janestreet/incremental.git"
+dev-repo: "git+https://github.com/janestreet/incremental.git"
 license: "Apache-2.0"
 build: [
   ["jbuilder" "build" "--only-packages" "incremental" "--root" "." "-j" jobs "@install"]
