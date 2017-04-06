@@ -1566,6 +1566,191 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           check [%here] [ 17; 18 ]
         ;;
 
+        let reduce_balanced = reduce_balanced
+        let reduce_balanced_exn a ~f ~reduce =
+          Option.value_exn (reduce_balanced a ~f ~reduce)
+        ;;
+
+        let%test_unit _ = (* empty array *)
+          let f =
+            reduce_balanced [||]
+              ~f:(fun _ -> assert false)
+              ~reduce:(fun _ _ -> assert false)
+          in
+          assert (Option.is_none f)
+        ;;
+
+        let%test_unit _ = (* singular value *)
+          let f =
+            reduce_balanced_exn [| watch (Var.create_ [%here] 1) |]
+              ~f:Fn.id
+              ~reduce:(+)
+          in
+          let o = observe f in
+          stabilize_ [%here];
+          assert (value o = 1);
+        ;;
+
+        let%test_unit _ = (* non-commutative function test *)
+          let list = ["a"; "b"; "c" ; "d"; "e"; "f"; "g"] in
+          let list = List.map list ~f:(Var.create_ [%here]) in
+          let array = Array.of_list_map ~f:Var.watch list in
+          let reduce_calls = ref 0 in
+          let f = reduce_balanced_exn array ~f:Fn.id
+                    ~reduce:(fun x y -> incr reduce_calls; x ^ y)
+          in
+          let o = observe f in
+          stabilize_ [%here];
+          [%test_eq: string] (value o) "abcdefg";
+          [%test_eq: int] !reduce_calls 6;
+          Var.set (List.hd_exn list) "z";
+          stabilize_ [%here];
+          [%test_eq: string] (value o) "zbcdefg";
+          [%test_eq: int] !reduce_calls 9;
+        ;;
+
+        let%test_unit _ = (* observability changes *)
+          let observe_stabilize_disallow node =
+            let o = observe node in
+            stabilize_ [%here];
+            let v = value o in
+            disallow_future_use o;
+            v
+          in
+          let v = Var.create_ [%here] 0 in
+          let res = observe_stabilize_disallow (Var.watch v) in
+          assert (res = 0);
+          (* stabilize a reduce_balanced_exn node with already stabilized children *)
+          let f = reduce_balanced_exn [| watch v |] ~f:Fn.id ~reduce:(+) in
+          let res = observe_stabilize_disallow f in
+          assert (res = 0);
+          (* re-stabilize a reduce_balanced_exn with a stale cache of its stabilized
+             children. *)
+          Var.set v 1;
+          let res = observe_stabilize_disallow (Var.watch v) in
+          assert (res = 1);
+          let res = observe_stabilize_disallow f in
+          assert (res = 1);
+        ;;
+
+        let%test_unit _ = (* multiple occurences of a node in the fold. *)
+          let x = Var.create_ [%here] 1 in
+          let f = reduce_balanced_exn [| watch x; watch x |] ~f:Fn.id ~reduce:(+) in
+          let o = observe f in
+          let f2 =
+            reduce_balanced_exn [| watch x; watch x; watch x |] ~f:Fn.id ~reduce:(+)
+          in
+          let o2 = observe f2 in
+          stabilize_ [%here];
+          assert (value o = 2);
+          assert (value o2 = 3);
+          Var.set x 3;
+          stabilize_ [%here];
+          assert (value o = 6);
+          assert (value o2 = 9);
+          disallow_future_use o;
+          disallow_future_use o2;
+          stabilize_ [%here];
+          Var.set x 4;
+          stabilize_ [%here];
+          let o = observe f in
+          let o2 = observe f2 in
+          stabilize_ [%here];
+          assert (value o = 8);
+          assert (value o2 = 12)
+        ;;
+
+        let%test_unit _ = (* general creation and updating *)
+          let module Test_value = struct
+            type t =
+              { var     : int Var.t
+              ; update1 : int option
+              ; update2 : int option
+              ; update3 : int option
+              }
+            [@@deriving fields]
+
+            let gen =
+              let open Quickcheck.Generator.Let_syntax in
+              let update_gen =
+                let%bind weight =
+                  Float.gen_uniform_excl 0.0 3.0
+                in
+                Quickcheck.Generator.weighted_union
+                  [ (1.0,    Quickcheck.Generator.singleton None)
+                  ; (weight, Int.gen >>| Option.some)
+                  ]
+              in
+              let%map var = Int.gen >>| Var.create_ [%here]
+              and     update1 = update_gen
+              and     update2 = update_gen
+              and     update3 = update_gen
+              in
+              { var; update1; update2; update3 }
+          end in
+          Quickcheck.test
+            (let open Quickcheck.Generator.Let_syntax in
+             let%map test_value = List.gen' ~length:(`At_least 1) Test_value.gen in
+             test_value)
+            (* Trials limited because incremental tests can take time on the order of
+               milliseconds each, due to the invariant checking. *)
+            ~trials:100
+            ~f:(fun test_values ->
+              let array =
+                Array.of_list_map test_values ~f:(fun test_value -> watch test_value.var)
+              in
+              let len = Array.length array in
+              let reduce_count = ref 0 in
+              let fold_count = ref 0 in
+              let update_count = ref 0 in
+              let assert_expected_reductions_and_reset () =
+                if !update_count = 0
+                then begin
+                  assert (!fold_count   = 0);
+                  assert (!reduce_count = 0);
+                end else begin
+                  assert (!fold_count = len);
+                  assert (!reduce_count
+                          <= Int.min (len - 1) (Int.ceil_log2 len * !update_count));
+                end;
+                fold_count   := 0;
+                reduce_count := 0;
+                update_count := 0
+              in
+              let reduce_f =
+                reduce_balanced_exn array ~f:Fn.id
+                  ~reduce:(fun a b -> incr reduce_count; a * b)
+              in
+              let fold_f =
+                array_fold array ~init:1 ~f:(fun a b -> incr fold_count; a * b)
+              in
+              update_count := len;
+              let reduce_o = observe reduce_f in
+              let fold_o = observe fold_f in
+              stabilize_ [%here];
+              assert (value fold_o = value reduce_o);
+              assert_expected_reductions_and_reset ();
+              List.iter test_values ~f:(fun test_value ->
+                Option.iter test_value.update1 ~f:(fun a ->
+                  Var.set test_value.var a;
+                  incr update_count));
+              stabilize_ [%here];
+              assert (value fold_o = value reduce_o);
+              assert_expected_reductions_and_reset ();
+              List.iter test_values ~f:(fun test_value ->
+                let updated = ref false in
+                Option.iter test_value.update2 ~f:(fun a ->
+                  Var.set test_value.var a;
+                  updated := true);
+                Option.iter test_value.update3 ~f:(fun a ->
+                  Var.set test_value.var a;
+                  updated := true);
+                if !updated then incr update_count);
+              stabilize_ [%here];
+              assert (value fold_o = value reduce_o);
+              assert_expected_reductions_and_reset ())
+        ;;
+
         let unordered_array_fold = unordered_array_fold
 
         let%test_unit _ = (* empty array *)
