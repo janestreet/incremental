@@ -11,7 +11,7 @@ build: [
 depends: [
   "core"
   "incremental_kernel"
-  "jbuilder"                {build & >= "1.0+beta2"}
+  "jbuilder"                {build & >= "1.0+beta8"}
   "ppx_driver"
   "ppx_jane"
   "ocaml-migrate-parsetree" {>= "0.4"}
