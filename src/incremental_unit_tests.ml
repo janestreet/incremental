@@ -1689,8 +1689,10 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
               { var; update1; update2; update3 }
           end in
           Quickcheck.test
-            (let open Quickcheck.Generator.Let_syntax in
-             let%map test_value = List.gen' ~length:(`At_least 1) Test_value.gen in
+            (let open Quickcheck.Let_syntax in
+             let%map test_value =
+               List.gen_non_empty Test_value.gen
+             in
              test_value)
             (* Trials limited because incremental tests can take time on the order of
                milliseconds each, due to the invariant checking. *)

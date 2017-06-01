@@ -6,7 +6,7 @@ bug-reports: "https://github.com/janestreet/incremental/issues"
 dev-repo: "git+https://github.com/janestreet/incremental.git"
 license: "Apache-2.0"
 build: [
-  ["jbuilder" "build" "--only-packages" "incremental" "--root" "." "-j" jobs "@install"]
+  ["jbuilder" "build" "-p" name "-j" jobs]
 ]
 depends: [
   "core"
