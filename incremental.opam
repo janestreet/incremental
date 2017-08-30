@@ -11,9 +11,9 @@ build: [
 depends: [
   "core"
   "incremental_kernel"
-  "jbuilder"                {build & >= "1.0+beta8"}
   "ppx_driver"
   "ppx_jane"
+  "jbuilder"                {build & >= "1.0+beta12"}
   "ocaml-migrate-parsetree" {>= "0.4"}
 ]
 available: [ ocaml-version >= "4.04.1" ]
