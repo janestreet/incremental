@@ -3653,7 +3653,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
             in
             let rec lhs_change = lazy (map lhs ~f:(fun map ->
               on_event `Lhs_change;
-              let empty_map = Map.empty ~comparator:(Map.comparator map) in
+              let empty_map = Map.Using_comparator.empty ~comparator:(Map.comparator map) in
               if Option.is_none !acc then acc := Some empty_map;
               let symmetric_diff =
                 Map.symmetric_diff ~data_equal:phys_equal
@@ -3693,10 +3693,10 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
                             acc := Some (
                               match opt with
                               | None -> if Map.mem old key then Map.remove old key else old
-                              | Some v -> Map.add old ~key ~data:v))
+                              | Some v -> Map.set old ~key ~data:v))
                       in
                       E.Node.add_dependency result user_function_dep;
-                      Map.add nodes ~key ~data:(node, user_function_dep))
+                      Map.set nodes ~key ~data:(node, user_function_dep))
               in
               prev_nodes := Some new_nodes;
               prev_map := Some map;
@@ -3758,7 +3758,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
 
             let update f = Var.set var (f (Var.value var)) in
 
-            update (fun map -> Map.add map ~key:"b2" ~data:12);
+            update (fun map -> Map.set map ~key:"b2" ~data:12);
             stabilize_ [%here];
             assert_incremental_computation_is_correct o;
             check [ `Lhs_change
@@ -3768,7 +3768,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
                   ; `Main
                   ];
 
-            update (fun map -> Map.add map ~key:"b2" ~data:18);
+            update (fun map -> Map.set map ~key:"b2" ~data:18);
             stabilize_ [%here];
             assert_incremental_computation_is_correct o;
             check [ `Lhs_change
@@ -3778,7 +3778,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
                   ; `Main
                   ];
 
-            update (fun map -> Map.add map ~key:"b2" ~data:19);
+            update (fun map -> Map.set map ~key:"b2" ~data:19);
             stabilize_ [%here];
             assert_incremental_computation_is_correct o;
             check [ `Lhs_change
@@ -3788,7 +3788,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
                   ; `Main
                   ];
 
-            update (fun map -> Map.add map ~key:"b2" ~data:18);
+            update (fun map -> Map.set map ~key:"b2" ~data:18);
             stabilize_ [%here];
             assert_incremental_computation_is_correct o;
             check [ `Lhs_change
@@ -3823,7 +3823,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
                   ; `Main
                   ];
 
-            update (fun map -> Map.add (Map.remove (Map.remove map "b") "c") ~key:"a" ~data:2);
+            update (fun map -> Map.set (Map.remove (Map.remove map "b") "c") ~key:"a" ~data:2);
             stabilize_ [%here];
             assert_incremental_computation_is_correct o;
             check [ `Lhs_change
@@ -3838,7 +3838,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
             disallow_future_use o;
             stabilize_ [%here];
             check [];
-            update (fun map -> Map.add map ~key:"a" ~data:3);
+            update (fun map -> Map.set map ~key:"a" ~data:3);
             stabilize_ [%here];
             check [];
             let o = observe result in
@@ -3866,7 +3866,7 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
             -> (a -> bool t) Staged.t =
             fun ~on_event hashable incr ->
               let last = ref None in
-              let reverse_dependencies = Hashtbl.create ~hashable () in
+              let reverse_dependencies = Hashtbl.Using_hashable.create ~hashable () in
               let scheduling_node =
                 I.map incr ~f:(fun v ->
                   on_event `Scheduling;

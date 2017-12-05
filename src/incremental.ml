@@ -54,7 +54,7 @@ module Make_with_config (C : Incremental_config) () = struct
         ?(initial_size = default_hash_table_initial_size)
         hashable project_key f =
     let scope = Scope.current () in
-    let table = Weak_hashtbl.create ~size:initial_size hashable in
+    let table = Weak_hashtbl.Using_hashable.create ~size:initial_size hashable in
     let packed = Extra_state.Packed_weak_hashtbl.T table in
     Weak_hashtbl.set_run_when_unused_data table ~thread_safe_f:(fun () ->
       Thread_safe_queue.enqueue Extra_state.t packed);
