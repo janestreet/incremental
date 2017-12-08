@@ -1,4 +1,5 @@
 opam-version: "1.2"
+version: "v0.10.0"
 maintainer: "opensource@janestreet.com"
 authors: ["Jane Street Group, LLC <opensource@janestreet.com>"]
 homepage: "https://github.com/janestreet/incremental"
@@ -9,10 +10,10 @@ build: [
   ["jbuilder" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "core"
-  "incremental_kernel"
-  "ppx_driver"
-  "ppx_jane"
+  "core"                    {>= "v0.10" & < "v0.11"}
+  "incremental_kernel"      {>= "v0.10" & < "v0.11"}
+  "ppx_driver"              {>= "v0.10" & < "v0.11"}
+  "ppx_jane"                {>= "v0.10" & < "v0.11"}
   "jbuilder"                {build & >= "1.0+beta12"}
   "ocaml-migrate-parsetree" {>= "0.4"}
 ]
