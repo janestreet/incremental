@@ -1,4 +1,4 @@
-A library for building self-adusting computations, following the work
+A library for building self-adjusting computations, following the work
 of [[http://www.umut-acar.org/self-adjusting-computation][Umut Acar et. al.]]. Incremental gives you a way of building complex
 computations that can update efficiently in response to their inputs.
 Incremental can be useful in a number of applications, including:
