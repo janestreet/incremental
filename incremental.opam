@@ -14,7 +14,7 @@ depends: [
   "ppx_driver"
   "ppx_jane"
   "jbuilder"                {build & >= "1.0+beta12"}
-  "ocaml-migrate-parsetree" {>= "0.4"}
+  "ocaml-migrate-parsetree" {>= "1.0"}
 ]
 available: [ ocaml-version >= "4.04.1" ]
 descr: "
