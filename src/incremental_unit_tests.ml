@@ -3628,9 +3628,9 @@ module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = str
           (* This tests
              - whether we can actually write such a thing with the intf of incremental
              - add_dependency/remove_dependency with an actually variable set of
-             children, unlike join
+               children, unlike join
              - incremental doesn't needlessly schedule certain nodes, destroying the good
-             complexities we're trying to get.
+               complexities we're trying to get.
              - behavior when observability if turned off and on
           *)
           let map_filter_mapi : type k v1 v2.
