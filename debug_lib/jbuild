@@ -18,7 +18,7 @@ ${ROOT}/lib/incremental_kernel/debug_lib/generate_debug_lib.sh \
    (core
     incremental_lib
     incremental_kernel_debug))
-  (preprocess (pps (ppx_jane ppx_driver.runner)))
+  (preprocess (pps (ppx_jane ppxlib.runner)))
   ))
 
 
