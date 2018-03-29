@@ -13,7 +13,6 @@ ${ROOT}/lib/incremental_kernel/debug_lib/generate_debug_lib.sh \
 
 (library
  ((name incremental_debug)
-  (flags (:standard -safe-string))
   (libraries
    (core
     incremental_lib
