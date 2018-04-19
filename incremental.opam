@@ -16,7 +16,7 @@ depends: [
   "ocaml-migrate-parsetree" {>= "1.0"}
   "ppxlib"                  {>= "0.1.0"}
 ]
-available: [ ocaml-version >= "4.04.1" ]
+available: [ ocaml-version >= "4.06.1" ]
 descr: "
 Library for incremental computations
 
