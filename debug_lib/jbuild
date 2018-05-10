@@ -16,7 +16,8 @@ ${ROOT}/lib/incremental_kernel/debug_lib/generate_debug_lib.sh \
   (libraries
    (core
     incremental_lib
-    incremental_kernel_debug))
+    incremental_kernel_debug
+    core.weak_hashtbl))
   (preprocess (pps (ppx_jane ppxlib.runner)))
   ))
 
