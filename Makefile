@@ -10,7 +10,7 @@ install:
 uninstall:
 	jbuilder uninstall $(INSTALL_ARGS)
 
-reinstall: uninstall reinstall
+reinstall: uninstall install
 
 clean:
 	rm -rf _build
