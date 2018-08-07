@@ -1,7 +1,8 @@
-open Core
+open! Core_kernel
+open! Import
 
 module type S = sig
-  include Incremental_kernel.Incremental_intf.S_abstract_times with module Time := Time
+  include Incremental_kernel.S_abstract_times with module Time := Time_ns
 
   (** The weak versions of the memoization functions use a {!Weak_hashtbl} for the memo
       table.  This keeps a weak pointer to each result, and so the garbage collector
@@ -29,4 +30,9 @@ module type Incremental = sig
   module type S = S
   module Make                                      () : S
   module Make_with_config (C : Incremental_config) () : S
+
+  module Private : sig
+    val debug : bool
+    val verbose : bool
+  end
 end

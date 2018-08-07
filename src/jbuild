@@ -1,9 +1,9 @@
 (library
- ((name incremental_lib)
+ ((name incremental)
   (public_name incremental)
-  (libraries (core
+  (libraries (core_kernel
               incremental_kernel
-              core.weak_hashtbl))
+              core_kernel.weak_hashtbl))
   (preprocess (pps (ppx_jane -check-doc-comments ppxlib.runner)))
   ))
 

@@ -1,7 +1,8 @@
-open Core
+open! Core_kernel
+open! Import
 
-let () = Incremental_kernel.Private.Import.sexp_of_time_ns := Time_ns.sexp_of_t
-let () = Incremental_kernel.Private.Import.sexp_of_time_ns_span := Time_ns.Span.sexp_of_t
+let () = Incremental_kernel.Private.sexp_of_time_ns := Time_ns.Alternate_sexp.sexp_of_t
+let () = Incremental_kernel.Private.sexp_of_time_ns_span := Time_ns.Span.sexp_of_t
 
 module Extra_state = struct
   module Packed_weak_hashtbl = struct
@@ -29,7 +30,7 @@ module type Incremental_config = Config.Incremental_config
 
 module Make_with_config (C : Incremental_config) () = struct
 
-  include Incremental_kernel.Incremental.Make_with_config (struct
+  include Incremental_kernel.Make_with_config (struct
       let bind_lhs_change_should_invalidate_rhs = C.bind_lhs_change_should_invalidate_rhs
 
       (* Make sure [start] is rounded to the nearest microsecond.  Otherwise, if you
@@ -71,27 +72,10 @@ module Make_with_config (C : Incremental_config) () = struct
   let weak_memoize_fun ?initial_size hashable f =
     weak_memoize_fun_by_key ?initial_size hashable Fn.id f
   ;;
-
-  let now () = Time_ns.to_time (now ())
-
-  let watch_now =
-    let shared = map (watch_now ()) ~f:Time_ns.to_time in
-    fun () -> shared
-  ;;
-
-  let advance_clock ~to_ = advance_clock ~to_:(Time_ns.of_time to_)
-
-  let at time = at (Time_ns.of_time time)
-
-  let after span = after (Time_ns.Span.of_span span)
-
-  let at_intervals span = at_intervals (Time_ns.Span.of_span span)
-
-  let step_function ~init alist =
-    step_function ~init (List.map alist ~f:(fun (time, a) -> (Time_ns.of_time time, a)))
-  ;;
-
-  let snapshot t ~at ~before = snapshot t ~at:(Time_ns.of_time at) ~before
 end
 
 module Make () = Make_with_config (Incremental_kernel.Config.Default ()) ()
+
+module Private = struct
+  include Import
+end

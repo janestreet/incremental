@@ -1,0 +1,9 @@
+(library
+ ((name incremental_test)
+  (libraries (core
+              incremental
+              incremental_debug))
+  (preprocess (pps (ppx_jane ppxlib.runner)))
+))
+
+(jbuild_version 1)

@@ -1,25 +1,25 @@
-(rule
-  ((targets (incremental_debug.ml))
-   (deps (../src/incremental_lib.pack-order
-          (glob_files ../src/*.ml)
-          (glob_files ../src/*.mli)
-          ${ROOT}/lib/incremental_kernel/debug_lib/generate_debug_lib.sh
-          ))
-   (action (bash "
-${ROOT}/lib/incremental_kernel/debug_lib/generate_debug_lib.sh \
-  incremental_lib \
-  incremental_debug \
-  sed -e s/Incremental_kernel/Incremental_kernel_debug/g"))))
-
 (library
  ((name incremental_debug)
   (libraries
-   (core
-    incremental_lib
+   (core_kernel
     incremental_kernel_debug
-    core.weak_hashtbl))
-  (preprocess (pps (ppx_jane ppxlib.runner)))
-  ))
+    core_kernel.weak_hashtbl))
+  (preprocess (pps (ppx_jane ppxlib.runner)))))
+
+(rule
+ ((targets (
+   ;; This is a list of all OCaml files from [../src], with [incremental*] replaced
+   ;; by [incremental_debug*].
+   import.ml
+   incremental_debug_intf.ml
+   incremental_debug.ml
+   incremental_debug.mli
+   ))
+  (deps (
+    (glob_files ../src/*.ml)
+    (glob_files ../src/*.mli)
+    ./generate_debug_lib.sh))
+  (action (bash "./generate_debug_lib.sh"))))
 
 
 (jbuild_version 1)

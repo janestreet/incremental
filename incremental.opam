@@ -9,7 +9,7 @@ build: [
   ["jbuilder" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "core"
+  "core_kernel"
   "incremental_kernel"
   "ppx_jane"
   "jbuilder"                {build & >= "1.0+beta18.1"}
