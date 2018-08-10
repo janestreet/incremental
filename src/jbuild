@@ -2,10 +2,10 @@
  ((name incremental)
   (public_name incremental)
   (libraries (core_kernel
-              incremental_kernel
+              core_kernel.uopt
               core_kernel.weak_hashtbl))
   (preprocess (pps (ppx_jane -check-doc-comments ppxlib.runner)))
+  (preprocessor_deps (debug.mlh))
   ))
-
 
 (jbuild_version 1)

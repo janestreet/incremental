@@ -1,0 +1,7 @@
+(library
+ ((name incremental_kernel)
+  (libraries (incremental))
+  (preprocess (pps (ppx_jane ppxlib.runner)))))
+
+
+(jbuild_version 1)

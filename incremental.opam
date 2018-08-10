@@ -10,13 +10,12 @@ build: [
 ]
 depends: [
   "core_kernel"
-  "incremental_kernel"
   "ppx_jane"
   "jbuilder"                {build & >= "1.0+beta18.1"}
   "ocaml-migrate-parsetree" {>= "1.0"}
   "ppxlib"                  {>= "0.1.0"}
 ]
-available: [ ocaml-version >= "4.06.1" ]
+available: [ ocaml-version >= "4.07.0" ]
 descr: "
 Library for incremental computations
 

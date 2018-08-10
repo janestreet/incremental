@@ -1,8 +1,9 @@
-open Core
+open! Core
+open! Import
 
 let sec = Time_ns.Span.of_sec
 
-module Test (Incremental : module type of Incremental) : sig end = struct
+module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
 
   open Incremental.Private
 

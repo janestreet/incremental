@@ -6,18 +6,14 @@ for f in ../src/*.ml{,i}; do
     b=$(basename $f)
     cat $f >$b.tmp
     case $b in
-        incremental*)
+        incremental.*|incremental_intf*)
             target=$(echo $b | sed -r 's/incremental/incremental_debug/')
             rm -f $target
-            sed <$b.tmp >$target -r \
-                -e 's/Incremental_intf/Incremental_debug_intf/g' \
-                -e 's/Incremental_kernel/Incremental_kernel_debug/g'
+            sed <$b.tmp >$target -r 's/Incremental_intf/Incremental_debug_intf/g'
             ;;
         *)
             target=$b
-            rm -f $target
-            sed <$b.tmp >$target -r \
-                -e 's/Incremental_kernel/Incremental_kernel_debug/'
+            mv $b.tmp $target
             ;;
     esac        
     chmod -w $target
