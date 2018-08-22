@@ -1595,11 +1595,11 @@ let advance_clock t ~to_ =
           add_alarm t ~at:(next_interval_alarm t ~base ~interval) alarm_value;
         change_leaf t main;
       end;
-    | Snapshot { main; value_at; _ } ->
+    | Types.Alarm_value.Action.Snapshot { main; value_at; _ } ->
       if debug then assert (Node.is_valid main);
       set_freeze t main ~child:value_at ~only_freeze_when:(fun _ -> true);
       change_leaf t main;
-    | Step_function ({ main; _ } as step_function) ->
+    | Types.Alarm_value.Action.Step_function ({ main; _ } as step_function) ->
       if Node.is_valid main then begin
         advance_step_function t main step_function alarm_value;
         change_leaf t main;
