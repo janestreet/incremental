@@ -1,7 +1,8 @@
 (library
  ((name incremental_debug)
   (libraries
-   (core_kernel
+   (core_kernel.balanced_reducer
+    core_kernel
     core_kernel.uopt
     core_kernel.weak_hashtbl))
   (preprocessor_deps (debug.mlh))
@@ -24,8 +25,6 @@
    at_intervals.mli
    at.ml
    at.mli
-   balanced_reducer.ml
-   balanced_reducer.mli
    before_or_after.ml
    before_or_after.mli
    bind.ml

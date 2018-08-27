@@ -259,7 +259,6 @@ end
 module Make () = Make_with_config (Config.Default ()) ()
 
 module Private = struct
-  module Balanced_reducer = Balanced_reducer
   let debug = debug
   let verbose = verbose
 end

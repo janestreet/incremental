@@ -1277,7 +1277,6 @@ module type Incremental = sig
 
     https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
-    module Balanced_reducer = Balanced_reducer
     val debug : bool
     val verbose : bool
   end
