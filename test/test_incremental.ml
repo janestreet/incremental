@@ -4,44 +4,47 @@ open! Import
 let sec = Time_ns.Span.of_sec
 
 module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
-
   open Incremental.Private
-
   module Alarm_precision = Timing_wheel_ns.Alarm_precision
 
   let does_raise = Exn.does_raise
-
   let verbose = verbose
 
-  module Test (M : sig val bind_lhs_change_should_invalidate_rhs : bool end) = struct
-
+  module Test (M : sig
+      val bind_lhs_change_should_invalidate_rhs : bool
+    end) =
+  struct
     let check_invalidity = M.bind_lhs_change_should_invalidate_rhs
     let skip_invalidity_check = not check_invalidity
 
     module Incremental_Make () =
       Incremental.Make_with_config (struct
         include Incremental.Config.Default ()
+
         let bind_lhs_change_should_invalidate_rhs =
           M.bind_lhs_change_should_invalidate_rhs
-      end) ()
+        ;;
+      end)
+        ()
 
     (* A little wrapper around [Incremental_Make] to add some utilities for testing. *)
     module Make () = struct
-
       include Incremental_Make ()
 
       let value = Observer.value_exn
-
       let watch = Var.watch
-
       let disallow_future_use = Observer.disallow_future_use
-
-      let advance_clock_by span = advance_clock ~to_:(Time_ns.add (now ()) span )
+      let advance_clock_by span = advance_clock ~to_:(Time_ns.add (now ()) span)
 
       let invalid =
         let r = ref None in
         let x = Var.create 13 in
-        let o = observe (bind (watch x) ~f:(fun i -> r := Some (const i); return ())) in
+        let o =
+          observe
+            (bind (watch x) ~f:(fun i ->
+               r := Some (const i);
+               return ()))
+        in
         stabilize ();
         let t = Option.value_exn !r in
         Var.set x 14;
@@ -55,17 +58,20 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
         State.invariant State.t;
         stabilize ();
         State.invariant State.t;
-        invariant ignore invalid;
+        invariant ignore invalid
       ;;
 
-      module On_update_queue
-          (Update : sig type 'a t [@@deriving compare, sexp_of] end) = struct
+      module On_update_queue (Update : sig
+          type 'a t [@@deriving compare, sexp_of]
+        end) =
+      struct
         let on_update_queue () =
           let r = ref [] in
-          (fun e -> r := e :: !r),
-          (fun expect ->
-             [%test_result: int Update.t list] (List.rev !r) ~expect;
-             r := [])
+          ( (fun e -> r := e :: !r)
+          , fun expect ->
+            [%test_result: int Update.t list] (List.rev !r) ~expect;
+            r := [] )
+        ;;
       end
 
       let on_observer_update_queue =
@@ -85,46 +91,38 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let dot_file = sprintf "/tmp/%s/z.dot.%d" (Unix.getlogin ()) !r in
           save_dot dot_file;
           let prog = "my-dot" in
-          Unix.waitpid_exn (Unix.fork_exec ~prog ~argv:[ prog; dot_file ] ());
+          Unix.waitpid_exn (Unix.fork_exec ~prog ~argv:[ prog; dot_file ] ())
       ;;
 
       let _ = save_dot_
-
-
     end
 
     let%test_module _ =
       (module struct
-
         module I = Make ()
-
         open I
 
-        include (struct
-
+        include (
+        struct
           type nonrec 'a t = 'a t
           type 'a incremental = 'a t
 
           module Infix = Infix
-
           module Before_or_after = Before_or_after
 
           let invariant = invariant
-
           let stabilize = stabilize
-
           let keep_node_creation_backtrace = keep_node_creation_backtrace
 
-          let observe = observe  (* used in lots of tests *)
+          (* used in lots of tests *)
+          let observe = observe
 
+          (* *)
           let user_info = user_info
-
           let set_user_info = set_user_info
-
           let save_dot = save_dot
 
           module Update = Update
-
           module Packed = Packed
 
           let pack = pack
@@ -132,7 +130,6 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           module Let_syntax = Let_syntax
 
           module State = struct
-
             open State
 
             type nonrec t = t [@@deriving sexp_of]
@@ -143,14 +140,15 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let%test_unit _ = invariant t
 
             let timing_wheel_length = timing_wheel_length
-
             let max_height_allowed = max_height_allowed
 
-            let%test _ = max_height_allowed t = 128  (* the default *)
+            (* the default *)
+            let%test _ = max_height_allowed t = 128
 
             let max_height_seen = max_height_seen
 
-            let%test _ = max_height_seen t = 3 (* because of [let invalid] above *)
+            (* because of [let invalid] above *)
+            let%test _ = max_height_seen t = 3
 
             let set_max_height_allowed = set_max_height_allowed
 
@@ -160,17 +158,13 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             ;;
 
             let%test_unit _ = set_max_height_allowed t 10
-
             let%test _ = max_height_allowed t = 10
-
             let%test_unit _ = set_max_height_allowed t 128
 
             let%test_unit _ =
               set_max_height_allowed t 256;
               let rec loop n =
-                if n = 0
-                then return 0
-                else loop (n - 1) >>| fun i -> i + 1
+                if n = 0 then return 0 else loop (n - 1) >>| fun i -> i + 1
               in
               let o = observe (loop (max_height_allowed t)) in
               stabilize_ [%here];
@@ -178,7 +172,6 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             ;;
 
             let%test _ = max_height_allowed t = max_height_seen t
-
             let%test_unit _ = invariant t
 
             let num_active_observers = num_active_observers
@@ -205,7 +198,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               [%test_result: int] (num_active_observers t) ~expect:n
             ;;
 
-            let%test_unit _ = (* [observe ~should_finalize:true] *)
+            let%test_unit _ =
+              (* [observe ~should_finalize:true] *)
               Gc.full_major ();
               stabilize_ [%here];
               let _o = observe (const 13) ~should_finalize:true in
@@ -216,7 +210,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               [%test_result: int] (num_active_observers t) ~expect:(n - 1)
             ;;
 
-            let%test_unit _ = (* [observe ~should_finalize:false] *)
+            let%test_unit _ =
+              (* [observe ~should_finalize:false] *)
               Gc.full_major ();
               stabilize_ [%here];
               let _o = observe (const 13) ~should_finalize:false in
@@ -227,14 +222,14 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               [%test_result: int] (num_active_observers t) ~expect:n
             ;;
 
-            let num_nodes_became_necessary   = num_nodes_became_necessary
+            let num_nodes_became_necessary = num_nodes_became_necessary
             let num_nodes_became_unnecessary = num_nodes_became_unnecessary
-            let num_nodes_changed            = num_nodes_changed
-            let num_nodes_created            = num_nodes_created
-            let num_nodes_invalidated        = num_nodes_invalidated
-            let num_nodes_recomputed         = num_nodes_recomputed
-            let num_stabilizes               = num_stabilizes
-            let num_var_sets                 = num_var_sets
+            let num_nodes_changed = num_nodes_changed
+            let num_nodes_created = num_nodes_created
+            let num_nodes_invalidated = num_nodes_invalidated
+            let num_nodes_recomputed = num_nodes_recomputed
+            let num_stabilizes = num_stabilizes
+            let num_var_sets = num_var_sets
 
             let num_nodes_recomputed_directly_because_min_height =
               num_nodes_recomputed_directly_because_min_height
@@ -245,9 +240,9 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               let o =
                 observe
                   (map2
-                     (map2 (Var.watch var) (const 1) ~f:(+))
-                     (map2 (const 2) (const 3) ~f:(+))
-                     ~f:(+))
+                     (map2 (Var.watch var) (const 1) ~f:( + ))
+                     (map2 (const 2) (const 3) ~f:( + ))
+                     ~f:( + ))
               in
               stabilize_ [%here];
               let stat1 = num_nodes_recomputed_directly_because_min_height t in
@@ -282,20 +277,19 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             ;;
 
             module Stats = Stats
+
             let stats = stats
           end
 
           let sexp_of_t = sexp_of_t
 
           let%test_unit _ =
-            State.( invariant t );
+            State.(invariant t);
             let i = 13 in
             let t = const i in
             let o = observe t in
             stabilize_ [%here];
-            [%test_eq: Sexp.t]
-              (t |> [%sexp_of: int t])
-              (i |> [%sexp_of: int]);
+            [%test_eq: Sexp.t] (t |> [%sexp_of: int t]) (i |> [%sexp_of: int]);
             disallow_future_use o
           ;;
 
@@ -310,7 +304,13 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let is_invalidated_on_bind_rhs (f : int -> _ t) =
             let x = Var.create 13 in
             let r = ref None in
-            let o1 = observe (Var.watch x >>= fun i -> r := Some (f i); return ()) in
+            let o1 =
+              observe
+                (Var.watch x
+                 >>= fun i ->
+                 r := Some (f i);
+                 return ())
+            in
             stabilize_ [%here];
             let t = Option.value_exn !r in
             let o2 = observe t in
@@ -329,9 +329,9 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let%test _ = is_valid (const 3)
           let%test _ = skip_invalidity_check || not (is_valid invalid)
 
-          let const        = const
-          let return       = return
-          let is_const     = is_const
+          let const = const
+          let return = return
+          let is_const = is_const
           let is_necessary = is_necessary
 
           let%test_unit _ =
@@ -350,7 +350,6 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let%test _ = is_invalidated_on_bind_rhs (fun _ -> const 13)
 
           module Var = struct
-
             open Var
 
             type nonrec 'a t = 'a t [@@deriving sexp_of]
@@ -360,13 +359,14 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               create ?use_current_scope value
             ;;
 
-            let create       = create
+            let create = create
             let latest_value = latest_value
-            let set          = set
-            let value        = value
-            let watch        = watch
+            let set = set
+            let value = value
+            let watch = watch
 
-            let%test_unit _ = (* observing a var after stabilization *)
+            let%test_unit _ =
+              (* observing a var after stabilization *)
               let x = create_ [%here] 0 in
               stabilize_ [%here];
               let o = observe (watch x) in
@@ -374,7 +374,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               assert (Observer.value_exn o = 0)
             ;;
 
-            let%test_unit _ = (* observing a set var after stabilization *)
+            let%test_unit _ =
+              (* observing a set var after stabilization *)
               let x = create_ [%here] 0 in
               set x 1;
               stabilize_ [%here];
@@ -383,7 +384,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               assert (Observer.value_exn o = 1)
             ;;
 
-            let%test_unit _ = (* observing and setting var after stabilization *)
+            let%test_unit _ =
+              (* observing and setting var after stabilization *)
               let x = create_ [%here] 0 in
               stabilize_ [%here];
               let o = observe (watch x) in
@@ -392,7 +394,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               assert (Observer.value_exn o = 1)
             ;;
 
-            let%test_unit _ = (* [set] without stabilizing *)
+            let%test_unit _ =
+              (* [set] without stabilizing *)
               let x = create_ [%here] 13 in
               assert (value x = 13);
               assert (latest_value x = 13);
@@ -405,28 +408,29 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               assert (Observer.value_exn o = 13)
             ;;
 
-            let%test_unit _ = (* [set] during stabilization *)
+            let%test_unit _ =
+              (* [set] during stabilization *)
               let v0 = create_ [%here] 0 in
               let v1 = create_ [%here] 1 in
               let v2 = create_ [%here] 2 in
               let o0 = observe (watch v0) in
               let o1 =
-                observe (watch v1 >>| fun i ->
-                         let i0 = value v0 in
-                         set v0 i;
-                         assert (value v0 = i0);
-                         assert (latest_value v0 = i);
-                         let i2 = value v2 in
-                         set v2 i;
-                         assert (value v2 = i2);
-                         assert (latest_value v2 = i);
-                         i)
+                observe
+                  (watch v1
+                   >>| fun i ->
+                   let i0 = value v0 in
+                   set v0 i;
+                   assert (value v0 = i0);
+                   assert (latest_value v0 = i);
+                   let i2 = value v2 in
+                   set v2 i;
+                   assert (value v2 = i2);
+                   assert (latest_value v2 = i);
+                   i)
               in
               let o2 = observe (watch v2) in
               let var_values_are i0 i1 i2 =
-                value v0 = i0
-                && value v1 = i1
-                && value v2 = i2
+                value v0 = i0 && value v1 = i1 && value v2 = i2
               in
               let observer_values_are i0 i1 i2 =
                 Observer.value_exn o0 = i0
@@ -455,11 +459,12 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               (* [set] during stabilization gets the last value that was set *)
               let x = create_ [%here] 0 in
               let o =
-                observe (map (watch x) ~f:(fun v ->
-                  set x 1;
-                  set x 2;
-                  assert (latest_value x = 2);
-                  v))
+                observe
+                  (map (watch x) ~f:(fun v ->
+                     set x 1;
+                     set x 2;
+                     assert (latest_value x = 2);
+                     v))
               in
               stabilize_ [%here];
               assert (value x = 2);
@@ -468,46 +473,54 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               disallow_future_use o
             ;;
 
-            let%test_unit _ = (* [create] during stabilization *)
+            let%test_unit _ =
+              (* [create] during stabilization *)
               let o =
-                observe (bind (const 13) ~f:(fun i ->
-                  let v = create_ [%here] i in
-                  watch v))
+                observe
+                  (bind (const 13) ~f:(fun i ->
+                     let v = create_ [%here] i in
+                     watch v))
               in
               stabilize_ [%here];
               assert (Observer.value_exn o = 13)
             ;;
 
-            let%test_unit _ = (* [create] and [set] during stabilization *)
+            let%test_unit _ =
+              (* [create] and [set] during stabilization *)
               let o =
-                observe (bind (const 13) ~f:(fun i ->
-                  let v = create_ [%here] i in
-                  let t = watch v in
-                  set v 15;
-                  t))
+                observe
+                  (bind (const 13) ~f:(fun i ->
+                     let v = create_ [%here] i in
+                     let t = watch v in
+                     set v 15;
+                     t))
               in
               stabilize_ [%here];
               assert (Observer.value_exn o = 13)
             ;;
 
-            let%test_unit _ = (* maybe invalidating a variable *)
+            let%test_unit _ =
+              (* maybe invalidating a variable *)
               List.iter [ false; true ] ~f:(fun use_current_scope ->
                 let lhs = Var.create 0 in
                 let rhs = ref (const 0) in
-                let o = observe (
-                  bind (watch lhs) ~f:(fun i ->
-                    rhs := Var.watch (create_ [%here] ~use_current_scope i);
-                    !rhs)) in
+                let o =
+                  observe
+                    (bind (watch lhs) ~f:(fun i ->
+                       rhs := Var.watch (create_ [%here] ~use_current_scope i);
+                       !rhs))
+                in
                 stabilize_ [%here];
                 let rhs = !rhs in
                 assert (is_valid rhs);
                 set lhs 1;
                 stabilize_ [%here];
                 if check_invalidity
-                then [%test_result: bool] (not (is_valid rhs))
-                       ~expect:use_current_scope;
-                assert (Observer.value_exn o = 1);
-              )
+                then
+                  [%test_result: bool]
+                    (not (is_valid rhs))
+                    ~expect:use_current_scope;
+                assert (Observer.value_exn o = 1))
             ;;
           end
 
@@ -517,7 +530,9 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
 
           let%test_unit _ =
             let x = Var.create_ [%here] 13 in
-            let o = observe (map (watch x) ~f:(fun _ -> assert (am_stabilizing ()))) in
+            let o =
+              observe (map (watch x) ~f:(fun _ -> assert (am_stabilizing ())))
+            in
             stabilize_ [%here];
             disallow_future_use o
           ;;
@@ -531,7 +546,6 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let map7 = map7
           let map8 = map8
           let map9 = map9
-
           let ( >>| ) = ( >>| )
 
           let test_map n (mapN : int t -> int t) =
@@ -549,52 +563,45 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             stabilize_ [%here];
             assert (value o = 2 * n);
             assert (is_invalid (mapN invalid));
-            assert (is_invalidated_on_bind_rhs (fun i -> mapN (const i)));
+            assert (is_invalidated_on_bind_rhs (fun i -> mapN (const i)))
           ;;
 
           let%test_unit _ = test_map 1 (fun i -> i >>| fun a1 -> a1)
+          let%test_unit _ = test_map 1 (fun i -> map i ~f:(fun a1 -> a1))
+          let%test_unit _ = test_map 2 (fun i -> map2 i i ~f:(fun a1 a2 -> a1 + a2))
 
           let%test_unit _ =
-            test_map 1 (fun i ->
-              map i ~f:(fun a1 ->
-                a1))
+            test_map 3 (fun i -> map3 i i i ~f:(fun a1 a2 a3 -> a1 + a2 + a3))
           ;;
 
-          let%test_unit _ =
-            test_map 2 (fun i ->
-              map2 i i ~f:(fun a1 a2 ->
-                a1 + a2))
-          ;;
-          let%test_unit _ =
-            test_map 3 (fun i ->
-              map3 i i i ~f:(fun a1 a2 a3 ->
-                a1 + a2 + a3))
-          ;;
           let%test_unit _ =
             test_map 4 (fun i ->
-              map4 i i i i ~f:(fun a1 a2 a3 a4 ->
-                a1 + a2 + a3 + a4))
+              map4 i i i i ~f:(fun a1 a2 a3 a4 -> a1 + a2 + a3 + a4))
           ;;
+
           let%test_unit _ =
             test_map 5 (fun i ->
-              map5 i i i i i ~f:(fun a1 a2 a3 a4 a5 ->
-                a1 + a2 + a3 + a4 + a5))
+              map5 i i i i i ~f:(fun a1 a2 a3 a4 a5 -> a1 + a2 + a3 + a4 + a5))
           ;;
+
           let%test_unit _ =
             test_map 6 (fun i ->
               map6 i i i i i i ~f:(fun a1 a2 a3 a4 a5 a6 ->
                 a1 + a2 + a3 + a4 + a5 + a6))
           ;;
+
           let%test_unit _ =
             test_map 7 (fun i ->
               map7 i i i i i i i ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
                 a1 + a2 + a3 + a4 + a5 + a6 + a7))
           ;;
+
           let%test_unit _ =
             test_map 8 (fun i ->
               map8 i i i i i i i i ~f:(fun a1 a2 a3 a4 a5 a6 a7 a8 ->
                 a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8))
           ;;
+
           let%test_unit _ =
             test_map 9 (fun i ->
               map9 i i i i i i i i i ~f:(fun a1 a2 a3 a4 a5 a6 a7 a8 a9 ->
@@ -621,7 +628,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               stabilize_ [%here];
               assert (value t1_o = value o0 + 1);
               assert (value t2_o = value o0 + value o1);
-              assert (value t3_o = value t1_o - value t2_o);
+              assert (value t3_o = value t1_o - value t2_o)
             in
             check ();
             Var.set x0 16;
@@ -633,10 +640,10 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             check ()
           ;;
 
-          let%test_unit _ = (* deep *)
+          let%test_unit _ =
+            (* deep *)
             let rec loop i t =
-              if i = 0 then t
-              else loop (i - 1) (map t ~f:(fun x -> x + 1))
+              if i = 0 then t else loop (i - 1) (map t ~f:(fun x -> x + 1))
             in
             let x0 = Var.create_ [%here] 0 in
             let n = 100 in
@@ -653,7 +660,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let bind = bind
           let ( >>= ) = ( >>= )
 
-          let%test_unit _ = (* [bind] of a constant *)
+          let%test_unit _ =
+            (* [bind] of a constant *)
             stabilize_ [%here];
             let o = observe (const 13 >>= const) in
             stabilize_ [%here];
@@ -661,18 +669,22 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           ;;
 
           let%test _ =
-            is_invalidated_on_bind_rhs (fun i -> bind (const i) ~f:(fun _ -> (const i)))
+            is_invalidated_on_bind_rhs (fun i -> bind (const i) ~f:(fun _ -> const i))
           ;;
 
-          let%test_unit _ = (* bind created with an invalid rhs *)
+          let%test_unit _ =
+            (* bind created with an invalid rhs *)
             let o = observe (const () >>= fun () -> invalid) in
             stabilize_ [%here];
             assert (skip_invalidity_check || not (is_valid (Observer.observing o)))
           ;;
 
-          let%test_unit _ = (* bind created with an rhs that becomes invalid *)
+          let%test_unit _ =
+            (* bind created with an rhs that becomes invalid *)
             let b = Var.create true in
-            let o = observe (Var.watch b >>= fun b -> if b then const 13 else invalid) in
+            let o =
+              observe (Var.watch b >>= fun b -> if b then const 13 else invalid)
+            in
             stabilize_ [%here];
             Var.set b false;
             assert (is_valid (Observer.observing o));
@@ -685,8 +697,10 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let x = Var.create_ [%here] 13 in
             let r = ref None in
             let o1 =
-              observe (bind (Var.watch x) ~f:(fun _ ->
-                r := Some (map invalid ~f:Fn.id); return ()))
+              observe
+                (bind (Var.watch x) ~f:(fun _ ->
+                   r := Some (map invalid ~f:Fn.id);
+                   return ()))
             in
             stabilize_ [%here];
             let o2 = observe (Option.value_exn !r) in
@@ -716,27 +730,26 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let i1 = Var.watch v1 in
             let i2 = i1 >>| fun x -> x + 1 in
             let i3 = i1 >>| fun x -> x + 2 in
-            let i4 =
-              i2 >>= fun x1 ->
-              i3 >>= fun x2 ->
-              const (x1 + x2)
-            in
+            let i4 = i2 >>= fun x1 -> i3 >>= fun x2 -> const (x1 + x2) in
             let o4 = observe i4 in
             List.iter (List.init 20 ~f:Fn.id) ~f:(fun x ->
               Gc.full_major ();
               Var.set v1 x;
               stabilize_ [%here];
-              assert (Observer.value_exn o4 = 2 * x + 3))
+              assert (Observer.value_exn o4 = (2 * x) + 3))
           ;;
 
-          let%test_unit _ = (* graph changes only *)
+          let%test_unit _ =
+            (* graph changes only *)
             let x = Var.create_ [%here] true in
             let a = const 3 in
             let b = const 4 in
-            let o = observe (bind (watch x) ~f:(fun bool -> if bool then a else b)) in
+            let o =
+              observe (bind (watch x) ~f:(fun bool -> if bool then a else b))
+            in
             let check where expect =
               stabilize_ where;
-              [%test_eq: int] (value o) expect;
+              [%test_eq: int] (value o) expect
             in
             check [%here] 3;
             Var.set x false;
@@ -756,7 +769,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let t_o = observe t in
             let check () =
               stabilize_ [%here];
-              assert (value t_o = value (if value o2 then o0 else o1));
+              assert (value t_o = value (if value o2 then o0 else o1))
             in
             check ();
             Var.set x0 17;
@@ -770,12 +783,19 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             check ()
           ;;
 
-          let%test_unit _ = (* walking chains of maps is not allowed to cross scopes *)
+          let%test_unit _ =
+            (* walking chains of maps is not allowed to cross scopes *)
             let x0 = Var.create_ [%here] 0 in
             let x1 = Var.create_ [%here] 1 in
             let r = ref 0 in
             let i2 =
-              observe (Var.watch x0 >>= (fun i -> Var.watch x1 >>| fun _ -> incr r; i))
+              observe
+                (Var.watch x0
+                 >>= fun i ->
+                 Var.watch x1
+                 >>| fun _ ->
+                 incr r;
+                 i)
             in
             assert (!r = 0);
             stabilize_ [%here];
@@ -801,27 +821,31 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             Gc.keep_alive (i1, i2, o1, o2)
           ;;
 
-          let%test_unit _ = (* topological overload many *)
+          let%test_unit _ =
+            (* topological overload many *)
             let rec copy_true c1 =
-              bind c1 ~f:(fun x -> if x then c1           else copy_false c1)
+              bind c1 ~f:(fun x -> if x then c1 else copy_false c1)
             and copy_false c1 =
-              bind c1 ~f:(fun x -> if x then copy_true c1 else c1           )
+              bind c1 ~f:(fun x -> if x then copy_true c1 else c1)
             in
             let x1 = Var.create_ [%here] false in
             let rec loop cur i =
-              if i > 1000
-              then cur
-              else loop (copy_true (copy_false cur)) (i+1)
+              if i > 1000 then cur else loop (copy_true (copy_false cur)) (i + 1)
             in
             let hold = loop (Var.watch x1) 0 in
             let rec set_loop at i =
-              if i < 5 then (Var.set x1 at; stabilize_ [%here]; set_loop (not at) (i + 1))
+              if i < 5
+              then (
+                Var.set x1 at;
+                stabilize_ [%here];
+                set_loop (not at) (i + 1))
             in
             set_loop true 0;
             Gc.keep_alive hold
           ;;
 
-          let%test_unit _ = (* nested var sets *)
+          let%test_unit _ =
+            (* nested var sets *)
             (* We model a simple ETF that initially consists of 100 shares of IBM and
                200 shares of microsoft with an implicit divisor of 1. *)
             (* the last trade prices of two stocks *)
@@ -833,36 +857,36 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               observe
                 (bind (Var.watch cfg) ~f:(fun (ibm_mult, msft_mult) ->
                    let x = map (Var.watch ibm) ~f:(fun ibm -> ibm *. ibm_mult) in
-                   let y = map (Var.watch msft) ~f:(fun msft -> msft *. msft_mult) in
-                   sum [| x; y |] ~zero:0. ~add:(+.) ~sub:(-.)
-                 ))
+                   let y =
+                     map (Var.watch msft) ~f:(fun msft -> msft *. msft_mult)
+                   in
+                   sum [| x; y |] ~zero:0. ~add:( +. ) ~sub:( -. )))
             in
             stabilize_ [%here];
-            assert (value nav =. 0.5 *. 50. +. 0.5 *. 20.);
+            assert (value nav =. (0.5 *. 50.) +. (0.5 *. 20.));
             Var.set cfg (0.6, 0.4);
             stabilize_ [%here];
-            assert (value nav =. 0.6 *. 50. +. 0.4 *. 20.)
+            assert (value nav =. (0.6 *. 50.) +. (0.4 *. 20.))
           ;;
 
-          let%test_unit _ = (* adjust heights *)
+          let%test_unit _ =
+            (* adjust heights *)
             let x = Var.create_ [%here] 0 in
             let rec chain i =
-              if i = 0
-              then watch x
-              else chain (i - 1) >>| fun i -> i + 1
+              if i = 0 then watch x else chain (i - 1) >>| fun i -> i + 1
             in
             let b = bind (watch x) ~f:chain in
             let rec dag i =
               if i = 0
               then b
-              else
+              else (
                 let t = dag (i - 1) in
-                map2 t t ~f:( + )
+                map2 t t ~f:( + ))
             in
             let o = observe (dag 20) in
             for i = 1 to 10 do
               Var.set x i;
-              stabilize_ [%here];
+              stabilize_ [%here]
             done;
             disallow_future_use o
           ;;
@@ -874,21 +898,28 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             loop t 5
           ;;
 
-          let%test_unit _ = (* an invalid unused rhs doesn't invalidate the [bind] *)
+          let%test_unit _ =
+            (* an invalid unused rhs doesn't invalidate the [bind] *)
             let r = ref None in
-            let lhs = Var.create_ [%here] 1; in
+            let lhs = Var.create_ [%here] 1 in
             let o1 =
-              observe (bind (watch lhs) ~f:(fun i -> r := Some (const i); return ()))
+              observe
+                (bind (watch lhs) ~f:(fun i ->
+                   r := Some (const i);
+                   return ()))
             in
             stabilize_ [%here];
             let else_ = Option.value_exn !r in
             let test = Var.create_ [%here] false in
-            let o2 = observe (bind (make_high (watch test))
-                                ~f:(fun test ->
-                                  if test then const 13 else else_))
+            let o2 =
+              observe
+                (bind
+                   (make_high (watch test))
+                   ~f:(fun test -> if test then const 13 else else_))
             in
             stabilize_ [%here];
-            Var.set lhs 2; (* invalidates [else_]. *)
+            Var.set lhs 2;
+            (* invalidates [else_]. *)
             Var.set test true;
             stabilize_ [%here];
             assert (skip_invalidity_check || not (is_valid else_));
@@ -902,7 +933,13 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                not always) *)
             let x = Var.create 4 in
             let r = ref (const (-1)) in
-            let o = observe (Var.watch x >>= fun i -> r := const i; const ()) in
+            let o =
+              observe
+                (Var.watch x
+                 >>= fun i ->
+                 r := const i;
+                 const ())
+            in
             stabilize_ [%here];
             let escaped = !r in
             let escaped_o = observe escaped in
@@ -924,10 +961,15 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let lhs_var = Var.create false in
             let num_calls = ref 0 in
             let rhs_var = Var.create 13 in
-            let rhs_false = map (watch rhs_var) ~f:(fun i -> incr num_calls; i + 1) in
-            let rhs_true  = map rhs_false ~f:(fun i -> i + 1) in
+            let rhs_false =
+              map (watch rhs_var) ~f:(fun i ->
+                incr num_calls;
+                i + 1)
+            in
+            let rhs_true = map rhs_false ~f:(fun i -> i + 1) in
             let o =
-              observe (bind (watch lhs_var) ~f:(fun b -> if b then rhs_true else rhs_false))
+              observe
+                (bind (watch lhs_var) ~f:(fun b -> if b then rhs_true else rhs_false))
             in
             stabilize_ [%here];
             [%test_result: int] !num_calls ~expect:1;
@@ -952,19 +994,27 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let v4 = Var.create_ [%here] 4 in
             let o =
               observe
-                (bind4 (watch v1) (watch v2) (watch v3) (watch v4) ~f:(fun x1 x2 x3 x4 ->
-                   bind3 (watch v2) (watch v3) (watch v4) ~f:(fun y2 y3 y4 ->
-                     bind2 (watch v3) (watch v4) ~f:(fun z3 z4 ->
-                       bind (watch v4) ~f:(fun w4 ->
-                         return (x1 + x2 + x3 + x4 + y2 + y3 + y4 + z3 + z4 + w4))))))
+                (bind4
+                   (watch v1)
+                   (watch v2)
+                   (watch v3)
+                   (watch v4)
+                   ~f:(fun x1 x2 x3 x4 ->
+                     bind3 (watch v2) (watch v3) (watch v4) ~f:(fun y2 y3 y4 ->
+                       bind2 (watch v3) (watch v4) ~f:(fun z3 z4 ->
+                         bind (watch v4) ~f:(fun w4 ->
+                           return
+                             (x1 + x2 + x3 + x4 + y2 + y3 + y4 + z3 + z4 + w4))))))
             in
             let check where =
               stabilize_ where;
-              [%test_result: int] (value o)
-                ~expect:(Var.value v1
-                         + 2 * Var.value v2
-                         + 3 * Var.value v3
-                         + 4 * Var.value v4);
+              [%test_result: int]
+                (value o)
+                ~expect:
+                  (Var.value v1
+                   + (2 * Var.value v2)
+                   + (3 * Var.value v3)
+                   + (4 * Var.value v4))
             in
             check [%here];
             Var.set v4 5;
@@ -982,22 +1032,28 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             check [%here]
           ;;
 
-          module Join(X : sig val join : 'a t t -> 'a t end) = struct
+          module Join (X : sig
+              val join : 'a t t -> 'a t
+            end) =
+          struct
             let join = X.join
-            let%test_unit _ = (* [join] of a constant *)
+
+            let%test_unit _ =
+              (* [join] of a constant *)
               let o = observe (join (const (const 1))) in
               stabilize_ [%here];
               assert (value o = 1)
             ;;
 
-            let%test_unit _ = (* graph changes only *)
+            let%test_unit _ =
+              (* graph changes only *)
               let a = const 3 in
               let b = const 4 in
               let x = Var.create_ [%here] a in
               let o = observe (join (watch x)) in
               let check where expect =
                 stabilize_ where;
-                [%test_result: int] (value o) ~expect;
+                [%test_result: int] (value o) ~expect
               in
               check [%here] 3;
               Var.set x b;
@@ -1025,16 +1081,21 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               assert (value o = 14)
             ;;
 
-            let%test_unit _ = (* an invalid unused rhs doesn't invalidate the [join] *)
-              let x = Var.create_ [%here] (const 0); in
+            let%test_unit _ =
+              (* an invalid unused rhs doesn't invalidate the [join] *)
+              let x = Var.create_ [%here] (const 0) in
               let lhs = Var.create_ [%here] 1 in
               let o1 =
-                observe (bind (watch lhs) ~f:(fun i -> Var.set x (const i); return ()))
+                observe
+                  (bind (watch lhs) ~f:(fun i ->
+                     Var.set x (const i);
+                     return ()))
               in
               stabilize_ [%here];
               let o2 = observe (join (make_high (Var.watch x))) in
               stabilize_ [%here];
-              Var.set lhs 2; (* invalidate *)
+              Var.set lhs 2;
+              (* invalidate *)
               Var.set x (const 3);
               stabilize_ [%here];
               assert (value o2 = 3);
@@ -1042,12 +1103,13 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               disallow_future_use o2
             ;;
 
-            let%test_unit _ = (* checking that join can be invalidated *)
+            let%test_unit _ =
+              (* checking that join can be invalidated *)
               let join = join (const invalid) in
               let o = observe join in
               stabilize_ [%here];
               disallow_future_use o;
-              assert (skip_invalidity_check || not (is_valid join));
+              assert (skip_invalidity_check || not (is_valid join))
             ;;
 
             let%test_unit _ =
@@ -1055,8 +1117,12 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                  we leave the node with a broken invariant while adding the ancestor. *)
               let num_calls = ref 0 in
               let rhs_var = Var.create 13 in
-              let first = map (watch rhs_var) ~f:(fun i -> incr num_calls; i + 1) in
-              let second  = map first ~f:(fun i -> i + 1) in
+              let first =
+                map (watch rhs_var) ~f:(fun i ->
+                  incr num_calls;
+                  i + 1)
+              in
+              let second = map first ~f:(fun i -> i + 1) in
               let lhs_var = Var.create first in
               let o = observe (join (watch lhs_var)) in
               stabilize_ [%here];
@@ -1072,28 +1138,35 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             ;;
           end
 
-          include Join(struct let join = join end)
+          include Join (struct
+              let join = join
+            end)
 
           let if_ = if_
 
-          let%test_unit _ = (* [if_ true] *)
+          let%test_unit _ =
+            (* [if_ true] *)
             let o = observe (if_ (const true) ~then_:(const 13) ~else_:(const 14)) in
             stabilize_ [%here];
             assert (value o = 13)
           ;;
 
-          let%test_unit _ = (* [if_ false] *)
-            let o = observe (if_ (const false) ~then_:(const 13) ~else_:(const 14)) in
+          let%test_unit _ =
+            (* [if_ false] *)
+            let o =
+              observe (if_ (const false) ~then_:(const 13) ~else_:(const 14))
+            in
             stabilize_ [%here];
             assert (value o = 14)
           ;;
 
-          let%test_unit _ = (* graph changes only *)
+          let%test_unit _ =
+            (* graph changes only *)
             let x = Var.create_ [%here] true in
             let o = observe (if_ (watch x) ~then_:(const 3) ~else_:(const 4)) in
             let check where expect =
               stabilize_ where;
-              [%test_eq: int] (value o) expect;
+              [%test_eq: int] (value o) expect
             in
             check [%here] 3;
             Var.set x false;
@@ -1111,9 +1184,19 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let num_then_run = ref 0 in
             let num_else_run = ref 0 in
             let ite =
-              observe (if_ (Var.watch test)
-                         ~then_:(Var.watch then_ >>| fun i -> incr num_then_run; i)
-                         ~else_:(Var.watch else_ >>| fun i -> incr num_else_run; i))
+              observe
+                (if_
+                   (Var.watch test)
+                   ~then_:
+                     (Var.watch then_
+                      >>| fun i ->
+                      incr num_then_run;
+                      i)
+                   ~else_:
+                     (Var.watch else_
+                      >>| fun i ->
+                      incr num_else_run;
+                      i))
             in
             stabilize_ [%here];
             assert (Observer.value_exn ite = 1);
@@ -1140,18 +1223,25 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (Observer.value_exn ite = 6)
           ;;
 
-          let%test_unit _ = (* an invalid unused branch doesn't invalidate the [if_] *)
+          let%test_unit _ =
+            (* an invalid unused branch doesn't invalidate the [if_] *)
             let r = ref None in
-            let lhs = Var.create_ [%here] 1; in
+            let lhs = Var.create_ [%here] 1 in
             let o1 =
-              observe (bind (watch lhs) ~f:(fun i -> r := Some (const i); return ()))
+              observe
+                (bind (watch lhs) ~f:(fun i ->
+                   r := Some (const i);
+                   return ()))
             in
             stabilize_ [%here];
             let else_ = Option.value_exn !r in
             let test = Var.create_ [%here] false in
-            let o2 = observe (if_ (make_high (watch test)) ~then_:(const 13) ~else_) in
+            let o2 =
+              observe (if_ (make_high (watch test)) ~then_:(const 13) ~else_)
+            in
             stabilize_ [%here];
-            Var.set lhs 2; (* invalidates [else_]. *)
+            Var.set lhs 2;
+            (* invalidates [else_]. *)
             Var.set test true;
             stabilize_ [%here];
             assert (skip_invalidity_check || not (is_valid else_));
@@ -1160,23 +1250,25 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             disallow_future_use o2
           ;;
 
-          let%test_unit _ = (* if-then-else created with an invalid test *)
+          let%test_unit _ =
+            (* if-then-else created with an invalid test *)
             let o =
-              observe (if_ (invalid >>| fun _ -> true)
-                         ~then_:(const ())
-                         ~else_:(const ()))
+              observe
+                (if_ (invalid >>| fun _ -> true) ~then_:(const ()) ~else_:(const ()))
             in
             stabilize_ [%here];
             assert (skip_invalidity_check || not (is_valid (Observer.observing o)))
           ;;
 
-          let%test_unit _ = (* if-then-else created with an invalid branch *)
+          let%test_unit _ =
+            (* if-then-else created with an invalid branch *)
             let o = observe (if_ (const true) ~then_:invalid ~else_:(const 13)) in
             stabilize_ [%here];
             assert (skip_invalidity_check || not (is_valid (Observer.observing o)))
           ;;
 
-          let%test_unit _ = (* if-then-else switching to an invalid branch *)
+          let%test_unit _ =
+            (* if-then-else switching to an invalid branch *)
             let b = Var.create false in
             let o = observe (if_ (Var.watch b) ~then_:invalid ~else_:(const 13)) in
             stabilize_ [%here];
@@ -1186,11 +1278,12 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (skip_invalidity_check || not (is_valid (Observer.observing o)))
           ;;
 
-          let%test_unit _ = (* if-then-else switching to an invalid branch via a map *)
+          let%test_unit _ =
+            (* if-then-else switching to an invalid branch via a map *)
             let b = Var.create false in
-            let o = observe (if_ (Var.watch b)
-                               ~then_:(invalid >>| fun _ -> 13)
-                               ~else_:(const 13))
+            let o =
+              observe
+                (if_ (Var.watch b) ~then_:(invalid >>| fun _ -> 13) ~else_:(const 13))
             in
             stabilize_ [%here];
             assert (is_valid (Observer.observing o));
@@ -1199,13 +1292,18 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (skip_invalidity_check || not (is_valid (Observer.observing o)))
           ;;
 
-          let%test_unit _ = (* if-then-else switching to an invalid test *)
+          let%test_unit _ =
+            (* if-then-else switching to an invalid test *)
             let b = Var.create false in
-            let o = observe (if_ (if_ (Var.watch b)
-                                    ~then_:(invalid >>| fun _ -> true)
-                                    ~else_:(const true))
-                               ~then_:(const 13)
-                               ~else_:(const 15))
+            let o =
+              observe
+                (if_
+                   (if_
+                      (Var.watch b)
+                      ~then_:(invalid >>| fun _ -> true)
+                      ~else_:(const true))
+                   ~then_:(const 13)
+                   ~else_:(const 15))
             in
             stabilize_ [%here];
             assert (is_valid (Observer.observing o));
@@ -1220,8 +1318,12 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let test_var = Var.create false in
             let num_calls = ref 0 in
             let branch_var = Var.create 13 in
-            let else_ = map (watch branch_var) ~f:(fun i -> incr num_calls; i + 1) in
-            let then_  = map else_ ~f:(fun i -> i + 1) in
+            let else_ =
+              map (watch branch_var) ~f:(fun i ->
+                incr num_calls;
+                i + 1)
+            in
+            let then_ = map else_ ~f:(fun i -> i + 1) in
             let o = observe (if_ (watch test_var) ~then_ ~else_) in
             stabilize_ [%here];
             [%test_result: int] !num_calls ~expect:1;
@@ -1246,7 +1348,9 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (value y = 13);
             assert (is_const f);
             let u = Var.create_ [%here] 1 in
-            let z = observe (bind (Var.watch u) ~f:(fun _ -> freeze (Var.watch x))) in
+            let z =
+              observe (bind (Var.watch u) ~f:(fun _ -> freeze (Var.watch x)))
+            in
             stabilize_ [%here];
             assert (value z = 13);
             Var.set u 2;
@@ -1277,13 +1381,15 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (value o2 = 14)
           ;;
 
-          let%test_unit _ = (* [freeze] nodes increment [num_nodes_became_necessary] *)
+          let%test_unit _ =
+            (* [freeze] nodes increment [num_nodes_became_necessary] *)
             let i1 = State.(num_nodes_became_necessary t) in
             ignore (freeze (const ()) : unit t);
             let i2 = State.(num_nodes_became_necessary t) in
-            [%test_result: int] i2
-              ~expect:(i1 + 2) (* one for the [const], one for the [freeze] *)
+            [%test_result: int] i2 ~expect:(i1 + 2)
           ;;
+
+          (* one for the [const], one for the [freeze] *)
 
           (* TEST_UNIT = (\* freeze nodes leak memory (and forces spurious computations) until
            *                they freeze *\)
@@ -1297,14 +1403,15 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
            *   done;
            * ;; *)
 
-          let%test_unit _ = (* [freeze]ing something that is otherwise unnecessary. *)
+          let%test_unit _ =
+            (* [freeze]ing something that is otherwise unnecessary. *)
             let x = Var.create_ [%here] 0 in
             let i = freeze (Var.watch x >>| fun i -> i + 1) in
             stabilize_ [%here];
             Var.set x 13;
             let o = observe i in
             stabilize_ [%here];
-            assert (value o = 1)  (* not 14 *)
+            assert (value o = 1 (* not 14 *))
           ;;
 
           let%test_unit _ =
@@ -1312,10 +1419,11 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let x = Var.create_ [%here] 13 in
             let r = ref None in
             let o1 =
-              observe (watch x
-                       >>= fun i ->
-                       if Option.is_none !r then r := Some (freeze (const i));
-                       const ())
+              observe
+                (watch x
+                 >>= fun i ->
+                 if Option.is_none !r then r := Some (freeze (const i));
+                 const ())
             in
             stabilize_ [%here];
             let f = Option.value_exn !r in
@@ -1333,7 +1441,13 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             (* a frozen node remains valid, even if the node it froze isn't *)
             let x = Var.create_ [%here] 13 in
             let r = ref (const 14) in
-            let o1 = observe (watch x >>= fun i -> r := (const i); const ()) in
+            let o1 =
+              observe
+                (watch x
+                 >>= fun i ->
+                 r := const i;
+                 const ())
+            in
             stabilize_ [%here];
             let o2 = observe (freeze !r) in
             stabilize_ [%here];
@@ -1343,12 +1457,13 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             disallow_future_use o1
           ;;
 
-          let%test_unit _ = (* [freeze ~when] *)
+          let%test_unit _ =
+            (* [freeze ~when] *)
             let x = Var.create_ [%here] 13 in
             let o = observe (freeze (watch x) ~when_:(fun i -> i >= 15)) in
             let check where expect =
               stabilize_ where;
-              [%test_result: int] (value o) ~expect;
+              [%test_result: int] (value o) ~expect
             in
             check [%here] 13;
             Var.set x 14;
@@ -1361,10 +1476,16 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             check [%here] 15
           ;;
 
-          let%test_unit _ = (* a freeze that is invalidated before it is frozen. *)
+          let%test_unit _ =
+            (* a freeze that is invalidated before it is frozen. *)
             let r = ref None in
             let x = Var.create_ [%here] 13 in
-            let o = observe (bind (watch x) ~f:(fun i -> r := Some (const i); return ())) in
+            let o =
+              observe
+                (bind (watch x) ~f:(fun i ->
+                   r := Some (const i);
+                   return ()))
+            in
             stabilize_ [%here];
             let f = freeze (Option.value_exn !r) ~when_:(fun _ -> false) in
             Var.set x 14;
@@ -1377,7 +1498,12 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             (* a freeze that is stabilized and invalidated before it is frozen. *)
             let r = ref None in
             let x = Var.create_ [%here] 13 in
-            let o = observe (bind (watch x) ~f:(fun i -> r := Some (const i); return ())) in
+            let o =
+              observe
+                (bind (watch x) ~f:(fun i ->
+                   r := Some (const i);
+                   return ()))
+            in
             stabilize_ [%here];
             let f = freeze (Option.value_exn !r) ~when_:(fun _ -> false) in
             stabilize_ [%here];
@@ -1395,13 +1521,11 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let d = depend_on (watch x) ~depend_on:(watch y) in
             let o = observe d in
             let nx = ref 0 in
-            let incr_o r =
-              function
+            let incr_o r = function
               | Observer.Update.Invalidated -> assert false
               | Initialized _ | Changed _ -> incr r
             in
-            let incr r =
-              function
+            let incr r = function
               | Update.Invalidated -> assert false
               | Unnecessary -> ()
               | Necessary _ | Changed _ -> incr r
@@ -1413,7 +1537,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               stabilize_ where;
               [%test_result: int] (value o) ~expect:eo;
               [%test_result: int] !nx ~expect:enx;
-              [%test_result: int] !ny ~expect:eny;
+              [%test_result: int] !ny ~expect:eny
             in
             check [%here] 13 1 1;
             Var.set x 15;
@@ -1431,7 +1555,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let check where enx eny =
               stabilize_ where;
               [%test_result: int] !nx ~expect:enx;
-              [%test_result: int] !ny ~expect:eny;
+              [%test_result: int] !ny ~expect:eny
             in
             Var.set x 19;
             Var.set y 20;
@@ -1461,7 +1585,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             [%test_eq: int] (Observer.value_exn o) 2
           ;;
 
-          let%test_unit _ = (* depend_on doesn't cutoff using phys_equal *)
+          let%test_unit _ =
+            (* depend_on doesn't cutoff using phys_equal *)
             let v1 = Var.create () in
             let v2 = Var.create 1 in
             set_cutoff (Var.watch v1) Cutoff.never;
@@ -1482,7 +1607,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
 
           let necessary_if_alive = necessary_if_alive
 
-          let%test_unit _ = (* dead => unnecessary *)
+          let%test_unit _ =
+            (* dead => unnecessary *)
             let x = Var.create 13 in
             let push, check = on_update_queue () in
             on_update (watch x) ~f:push;
@@ -1500,7 +1626,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             check [ Unnecessary ]
           ;;
 
-          let%test_unit _ = (* cutoff is preserved *)
+          let%test_unit _ =
+            (* cutoff is preserved *)
             let x = Var.create 13 in
             set_cutoff (watch x) Cutoff.never;
             let t = necessary_if_alive (watch x) in
@@ -1521,8 +1648,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             check [ Unnecessary ]
           ;;
 
-          let all     = all
-          let exists  = exists
+          let all = all
+          let exists = exists
           let for_all = for_all
 
           let test q list_f =
@@ -1534,20 +1661,23 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                 match vars with
                 | [] ->
                   stabilize_ [%here];
-                  [%test_eq: Bool.t] (value q) (list_f (value all) ~f:Fn.id);
+                  [%test_eq: Bool.t] (value q) (list_f (value all) ~f:Fn.id)
                 | var :: vars ->
-                  List.iter [ false; true ] ~f:(fun b -> Var.set var b; loop vars)
+                  List.iter [ false; true ] ~f:(fun b ->
+                    Var.set var b;
+                    loop vars)
               in
-              loop vars;
-            done;
+              loop vars
+            done
           ;;
 
-          let%test_unit _ = test exists  List.exists
+          let%test_unit _ = test exists List.exists
           let%test_unit _ = test for_all List.for_all
 
           let array_fold = array_fold
 
-          let%test_unit _ = (* empty array *)
+          let%test_unit _ =
+            (* empty array *)
             let o = observe (array_fold [||] ~init:13 ~f:(fun _ -> assert false)) in
             stabilize_ [%here];
             assert (value o = 13)
@@ -1557,12 +1687,12 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let x = Var.create_ [%here] 13 in
             let y = Var.create_ [%here] 14 in
             let o =
-              observe (array_fold [| watch y; watch x |] ~init:[]
-                         ~f:(fun ac x -> x :: ac))
+              observe
+                (array_fold [| watch y; watch x |] ~init:[] ~f:(fun ac x -> x :: ac))
             in
             let check where expect =
               stabilize_ where;
-              [%test_result: int list] (value o) ~expect;
+              [%test_result: int list] (value o) ~expect
             in
             check [%here] [ 13; 14 ];
             Var.set x 15;
@@ -1575,37 +1705,45 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           ;;
 
           let reduce_balanced = reduce_balanced
+
           let reduce_balanced_exn a ~f ~reduce =
             Option.value_exn (reduce_balanced a ~f ~reduce)
           ;;
 
-          let%test_unit _ = (* empty array *)
+          let%test_unit _ =
+            (* empty array *)
             let f =
-              reduce_balanced [||]
+              reduce_balanced
+                [||]
                 ~f:(fun _ -> assert false)
                 ~reduce:(fun _ _ -> assert false)
             in
             assert (Option.is_none f)
           ;;
 
-          let%test_unit _ = (* singular value *)
+          let%test_unit _ =
+            (* singular value *)
             let f =
-              reduce_balanced_exn [| watch (Var.create_ [%here] 1) |]
+              reduce_balanced_exn
+                [| watch (Var.create_ [%here] 1) |]
                 ~f:Fn.id
-                ~reduce:(+)
+                ~reduce:( + )
             in
             let o = observe f in
             stabilize_ [%here];
-            assert (value o = 1);
+            assert (value o = 1)
           ;;
 
-          let%test_unit _ = (* non-commutative function test *)
-            let list = ["a"; "b"; "c" ; "d"; "e"; "f"; "g"] in
+          let%test_unit _ =
+            (* non-commutative function test *)
+            let list = [ "a"; "b"; "c"; "d"; "e"; "f"; "g" ] in
             let list = List.map list ~f:(Var.create_ [%here]) in
             let array = Array.of_list_map ~f:Var.watch list in
             let reduce_calls = ref 0 in
-            let f = reduce_balanced_exn array ~f:Fn.id
-                      ~reduce:(fun x y -> incr reduce_calls; x ^ y)
+            let f =
+              reduce_balanced_exn array ~f:Fn.id ~reduce:(fun x y ->
+                incr reduce_calls;
+                x ^ y)
             in
             let o = observe f in
             stabilize_ [%here];
@@ -1614,10 +1752,11 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             Var.set (List.hd_exn list) "z";
             stabilize_ [%here];
             [%test_eq: string] (value o) "zbcdefg";
-            [%test_eq: int] !reduce_calls 9;
+            [%test_eq: int] !reduce_calls 9
           ;;
 
-          let%test_unit _ = (* observability changes *)
+          let%test_unit _ =
+            (* observability changes *)
             let observe_stabilize_disallow node =
               let o = observe node in
               stabilize_ [%here];
@@ -1629,7 +1768,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let res = observe_stabilize_disallow (Var.watch v) in
             assert (res = 0);
             (* stabilize a reduce_balanced_exn node with already stabilized children *)
-            let f = reduce_balanced_exn [| watch v |] ~f:Fn.id ~reduce:(+) in
+            let f = reduce_balanced_exn [| watch v |] ~f:Fn.id ~reduce:( + ) in
             let res = observe_stabilize_disallow f in
             assert (res = 0);
             (* re-stabilize a reduce_balanced_exn with a stale cache of its stabilized
@@ -1638,15 +1777,21 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let res = observe_stabilize_disallow (Var.watch v) in
             assert (res = 1);
             let res = observe_stabilize_disallow f in
-            assert (res = 1);
+            assert (res = 1)
           ;;
 
-          let%test_unit _ = (* multiple occurences of a node in the fold. *)
+          let%test_unit _ =
+            (* multiple occurences of a node in the fold. *)
             let x = Var.create_ [%here] 1 in
-            let f = reduce_balanced_exn [| watch x; watch x |] ~f:Fn.id ~reduce:(+) in
+            let f =
+              reduce_balanced_exn [| watch x; watch x |] ~f:Fn.id ~reduce:( + )
+            in
             let o = observe f in
             let f2 =
-              reduce_balanced_exn [| watch x; watch x; watch x |] ~f:Fn.id ~reduce:(+)
+              reduce_balanced_exn
+                [| watch x; watch x; watch x |]
+                ~f:Fn.id
+                ~reduce:( + )
             in
             let o2 = observe f2 in
             stabilize_ [%here];
@@ -1668,10 +1813,11 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (value o2 = 12)
           ;;
 
-          let%test_unit _ = (* general creation and updating *)
+          let%test_unit _ =
+            (* general creation and updating *)
             let module Test_value = struct
               type t =
-                { var     : int Var.t
+                { var : int Var.t
                 ; update1 : int option
                 ; update2 : int option
                 ; update3 : int option
@@ -1681,21 +1827,20 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               let quickcheck_generator =
                 let open Quickcheck.Generator.Let_syntax in
                 let update_gen =
-                  let%bind weight =
-                    Float.gen_uniform_excl 0.0 3.0
-                  in
+                  let%bind weight = Float.gen_uniform_excl 0.0 3.0 in
                   Quickcheck.Generator.weighted_union
-                    [ (1.0,    Quickcheck.Generator.singleton None)
-                    ; (weight, Int.quickcheck_generator >>| Option.some)
+                    [ 1.0, Quickcheck.Generator.singleton None
+                    ; weight, Int.quickcheck_generator >>| Option.some
                     ]
                 in
                 let%map var = Int.quickcheck_generator >>| Var.create_ [%here]
-                and     update1 = update_gen
-                and     update2 = update_gen
-                and     update3 = update_gen
-                in
+                and update1 = update_gen
+                and update2 = update_gen
+                and update3 = update_gen in
                 { var; update1; update2; update3 }
-            end in
+              ;;
+            end
+            in
             Quickcheck.test
               (let open Quickcheck.Let_syntax in
                let%map test_value =
@@ -1707,7 +1852,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               ~trials:100
               ~f:(fun test_values ->
                 let array =
-                  Array.of_list_map test_values ~f:(fun test_value -> watch test_value.var)
+                  Array.of_list_map test_values ~f:(fun test_value ->
+                    watch test_value.var)
                 in
                 let len = Array.length array in
                 let reduce_count = ref 0 in
@@ -1715,24 +1861,27 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                 let update_count = ref 0 in
                 let assert_expected_reductions_and_reset () =
                   if !update_count = 0
-                  then begin
-                    assert (!fold_count   = 0);
-                    assert (!reduce_count = 0);
-                  end else begin
+                  then (
+                    assert (!fold_count = 0);
+                    assert (!reduce_count = 0))
+                  else (
                     assert (!fold_count = len);
-                    assert (!reduce_count
-                            <= Int.min (len - 1) (Int.ceil_log2 len * !update_count));
-                  end;
-                  fold_count   := 0;
+                    assert (
+                      !reduce_count
+                      <= Int.min (len - 1) (Int.ceil_log2 len * !update_count)));
+                  fold_count := 0;
                   reduce_count := 0;
                   update_count := 0
                 in
                 let reduce_f =
-                  reduce_balanced_exn array ~f:Fn.id
-                    ~reduce:(fun a b -> incr reduce_count; a * b)
+                  reduce_balanced_exn array ~f:Fn.id ~reduce:(fun a b ->
+                    incr reduce_count;
+                    a * b)
                 in
                 let fold_f =
-                  array_fold array ~init:1 ~f:(fun a b -> incr fold_count; a * b)
+                  array_fold array ~init:1 ~f:(fun a b ->
+                    incr fold_count;
+                    a * b)
                 in
                 update_count := len;
                 let reduce_o = observe reduce_f in
@@ -1763,25 +1912,31 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
 
           let unordered_array_fold = unordered_array_fold
 
-          let%test_unit _ = (* empty array *)
+          let%test_unit _ =
+            (* empty array *)
             let o =
-              observe (unordered_array_fold ~full_compute_every_n_changes:0 [||]
-                         ~init:13
-                         ~f:(fun _ -> assert false)
-                         ~f_inverse:(fun _ -> assert false))
+              observe
+                (unordered_array_fold
+                   ~full_compute_every_n_changes:0
+                   [||]
+                   ~init:13
+                   ~f:(fun _ -> assert false)
+                   ~f_inverse:(fun _ -> assert false))
             in
             stabilize_ [%here];
             assert (value o = 13)
           ;;
 
-          let%test_unit _ = (* an unnecessary [unordered_array_fold] isn't computed. *)
+          let%test_unit _ =
+            (* an unnecessary [unordered_array_fold] isn't computed. *)
             let x = Var.create_ [%here] 1 in
             let num_f_inverse = ref 0 in
             let ox = observe (Var.watch x) in
             let fold =
-              unordered_array_fold [| Var.watch x |]
+              unordered_array_fold
+                [| Var.watch x |]
                 ~init:0
-                ~f:(+)
+                ~f:( + )
                 ~f_inverse:(fun b a ->
                   incr num_f_inverse;
                   b - a)
@@ -1805,10 +1960,15 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (!num_f_inverse = 1)
           ;;
 
-          let%test_unit _ = (* multiple occurences of a node in the fold. *)
+          let%test_unit _ =
+            (* multiple occurences of a node in the fold. *)
             let x = Var.create_ [%here] 1 in
             let f =
-              unordered_array_fold [| watch x; watch x |] ~init:0 ~f:(+) ~f_inverse:(-)
+              unordered_array_fold
+                [| watch x; watch x |]
+                ~init:0
+                ~f:( + )
+                ~f_inverse:( - )
             in
             let o = observe f in
             stabilize_ [%here];
@@ -1828,10 +1988,13 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let opt_unordered_array_fold = opt_unordered_array_fold
 
           let%test_unit _ =
-            let o = observe (opt_unordered_array_fold [||]
-                               ~init:()
-                               ~f:(fun _ -> assert false)
-                               ~f_inverse:(fun _ -> assert false))
+            let o =
+              observe
+                (opt_unordered_array_fold
+                   [||]
+                   ~init:()
+                   ~f:(fun _ -> assert false)
+                   ~f_inverse:(fun _ -> assert false))
             in
             stabilize_ [%here];
             assert (is_some (value o))
@@ -1841,12 +2004,16 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let x = Var.create_ [%here] None in
             let y = Var.create_ [%here] None in
             let t =
-              observe (opt_unordered_array_fold [| watch x; watch y |]
-                         ~init:0 ~f:( + ) ~f_inverse:( - ))
+              observe
+                (opt_unordered_array_fold
+                   [| watch x; watch y |]
+                   ~init:0
+                   ~f:( + )
+                   ~f_inverse:( - ))
             in
             let check where expect =
               stabilize_ where;
-              [%test_eq: int option] (value t) expect;
+              [%test_eq: int option] (value t) expect
             in
             check [%here] None;
             Var.set x (Some 13);
@@ -1859,24 +2026,41 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
 
           let sum = sum
 
-          let%test_unit _ = (* empty *)
-            let o = observe (sum [||] ~zero:13 ~add:(fun _ -> assert false)
-                               ~sub:(fun _ -> assert false))
+          let%test_unit _ =
+            (* empty *)
+            let o =
+              observe
+                (sum
+                   [||]
+                   ~zero:13
+                   ~add:(fun _ -> assert false)
+                   ~sub:(fun _ -> assert false))
             in
             stabilize_ [%here];
             assert (value o = 13)
           ;;
 
-          let%test_unit _ = (* full recompute *)
+          let%test_unit _ =
+            (* full recompute *)
             let x = Var.create_ [%here] 13. in
             let y = Var.create_ [%here] 15. in
             let num_adds = ref 0 in
-            let add a b = incr num_adds; a +. b in
+            let add a b =
+              incr num_adds;
+              a +. b
+            in
             let num_subs = ref 0 in
-            let sub a b = incr num_subs; a -. b in
+            let sub a b =
+              incr num_subs;
+              a -. b
+            in
             let z =
               observe
-                (sum [| watch x; watch y |] ~zero:0. ~add ~sub
+                (sum
+                   [| watch x; watch y |]
+                   ~zero:0.
+                   ~add
+                   ~sub
                    ~full_compute_every_n_changes:2)
             in
             stabilize_ [%here];
@@ -1901,9 +2085,12 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
 
           let%test_unit _ =
             let t =
-              observe (opt_sum [||] ~zero:()
-                         ~add:(fun _ -> assert false)
-                         ~sub:(fun _ -> assert false))
+              observe
+                (opt_sum
+                   [||]
+                   ~zero:()
+                   ~add:(fun _ -> assert false)
+                   ~sub:(fun _ -> assert false))
             in
             stabilize_ [%here];
             assert (is_some (value t))
@@ -1917,7 +2104,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             in
             let check where expect =
               stabilize_ where;
-              [%test_eq: int option] (value t) expect;
+              [%test_eq: int option] (value t) expect
             in
             check [%here] None;
             Var.set x (Some 13);
@@ -1928,8 +2115,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             check [%here] None
           ;;
 
-          let sum_int    = sum_int
-          let sum_float  = sum_float
+          let sum_int = sum_int
+          let sum_float = sum_float
 
           let test_sum (type a) sum (of_int : int -> a) equal =
             let x = Var.create_ [%here] (of_int 13) in
@@ -1944,10 +2131,10 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             Var.set x (of_int 19);
             Var.set y (of_int 21);
             stabilize_ [%here];
-            assert (equal (value z) (of_int 40));
+            assert (equal (value z) (of_int 40))
           ;;
 
-          let%test_unit _ = test_sum sum_int   Fn.id        Int.equal
+          let%test_unit _ = test_sum sum_int Fn.id Int.equal
           let%test_unit _ = test_sum sum_float Float.of_int Float.equal
 
           let%test_unit _ =
@@ -1956,10 +2143,12 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             [%test_result: Float.t] (value o) ~expect:0.
           ;;
 
-          let alarm_precision = alarm_precision (* nothing to test? *)
+          (* nothing to test? *)
+          let alarm_precision = alarm_precision
 
-          let now           = now
-          let watch_now     = watch_now
+          (* *)
+          let now = now
+          let watch_now = watch_now
           let advance_clock = advance_clock
 
           let%test_unit _ =
@@ -1970,22 +2159,24 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let to_ = Time_ns.add before_advance (sec 1.) in
             advance_clock ~to_;
             assert (Time_ns.equal (now ()) to_);
-            assert (Time_ns.equal (value w) before_advance); (* we didn't yet stabilize *)
+            assert (Time_ns.equal (value w) before_advance);
+            (* we didn't yet stabilize *)
             stabilize_ [%here];
             assert (Time_ns.equal (value w) to_)
           ;;
 
           let after = after
-          let at    = at
-
+          let at = at
           let is observer v = Poly.equal (value observer) v
 
           let%test _ =
-            is_invalidated_on_bind_rhs (fun _ -> at (Time_ns.add (Time_ns.now ()) (sec 1.)))
+            is_invalidated_on_bind_rhs (fun _ ->
+              at (Time_ns.add (Time_ns.now ()) (sec 1.)))
           ;;
 
           let%test _ =
-            is_invalidated_on_bind_rhs (fun _ -> at (Time_ns.add (Time_ns.now ()) (sec (-1.))))
+            is_invalidated_on_bind_rhs (fun _ ->
+              at (Time_ns.add (Time_ns.now ()) (sec (-1.))))
           ;;
 
           let%test _ = is_invalidated_on_bind_rhs (fun _ -> after (sec 1.))
@@ -2021,14 +2212,20 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (is i After)
           ;;
 
-          let%test_unit _ = (* firing an unnecessary [after] and then observing it *)
+          let%test_unit _ =
+            (* firing an unnecessary [after] and then observing it *)
             let i = after (sec (-1.)) in
             stabilize_ [%here];
             let o = observe i in
             stabilize_ [%here];
             assert (is o After);
             let r = ref 0 in
-            let i = after (sec 1.) >>| fun z -> incr r; z in
+            let i =
+              after (sec 1.)
+              >>| fun z ->
+              incr r;
+              z
+            in
             advance_clock_by (sec 2.);
             stabilize_ [%here];
             assert (!r = 0);
@@ -2043,10 +2240,10 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
 
           let%test _ = does_raise (fun () -> at_intervals (sec (-1.)))
           let%test _ = does_raise (fun () -> at_intervals (sec 0.))
-
           let%test _ = is_invalidated_on_bind_rhs (fun _ -> at_intervals (sec 1.))
 
-          let%test_unit _ = (* advancing the clock does nothing by itself *)
+          let%test_unit _ =
+            (* advancing the clock does nothing by itself *)
             let r = ref 0 in
             let i = at_intervals (sec 1.) >>| fun () -> incr r in
             let o = observe i in
@@ -2089,7 +2286,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             disallow_future_use o
           ;;
 
-          let%test_unit _ = (* advancing exactly to intervals doesn't skip any *)
+          let%test_unit _ =
+            (* advancing exactly to intervals doesn't skip any *)
             let r = ref (-1) in
             let o = observe (at_intervals (sec 1.) >>| fun () -> incr r) in
             stabilize_ [%here];
@@ -2100,27 +2298,34 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               curr := Time_ns.next_multiple ~base ~after:!curr ~interval:(sec 1.) ();
               advance_clock ~to_:!curr;
               stabilize_ [%here];
-              [%test_result: int] !r ~expect:i;
+              [%test_result: int] !r ~expect:i
             done;
             disallow_future_use o
           ;;
 
-          let%test_unit _ = (* [interval < alarm precision] raises *)
+          let%test_unit _ =
+            (* [interval < alarm precision] raises *)
             assert (does_raise (fun () -> at_intervals (sec 0.0005)))
           ;;
 
           let snapshot = snapshot
 
-          let%test_unit _ = (* [at] in the past *)
-            assert (is_error
-                      (snapshot (const 14) ~at:(Time_ns.sub (now ()) (sec 1.)) ~before:13))
+          let%test_unit _ =
+            (* [at] in the past *)
+            assert (
+              is_error
+                (snapshot (const 14) ~at:(Time_ns.sub (now ()) (sec 1.)) ~before:13))
           ;;
 
-          let%test_unit _ = (* [at] in the future *)
+          let%test_unit _ =
+            (* [at] in the future *)
             let o =
               observe
                 (ok_exn
-                   (snapshot (const 14) ~at:(Time_ns.add (now ()) (sec 1.)) ~before:13))
+                   (snapshot
+                      (const 14)
+                      ~at:(Time_ns.add (now ()) (sec 1.))
+                      ~before:13))
             in
             stabilize_ [%here];
             assert (value o = 13);
@@ -2131,11 +2336,15 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (value o = 14)
           ;;
 
-          let%test_unit _ = (* [at] in the future, unobserved *)
+          let%test_unit _ =
+            (* [at] in the future, unobserved *)
             let x = Var.create_ [%here] 13 in
             let i =
               ok_exn
-                (snapshot (Var.watch x) ~at:(Time_ns.add (now ()) (sec 1.)) ~before:15)
+                (snapshot
+                   (Var.watch x)
+                   ~at:(Time_ns.add (now ()) (sec 1.))
+                   ~before:15)
             in
             stabilize_ [%here];
             Var.set x 17;
@@ -2147,11 +2356,15 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (value o = 17)
           ;;
 
-          let%test_unit _ = (* [advance_clock] past [at] prior to stabilization. *)
+          let%test_unit _ =
+            (* [advance_clock] past [at] prior to stabilization. *)
             let o =
               observe
                 (ok_exn
-                   (snapshot (const 15) ~at:(Time_ns.add (now ()) (sec 1.)) ~before:13))
+                   (snapshot
+                      (const 15)
+                      ~at:(Time_ns.add (now ()) (sec 1.))
+                      ~before:13))
             in
             advance_clock_by (sec 2.);
             stabilize_ [%here];
@@ -2163,7 +2376,10 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let x = Var.create_ [%here] 13 in
             let i =
               ok_exn
-                (snapshot (Var.watch x) ~at:(Time_ns.add (now ()) (sec 1.)) ~before:15)
+                (snapshot
+                   (Var.watch x)
+                   ~at:(Time_ns.add (now ()) (sec 1.))
+                   ~before:15)
             in
             advance_clock_by (sec 2.);
             stabilize_ [%here];
@@ -2173,9 +2389,11 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (value o = 13)
           ;;
 
-          let%test_unit _ = (* invalidated *)
+          let%test_unit _ =
+            (* invalidated *)
             let t =
-              ok_exn (snapshot invalid ~at:(Time_ns.add (now ()) (sec 1.)) ~before:13)
+              ok_exn
+                (snapshot invalid ~at:(Time_ns.add (now ()) (sec 1.)) ~before:13)
             in
             let o = observe t in
             stabilize_ [%here];
@@ -2192,44 +2410,43 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let c = const () in
             for _ = 1 to 5 do
               ignore
-                (ok_exn (snapshot c ~at:(Time_ns.add (now ()) (sec 1.)) ~before:()) : _ t);
+                ( ok_exn (snapshot c ~at:(Time_ns.add (now ()) (sec 1.)) ~before:())
+                  : _ t )
             done;
             advance_clock_by (sec 2.);
             let i2 = State.(num_nodes_became_necessary t) in
-            [%test_result: int] i2
-              ~expect:(i1 + 6)
-              (* the 5 [snapshot]s that became [freeze] plus the [const] *)
+            (* the 5 [snapshot]s that became [freeze] plus the [const] *)
+            [%test_result: int] i2 ~expect:(i1 + 6)
           ;;
 
           let step_function = step_function
 
           let relative_step_function ~init steps =
             let now = now () in
-            step_function ~init (List.map steps ~f:(fun (after, a) ->
-              (Time_ns.add now (sec (Float.of_int after)), a)))
+            step_function
+              ~init
+              (List.map steps ~f:(fun (after, a) ->
+                 Time_ns.add now (sec (Float.of_int after)), a))
           ;;
 
           let%test _ = is_invalidated_on_bind_rhs (fun i -> step_function ~init:i [])
 
           let%test _ =
-            is_invalidated_on_bind_rhs
-              (fun i -> relative_step_function ~init:i [1, i + 1])
+            is_invalidated_on_bind_rhs (fun i ->
+              relative_step_function ~init:i [ 1, i + 1 ])
           ;;
 
-          let%test_unit _ = (* no steps *)
+          let%test_unit _ =
+            (* no steps *)
             let i = step_function ~init:13 [] in
             let o = observe i in
             stabilize_ [%here];
             assert (value o = 13)
           ;;
 
-          let%test_unit _ = (* one step at a time *)
-            let i =
-              relative_step_function ~init:13
-                [ 1, 14
-                ; 2, 15
-                ]
-            in
+          let%test_unit _ =
+            (* one step at a time *)
+            let i = relative_step_function ~init:13 [ 1, 14; 2, 15 ] in
             let o = observe i in
             stabilize_ [%here];
             assert (value o = 13);
@@ -2241,25 +2458,17 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (value o = 15)
           ;;
 
-          let%test_unit _ = (* all steps in the past *)
-            let i =
-              relative_step_function ~init:13
-                [ -2, 14
-                ; -1, 15
-                ]
-            in
+          let%test_unit _ =
+            (* all steps in the past *)
+            let i = relative_step_function ~init:13 [ -2, 14; -1, 15 ] in
             let o = observe i in
             stabilize_ [%here];
             assert (value o = 15)
           ;;
 
-          let%test_unit _ = (* some steps in the past *)
-            let i =
-              relative_step_function ~init:13
-                [ -1, 14
-                ;  1, 15
-                ]
-            in
+          let%test_unit _ =
+            (* some steps in the past *)
+            let i = relative_step_function ~init:13 [ -1, 14; 1, 15 ] in
             let o = observe i in
             stabilize_ [%here];
             assert (value o = 14);
@@ -2268,13 +2477,9 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (value o = 15)
           ;;
 
-          let%test_unit _ = (* cross multiple steps in one stabilization cycle *)
-            let i =
-              relative_step_function ~init:13
-                [ 1, 14
-                ; 2, 15
-                ]
-            in
+          let%test_unit _ =
+            (* cross multiple steps in one stabilization cycle *)
+            let i = relative_step_function ~init:13 [ 1, 14; 2, 15 ] in
             let o = observe i in
             stabilize_ [%here];
             assert (value o = 13);
@@ -2284,24 +2489,18 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (value o = 15)
           ;;
 
-          let%test_unit _ = (* cross step in same stabilization as creation *)
-            let i =
-              relative_step_function ~init:13
-                [ 1, 14
-                ]
-            in
+          let%test_unit _ =
+            (* cross step in same stabilization as creation *)
+            let i = relative_step_function ~init:13 [ 1, 14 ] in
             let o = observe i in
             advance_clock_by (sec 2.);
             stabilize_ [%here];
             assert (value o = 14)
           ;;
 
-          let%test_unit _ = (* observe after step *)
-            let i =
-              relative_step_function ~init:13
-                [ 1, 14
-                ]
-            in
+          let%test_unit _ =
+            (* observe after step *)
+            let i = relative_step_function ~init:13 [ 1, 14 ] in
             stabilize_ [%here];
             advance_clock_by (sec 1.5);
             stabilize_ [%here];
@@ -2310,21 +2509,21 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (value o = 14)
           ;;
 
-          let%test_unit _ = (* advancing exactly to steps doesn't skip steps *)
+          let%test_unit _ =
+            (* advancing exactly to steps doesn't skip steps *)
             let base = now () in
             let curr = ref base in
             let steps = ref [] in
             for i = 1 to 20 do
               curr := Time_ns.next_multiple ~base ~after:!curr ~interval:(sec 1.) ();
-              steps := (!curr, i)::!steps
+              steps := (!curr, i) :: !steps
             done;
             let steps = List.rev !steps in
             let o = observe (step_function ~init:0 steps) in
             List.iter steps ~f:(fun (to_, i) ->
               advance_clock ~to_;
               stabilize_ [%here];
-              [%test_result: int] (value o) ~expect:(i-1);
-            );
+              [%test_result: int] (value o) ~expect:(i - 1));
             disallow_future_use o
           ;;
 
@@ -2341,20 +2540,21 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             in
             let base = now () in
             let steps =
-              List.map ~f:(fun (d, v) -> Time_ns.add base (sec d), v)
-                [ 1.0,     1
-                ; 1.99999, 2 (* It is unspecified whether this alarm has fired when the
-                                time is 2. but this test relies on the two
-                                step_functions having the same unspecified behaviour. *)
-                ; 2.0,     3
+              List.map
+                ~f:(fun (d, v) -> Time_ns.add base (sec d), v)
+                [ 1.0, 1
+                ; 1.99999, 2
+                (* It is unspecified whether this alarm has fired when the
+                   time is 2. but this test relies on the two
+                   step_functions having the same unspecified behaviour. *)
+                ; 2.0, 3
                 ; 3.00001, 4
-                ; 4.0,     5
+                ; 4.0, 5
                 ; 4.00001, 6
-                ; 5.0,     6
-                ; 6.0,     7
+                ; 5.0, 6
+                ; 6.0, 7
                 ]
             in
-
             let o1 = observe (step_function ~init:0 steps) in
             let o2 = observe (my_step_function ~init:0 steps) in
             stabilize_ [%here];
@@ -2367,7 +2567,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             disallow_future_use o2
           ;;
 
-          let%test_unit _ = (* Advancing to a scheduled time shouldn't break things. *)
+          let%test_unit _ =
+            (* Advancing to a scheduled time shouldn't break things. *)
             let fut = Time_ns.add (now ()) (sec 1.0) in
             let o1 = observe (at fut) in
             let o2 = observe (ok_exn (snapshot (const 1) ~at:fut ~before:0)) in
@@ -2388,29 +2589,33 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                 let num_alarms = State.(timing_wheel_length t) in
                 let x = Var.create_ [%here] 0 in
                 let o =
-                  observe (bind (Var.watch x) ~f:(fun i ->
-                    if i >= 0
-                    then create_time_based_incremental ()
-                    else return ()))
+                  observe
+                    (bind (Var.watch x) ~f:(fun i ->
+                       if i >= 0
+                       then create_time_based_incremental ()
+                       else return ()))
                 in
                 stabilize_ [%here];
                 for i = 1 to 10 do
                   Var.set x i;
                   stabilize_ [%here];
                   if check_invalidity
-                  then [%test_result: int] ~expect:(num_alarms + 1)
-                         State.(timing_wheel_length t);
+                  then
+                    [%test_result: int]
+                      ~expect:(num_alarms + 1)
+                      State.(timing_wheel_length t)
                 done;
                 Var.set x (-1);
                 stabilize_ [%here];
                 if check_invalidity
-                then [%test_result: int] ~expect:num_alarms
-                       State.(timing_wheel_length t);
+                then
+                  [%test_result: int]
+                    ~expect:num_alarms
+                    State.(timing_wheel_length t);
                 disallow_future_use o)
           ;;
 
           module Observer = struct
-
             open Observer
 
             type nonrec 'a t = 'a t [@@deriving sexp_of]
@@ -2421,12 +2626,13 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                 |> [%sexp_of: int t]
                 |> Sexp.to_string_hum
               in
-              is_some (String.substr_index string
-                         ~pattern:"Observer.value_exn called without stabilizing")
+              is_some
+                (String.substr_index
+                   string
+                   ~pattern:"Observer.value_exn called without stabilizing")
             ;;
 
             let invariant = invariant
-
             let observing = observing
 
             let%test_unit _ =
@@ -2445,10 +2651,11 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             ;;
 
             let disallow_future_use = disallow_future_use
-            let value               = value
-            let value_exn           = value_exn
+            let value = value
+            let value_exn = value_exn
 
-            let%test_unit _ = (* calling [value] before stabilizing returns error. *)
+            let%test_unit _ =
+              (* calling [value] before stabilizing returns error. *)
               let x = Var.create_ [%here] 0 in
               let o = observe (watch x) in
               assert (is_error (value o));
@@ -2480,7 +2687,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               assert (does_raise (fun () -> value_exn o))
             ;;
 
-            let%test_unit _ = (* [disallow_future_use] disables on-update handlers. *)
+            let%test_unit _ =
+              (* [disallow_future_use] disables on-update handlers. *)
               let x = Var.create_ [%here] 13 in
               let o = observe (Var.watch x) in
               let r = ref 0 in
@@ -2493,9 +2701,11 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               assert (!r = 1)
             ;;
 
-            let%test_unit _ = (* finalizers work *)
+            let%test_unit _ =
+              (* finalizers work *)
               Gc.full_major ();
-              stabilize_ [%here];  (* clean up pre-existing finalizers *)
+              stabilize_ [%here];
+              (* clean up pre-existing finalizers *)
               let before = State.(num_active_observers t) in
               let x = Var.create_ [%here] 13 in
               let o = observe (Var.watch x) in
@@ -2508,7 +2718,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               assert (State.(num_active_observers t) = before)
             ;;
 
-            let%test_unit _ = (* finalizers don't disable on-update handlers *)
+            let%test_unit _ =
+              (* finalizers don't disable on-update handlers *)
               let x = Var.create_ [%here] 13 in
               let o = observe (Var.watch x) in
               let r = ref 0 in
@@ -2521,7 +2732,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               assert (!r = 2)
             ;;
 
-            let%test_unit _ = (* finalizers cause an [Unnecessary] update to be sent *)
+            let%test_unit _ =
+              (* finalizers cause an [Unnecessary] update to be sent *)
               let x = Var.create 13 in
               let o = observe (watch x) in
               let push, check = on_update_queue () in
@@ -2534,7 +2746,6 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               check [ Unnecessary ]
             ;;
 
-
             let%test_unit _ =
               (* [disallow_future_use] and finalize in the same stabilization. *)
               let x = Var.create_ [%here] 1 in
@@ -2545,7 +2756,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               stabilize_ [%here]
             ;;
 
-            let%test_unit _ = (* finalize after disallow_future_use *)
+            let%test_unit _ =
+              (* finalize after disallow_future_use *)
               let x = Var.create_ [%here] 1 in
               let o = observe (Var.watch x) in
               stabilize_ [%here];
@@ -2572,14 +2784,16 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               assert (not (use_is_allowed o))
             ;;
 
-            let%test_unit _ = (* lots of observers on the same node isn't quadratic. *)
+            let%test_unit _ =
+              (* lots of observers on the same node isn't quadratic. *)
               (* We can't run this test with debugging, because it's too slow. *)
-              if not debug then begin
+              if not debug
+              then (
                 let t = const 13 in
                 let observers = List.init 100_000 ~f:(fun _ -> observe t) in
                 let cpu_used () =
                   let module R = Unix.Resource_usage in
-                  let { R. utime; stime; _ } = R.get `Self in
+                  let { R.utime; stime; _ } = R.get `Self in
                   Time_ns.Span.of_sec (utime +. stime)
                 in
                 let before = cpu_used () in
@@ -2588,11 +2802,10 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                 stabilize ();
                 List.iter observers ~f:Observer.disallow_future_use;
                 stabilize ();
-                let consumed = Time_ns.Span.(-) (cpu_used ()) before in
+                let consumed = Time_ns.Span.( - ) (cpu_used ()) before in
                 if verbose
                 then Debug.ams [%here] "consumed" consumed [%sexp_of: Time_ns.Span.t];
-                assert (Time_ns.Span.(<) consumed (sec 1.));
-              end
+                assert (Time_ns.Span.( < ) consumed (sec 1.)))
             ;;
 
             module Update = Update
@@ -2601,12 +2814,13 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
 
             let%test_unit _ =
               let x = Var.create_ [%here] 13 in
-              let parent = map (watch x) ~f:(fun x ->  x + 1) in
+              let parent = map (watch x) ~f:(fun x -> x + 1) in
               let parent_o = observe parent in
               let num_calls = ref 0 in
               let r = ref 0 in
               on_update_exn parent_o ~f:(function
-                | Initialized i | Changed (_, i) ->
+                | Initialized i
+                | Changed (_, i) ->
                   num_calls := !num_calls + 1;
                   r := i
                 | Invalidated -> assert false);
@@ -2630,7 +2844,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               disallow_future_use o
             ;;
 
-            let%test_unit _ = (* [on_update_exn] of an invalid node *)
+            let%test_unit _ =
+              (* [on_update_exn] of an invalid node *)
               let o = observe invalid in
               let is_ok = ref false in
               on_update_exn o ~f:(function
@@ -2645,7 +2860,11 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               let x = Var.create 0 in
               let r = ref None in
               let o1 =
-                observe (bind (watch x) ~f:(fun i -> let t = const i in r := Some t; t))
+                observe
+                  (bind (watch x) ~f:(fun i ->
+                     let t = const i in
+                     r := Some t;
+                     t))
               in
               stabilize_ [%here];
               let o2 = observe (Option.value_exn !r) in
@@ -2662,21 +2881,24 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               disallow_future_use o2
             ;;
 
-            let%test_unit _ = (* [on_update_exn] of a disallowed observer *)
+            let%test_unit _ =
+              (* [on_update_exn] of a disallowed observer *)
               let o = observe (const 5) in
               disallow_future_use o;
-              assert (does_raise (fun () ->
-                on_update_exn o ~f:(fun _ -> assert false)))
+              assert (
+                does_raise (fun () -> on_update_exn o ~f:(fun _ -> assert false)))
             ;;
 
-            let%test_unit _ = (* [disallow_future_use] before first stabilization *)
+            let%test_unit _ =
+              (* [disallow_future_use] before first stabilization *)
               let o = observe (const 5) in
               disallow_future_use o;
               stabilize_ [%here];
               disallow_future_use o
             ;;
 
-            let%test_unit _ = (* [disallow_future_use] during an on-update handler *)
+            let%test_unit _ =
+              (* [disallow_future_use] during an on-update handler *)
               let x = Var.create_ [%here] 13 in
               let o = observe (watch x) in
               on_update_exn o ~f:(fun _ -> disallow_future_use o);
@@ -2691,7 +2913,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               for _ = 1 to 2 do
                 on_update_exn o ~f:(fun _ ->
                   assert (use_is_allowed o);
-                  disallow_future_use o);
+                  disallow_future_use o)
               done;
               stabilize_ [%here]
             ;;
@@ -2724,7 +2946,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               stabilize_ [%here]
             ;;
 
-            let%test_unit _ = (* adding an on-update-handler to an already stable node *)
+            let%test_unit _ =
+              (* adding an on-update-handler to an already stable node *)
               let x = watch (Var.create 13) in
               let o = observe x in
               stabilize_ [%here];
@@ -2736,7 +2959,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               disallow_future_use o
             ;;
 
-            let%test_unit _ = (* adding an on-update handler after a change *)
+            let%test_unit _ =
+              (* adding an on-update handler after a change *)
               let x = Var.create 13 in
               let o = observe (watch x) in
               let push1, check1 = on_observer_update_queue () in
@@ -2756,13 +2980,13 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               check2 [ Changed (14, 15) ]
             ;;
 
-            let%test_unit _ = (* adding an on-update handler in an on-update handler. *)
+            let%test_unit _ =
+              (* adding an on-update handler in an on-update handler. *)
               let x = Var.create 13 in
               let o = observe (watch x) in
               let did_run = ref false in
               on_update_exn o ~f:(fun _ ->
-                on_update_exn (observe (watch x))
-                  ~f:(fun _ -> did_run := true));
+                on_update_exn (observe (watch x)) ~f:(fun _ -> did_run := true));
               stabilize_ [%here];
               assert (not !did_run);
               Var.set x 14;
@@ -2780,10 +3004,9 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               let o = observe (watch (Var.create 13)) in
               let is_ok = ref false in
               Observer.on_update_exn o ~f:(fun _ ->
-                Observer.on_update_exn (observe invalid)
-                  ~f:(function
-                    | Invalidated -> is_ok := true
-                    | _ -> assert (skip_invalidity_check || false)));
+                Observer.on_update_exn (observe invalid) ~f:(function
+                  | Invalidated -> is_ok := true
+                  | _ -> assert (skip_invalidity_check || false)));
               stabilize_ [%here];
               assert (not !is_ok);
               stabilize_ [%here];
@@ -2793,24 +3016,22 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let%test_unit _ =
               (* on-update-handlers added during the firing of other on-update-handlers
                  should not fire now but instead after the next stabilization *)
-              List.iter [ const 1; invalid ]
-                ~f:(fun node ->
-                  let o1 = observe (const 1) in
-                  let o2 = observe node in
-                  let ran = ref 0 in
-                  Observer.on_update_exn o1 ~f:(fun _ ->
-                    Observer.on_update_exn o2 ~f:(fun _ -> incr ran));
-                  Observer.on_update_exn o2 ~f:(fun _ -> ());
-                  assert (!ran = 0);
-                  stabilize_ [%here];
-                  assert (!ran = 0);
-                  stabilize_ [%here];
-                  assert (!ran = 1);
-                  stabilize_ [%here];
-                  assert (!ran = 1);
-                  disallow_future_use o1;
-                  disallow_future_use o2;
-                )
+              List.iter [ const 1; invalid ] ~f:(fun node ->
+                let o1 = observe (const 1) in
+                let o2 = observe node in
+                let ran = ref 0 in
+                Observer.on_update_exn o1 ~f:(fun _ ->
+                  Observer.on_update_exn o2 ~f:(fun _ -> incr ran));
+                Observer.on_update_exn o2 ~f:(fun _ -> ());
+                assert (!ran = 0);
+                stabilize_ [%here];
+                assert (!ran = 0);
+                stabilize_ [%here];
+                assert (!ran = 1);
+                stabilize_ [%here];
+                assert (!ran = 1);
+                disallow_future_use o1;
+                disallow_future_use o2)
             ;;
 
             let%test_unit _ =
@@ -2819,17 +3040,20 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               let called = ref false in
               let unit = const () in
               let o_unit = observe unit in
-              let o = observe (map unit ~f:(fun () ->
-                on_update_exn o_unit ~f:(fun _ -> called := true)))
+              let o =
+                observe
+                  (map unit ~f:(fun () ->
+                     on_update_exn o_unit ~f:(fun _ -> called := true)))
               in
               assert (not !called);
               stabilize_ [%here];
-              assert (!called);
+              assert !called;
               disallow_future_use o;
               disallow_future_use o_unit
             ;;
 
-            let%test_unit _ = (* on-update handlers are initialized once *)
+            let%test_unit _ =
+              (* on-update handlers are initialized once *)
               let v = Var.create (const 0) in
               let i = Var.watch v in
               let o = observe i in
@@ -2837,8 +3061,9 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                 let is_first_call = ref true in
                 function
                 | Observer.Update.Initialized _ ->
-                  assert !is_first_call; is_first_call := false;
-                | Changed _   -> assert (not !is_first_call);
+                  assert !is_first_call;
+                  is_first_call := false
+                | Changed _ -> assert (not !is_first_call)
                 | Invalidated -> assert false
               in
               Observer.on_update_exn o ~f:(old_val_is_none_once ());
@@ -2847,17 +3072,19 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               stabilize ()
             ;;
 
-            let%test_unit _ = (* creating an observer during stabilization *)
+            let%test_unit _ =
+              (* creating an observer during stabilization *)
               let x = Var.create 13 in
               let r = ref None in
               let o1 =
-                observe (Var.watch x
-                         >>| fun _ ->
-                         let o2 = observe (Var.watch x) in
-                         assert (use_is_allowed o2);
-                         assert (is_error (value o2));
-                         r := Some o2;
-                         0)
+                observe
+                  (Var.watch x
+                   >>| fun _ ->
+                   let o2 = observe (Var.watch x) in
+                   assert (use_is_allowed o2);
+                   assert (is_error (value o2));
+                   r := Some o2;
+                   0)
               in
               stabilize_ [%here];
               let o2 = Option.value_exn !r in
@@ -2878,11 +3105,13 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               let push, check = on_observer_update_queue () in
               let inner_obs = ref None in
               let o =
-                observe (Var.watch v >>| fun i ->
-                         let observer = observe (Var.watch v) in
-                         inner_obs := Some observer;
-                         on_update_exn observer ~f:push;
-                         i)
+                observe
+                  (Var.watch v
+                   >>| fun i ->
+                   let observer = observe (Var.watch v) in
+                   inner_obs := Some observer;
+                   on_update_exn observer ~f:push;
+                   i)
               in
               check [];
               stabilize_ [%here];
@@ -2893,15 +3122,19 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               disallow_future_use (Option.value_exn !inner_obs)
             ;;
 
-            let%test_unit _ = (* disallow_future_use during stabilization *)
+            let%test_unit _ =
+              (* disallow_future_use during stabilization *)
               let x = Var.create 13 in
               let handler_ran = ref false in
               let o1 = observe (Var.watch x) in
-              let o2 = observe (Var.watch x >>| fun i ->
-                                on_update_exn o1 ~f:(fun _ -> handler_ran := true);
-                                disallow_future_use o1;
-                                assert (not (use_is_allowed o1));
-                                i)
+              let o2 =
+                observe
+                  (Var.watch x
+                   >>| fun i ->
+                   on_update_exn o1 ~f:(fun _ -> handler_ran := true);
+                   disallow_future_use o1;
+                   assert (not (use_is_allowed o1));
+                   i)
               in
               assert (use_is_allowed o1);
               assert (not !handler_ran);
@@ -2916,12 +3149,13 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               let x = Var.create 13 in
               let r = ref None in
               let o1 =
-                observe (Var.watch x
-                         >>| fun _ ->
-                         let o2 = observe (Var.watch x) in
-                         r := Some o2;
-                         disallow_future_use o2;
-                         0)
+                observe
+                  (Var.watch x
+                   >>| fun _ ->
+                   let o2 = observe (Var.watch x) in
+                   r := Some o2;
+                   disallow_future_use o2;
+                   0)
               in
               stabilize_ [%here];
               let o2 = Option.value_exn !r in
@@ -2934,11 +3168,12 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               (* creating an observer and finalizing it during stabilization *)
               let x = Var.create 13 in
               let o =
-                observe (Var.watch x
-                         >>| fun _ ->
-                         Fn.ignore (observe (Var.watch x) : _ Observer.t);
-                         Gc.full_major ();
-                         0)
+                observe
+                  (Var.watch x
+                   >>| fun _ ->
+                   Fn.ignore (observe (Var.watch x) : _ Observer.t);
+                   Gc.full_major ();
+                   0)
               in
               stabilize_ [%here];
               stabilize_ [%here];
@@ -2984,7 +3219,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             disallow_future_use o
           ;;
 
-          let%test_unit _ = (* value changing with different observers *)
+          let%test_unit _ =
+            (* value changing with different observers *)
             let v = Var.create_ [%here] 13 in
             let o = observe (watch v) in
             let push, check = on_update_queue () in
@@ -3001,7 +3237,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             check [ Necessary 14 ]
           ;;
 
-          let%test_unit _ = (* call at next stabilization *)
+          let%test_unit _ =
+            (* call at next stabilization *)
             let v = Var.create_ [%here] 13 in
             let o = observe (Var.watch v) in
             stabilize_ [%here];
@@ -3012,7 +3249,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             disallow_future_use o
           ;;
 
-          let%test_unit _ = (* called at next stabilization with [Unnecessary] update *)
+          let%test_unit _ =
+            (* called at next stabilization with [Unnecessary] update *)
             let v = Var.create_ [%here] 13 in
             let o = observe (Var.watch v) in
             stabilize_ [%here];
@@ -3023,7 +3261,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             check [ Unnecessary ]
           ;;
 
-          let%test_unit _ = (* transition from unnecessary to necessary and back *)
+          let%test_unit _ =
+            (* transition from unnecessary to necessary and back *)
             let x = Var.create 13 in
             let push, check = on_update_queue () in
             on_update (watch x) ~f:push;
@@ -3040,7 +3279,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             check [ Unnecessary ]
           ;;
 
-          let%test_unit _ = (* an indirectly necessary node *)
+          let%test_unit _ =
+            (* an indirectly necessary node *)
             let x = Var.create_ [%here] 13 in
             let push, check = on_update_queue () in
             on_update (Var.watch x) ~f:push;
@@ -3061,7 +3301,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             check [ Unnecessary ]
           ;;
 
-          let%test_unit _ = (* [on_update] doesn't make a node necessary *)
+          let%test_unit _ =
+            (* [on_update] doesn't make a node necessary *)
             let v = Var.create_ [%here] 13 in
             let push, check = on_update_queue () in
             on_update (watch v) ~f:push;
@@ -3076,18 +3317,23 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             disallow_future_use o
           ;;
 
-          let%test_unit _ = (* invalid from the start *)
+          let%test_unit _ =
+            (* invalid from the start *)
             let push, check = on_update_queue () in
             on_update invalid ~f:push;
             stabilize_ [%here];
             if check_invalidity then check [ Invalidated ]
           ;;
 
-          let%test_unit _ = (* invalidation of an unnecessary node *)
+          let%test_unit _ =
+            (* invalidation of an unnecessary node *)
             let v = Var.create_ [%here] 13 in
             let r = ref None in
             let o =
-              observe (bind (watch v) ~f:(fun i -> r := Some (const i); return ()))
+              observe
+                (bind (watch v) ~f:(fun i ->
+                   r := Some (const i);
+                   return ()))
             in
             stabilize_ [%here];
             let i = Option.value_exn !r in
@@ -3101,11 +3347,15 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             disallow_future_use o
           ;;
 
-          let%test_unit _ = (* invalidation of a necessary node *)
+          let%test_unit _ =
+            (* invalidation of a necessary node *)
             let v = Var.create_ [%here] 13 in
             let r = ref None in
             let o1 =
-              observe (bind (watch v) ~f:(fun i -> r := Some (const i); return ()))
+              observe
+                (bind (watch v) ~f:(fun i ->
+                   r := Some (const i);
+                   return ()))
             in
             stabilize_ [%here];
             let i = Option.value_exn !r in
@@ -3121,14 +3371,16 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             disallow_future_use o2
           ;;
 
-          let%test_unit _ = (* invalidation of a necessary node after a change *)
+          let%test_unit _ =
+            (* invalidation of a necessary node after a change *)
             let v = Var.create_ [%here] 13 in
             let w = Var.create_ [%here] 14 in
             let r = ref None in
             let o1 =
-              observe (bind (watch v) ~f:(fun _ ->
-                r := Some (watch w >>| Fn.id);
-                return ()))
+              observe
+                (bind (watch v) ~f:(fun _ ->
+                   r := Some (watch w >>| Fn.id);
+                   return ()))
             in
             stabilize_ [%here];
             let i = Option.value_exn !r in
@@ -3147,7 +3399,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             disallow_future_use o2
           ;;
 
-          let%test_unit _ = (* making a node necessary from an on-update handler *)
+          let%test_unit _ =
+            (* making a node necessary from an on-update handler *)
             let x = Var.create_ [%here] 13 in
             let y = Var.create_ [%here] 14 in
             let r = ref None in
@@ -3170,11 +3423,14 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             disallow_future_use ox
           ;;
 
-          let%test_unit _ = (* calling [advance_clock] in an on-update handler *)
+          let%test_unit _ =
+            (* calling [advance_clock] in an on-update handler *)
             let i = after (sec 1.) in
             let o = observe i in
             let num_fires = ref 0 in
-            on_update i ~f:(fun _ -> incr num_fires; advance_clock_by (sec 2.));
+            on_update i ~f:(fun _ ->
+              incr num_fires;
+              advance_clock_by (sec 2.));
             assert (!num_fires = 0);
             stabilize_ [%here];
             assert (!num_fires = 1);
@@ -3184,20 +3440,18 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           ;;
 
           module Cutoff = struct
-
             open Cutoff
 
             type nonrec 'a t = 'a t
 
             let sexp_of_t = sexp_of_t
             let invariant = invariant
+            let create = create
 
-            let create = create (* tested below *)
+            (* tested below *)
 
             let _ = create
-
             let of_compare = of_compare
-
             let should_cutoff = should_cutoff
 
             let%test_unit _ =
@@ -3215,13 +3469,10 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               let o = observe (watch x >>| fun _i -> incr r) in
               stabilize_ [%here];
               assert (!r = 1);
-              List.iter
-                [ 1, 1
-                ; 0, 1
-                ] ~f:(fun (v, expect) ->
-                  Var.set x v;
-                  stabilize_ [%here];
-                  assert (!r = expect));
+              List.iter [ 1, 1; 0, 1 ] ~f:(fun (v, expect) ->
+                Var.set x v;
+                stabilize_ [%here];
+                assert (!r = expect));
               disallow_future_use o
             ;;
 
@@ -3234,14 +3485,10 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               let o = observe (watch x >>| fun _i -> incr r) in
               stabilize_ [%here];
               assert (!r = 1);
-              List.iter
-                [ 1, 2
-                ; 1, 3
-                ; 1, 4
-                ] ~f:(fun (v, expect) ->
-                  Var.set x v;
-                  stabilize_ [%here];
-                  assert (!r = expect));
+              List.iter [ 1, 2; 1, 3; 1, 4 ] ~f:(fun (v, expect) ->
+                Var.set x v;
+                stabilize_ [%here];
+                assert (!r = expect));
               disallow_future_use o
             ;;
 
@@ -3256,15 +3503,10 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               let o = observe (watch x >>| fun _i -> incr r) in
               stabilize_ [%here];
               assert (!r = 1);
-              List.iter
-                [ r1, 1
-                ; r2, 2
-                ; r2, 2
-                ; r1, 3
-                ] ~f:(fun (v, expect) ->
-                  Var.set x v;
-                  stabilize_ [%here];
-                  assert (!r = expect));
+              List.iter [ r1, 1; r2, 2; r2, 2; r1, 3 ] ~f:(fun (v, expect) ->
+                Var.set x v;
+                stabilize_ [%here];
+                assert (!r = expect));
               disallow_future_use o
             ;;
 
@@ -3280,15 +3522,10 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               let o = observe (watch x >>| fun _i -> incr r) in
               stabilize_ [%here];
               assert (!r = 1);
-              List.iter
-                [ r1a, 1
-                ; r1b, 1
-                ; r2 , 2
-                ; r1a, 3
-                ] ~f:(fun (v, expect) ->
-                  Var.set x v;
-                  stabilize_ [%here];
-                  assert (!r = expect));
+              List.iter [ r1a, 1; r1b, 1; r2, 2; r1a, 3 ] ~f:(fun (v, expect) ->
+                Var.set x v;
+                stabilize_ [%here];
+                assert (!r = expect));
               disallow_future_use o
             ;;
 
@@ -3311,24 +3548,20 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let%test_unit _ =
             let a = Var.create_ [%here] 0 in
             let n = map ~f:Fn.id (watch a) in
-            set_cutoff n
-              (Cutoff.create
-                 (fun ~old_value ~new_value -> abs (old_value - new_value) <= 1));
+            set_cutoff
+              n
+              (Cutoff.create (fun ~old_value ~new_value ->
+                 abs (old_value - new_value) <= 1));
             let a' = observe n in
             stabilize_ [%here];
             assert (value a' = 0);
-            List.iter
-              [ 1, 0
-              ; 2, 2
-              ; 2, 2
-              ] ~f:(fun (v, expect) ->
-                Var.set a v;
-                stabilize_ [%here];
-                assert (value a' = expect))
+            List.iter [ 1, 0; 2, 2; 2, 2 ] ~f:(fun (v, expect) ->
+              Var.set a v;
+              stabilize_ [%here];
+              assert (value a' = expect))
           ;;
 
           module Scope = struct
-
             open Scope
 
             type nonrec t = t
@@ -3341,7 +3574,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             ;;
 
             let current = current
-            let within  = within
+            let within = within
 
             let%test_unit _ =
               let o = observe (within (current ()) ~f:(fun () -> const 13)) in
@@ -3349,14 +3582,16 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               assert (value o = 13)
             ;;
 
-            let%test_unit _ = (* escaping a [bind] *)
+            let%test_unit _ =
+              (* escaping a [bind] *)
               let s = current () in
               let r = ref None in
               let x = Var.create_ [%here] 13 in
               let o =
-                observe (bind (watch x) ~f:(fun i ->
-                  r := Some (within s ~f:(fun () -> const i));
-                  return ()))
+                observe
+                  (bind (watch x) ~f:(fun i ->
+                     r := Some (within s ~f:(fun () -> const i));
+                     return ()))
               in
               stabilize_ [%here];
               let o2 = observe (Option.value_exn !r) in
@@ -3370,13 +3605,15 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               assert (value o2 = 13)
             ;;
 
-            let%test_unit _ = (* returning to a [bind] *)
+            let%test_unit _ =
+              (* returning to a [bind] *)
               let r = ref None in
               let x = Var.create_ [%here] 13 in
               let o1 =
-                observe (bind (watch x) ~f:(fun _i ->
-                  r := Some (current ());
-                  return ()))
+                observe
+                  (bind (watch x) ~f:(fun _i ->
+                     r := Some (current ());
+                     return ()))
               in
               stabilize_ [%here];
               let s = Option.value_exn !r in
@@ -3392,7 +3629,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
 
           let lazy_from_fun = lazy_from_fun
 
-          let%test_unit _ = (* laziness *)
+          let%test_unit _ =
+            (* laziness *)
             let r = ref 0 in
             let l = lazy_from_fun (fun () -> incr r) in
             assert (!r = 0);
@@ -3402,7 +3640,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (!r = 1)
           ;;
 
-          let%test_unit _ = (* nodes created when forcing are in the right scope *)
+          let%test_unit _ =
+            (* nodes created when forcing are in the right scope *)
             let l = lazy_from_fun (fun () -> const 13) in
             let x = Var.create_ [%here] 13 in
             let o = observe (bind (watch x) ~f:(fun _i -> force l)) in
@@ -3414,10 +3653,10 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           ;;
 
           let default_hash_table_initial_size = default_hash_table_initial_size
-          let memoize_fun                     = memoize_fun
-          let memoize_fun_by_key              = memoize_fun_by_key
-          let weak_memoize_fun                = weak_memoize_fun
-          let weak_memoize_fun_by_key         = weak_memoize_fun_by_key
+          let memoize_fun = memoize_fun
+          let memoize_fun_by_key = memoize_fun_by_key
+          let weak_memoize_fun = weak_memoize_fun
+          let weak_memoize_fun_by_key = weak_memoize_fun_by_key
 
           let test_memoize_fun memoize_fun =
             let x = Var.create_ [%here] 13 in
@@ -3425,15 +3664,15 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let z = Var.create_ [%here] 15 in
             let num_calls = ref 0 in
             let o =
-              observe (
-                (bind (bind (watch x)
-                         ~f:(fun i1 ->
-                           let f i2 =
-                             incr num_calls;
-                             map (watch y) ~f:(fun i3 -> i1 + i2 + i3)
-                           in
-                           return (unstage (memoize_fun Int.hashable f))))
-                   ~f:(fun f -> bind (watch z) ~f)))
+              observe
+                (bind
+                   (bind (watch x) ~f:(fun i1 ->
+                      let f i2 =
+                        incr num_calls;
+                        map (watch y) ~f:(fun i3 -> i1 + i2 + i3)
+                      in
+                      return (unstage (memoize_fun Int.hashable f))))
+                   ~f:(fun f -> bind (watch z) ~f))
             in
             stabilize_ [%here];
             [%test_eq: int] (value o) 42;
@@ -3457,7 +3696,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             Var.set x 30;
             stabilize_ [%here];
             assert (!num_calls = 4);
-            [%test_eq: int] (value o) 66;
+            [%test_eq: int] (value o) 66
           ;;
 
           let%test_unit _ = test_memoize_fun memoize_fun
@@ -3469,8 +3708,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let%test_unit _ =
             test_memoize_fun (fun hashable f ->
               let memo_f =
-                unstage (weak_memoize_fun hashable
-                           (fun a -> Heap_block.create_exn (f a)))
+                unstage
+                  (weak_memoize_fun hashable (fun a -> Heap_block.create_exn (f a)))
               in
               stage (fun a -> Heap_block.value (memo_f a)))
           ;;
@@ -3478,13 +3717,15 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let%test_unit _ =
             test_memoize_fun (fun hashable f ->
               let memo_f =
-                unstage (weak_memoize_fun_by_key hashable Fn.id
-                           (fun a -> Heap_block.create_exn (f a)))
+                unstage
+                  (weak_memoize_fun_by_key hashable Fn.id (fun a ->
+                     Heap_block.create_exn (f a)))
               in
               stage (fun a -> Heap_block.value (memo_f a)))
           ;;
 
-          let%test_unit _ = (* removal of unused data *)
+          let%test_unit _ =
+            (* removal of unused data *)
             let num_calls = ref 0 in
             let f =
               unstage
@@ -3507,9 +3748,11 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             Gc.keep_alive x1
           ;;
 
-          let%test_unit _ = (* removing a parent is constant time *)
+          let%test_unit _ =
+            (* removing a parent is constant time *)
             (* We can't run this test with debugging, because it's too slow. *)
-            if not debug then begin
+            if not debug
+            then
               for e = 0 to 5 do
                 let num_observers = Float.to_int (10. ** Float.of_int e) in
                 let t = const 13 in
@@ -3518,7 +3761,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                 in
                 let cpu_used () =
                   let module R = Unix.Resource_usage in
-                  let { R. utime; stime; _ } = R.get `Self in
+                  let { R.utime; stime; _ } = R.get `Self in
                   Time_ns.Span.of_sec (utime +. stime)
                 in
                 let before = cpu_used () in
@@ -3527,12 +3770,16 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                 stabilize ();
                 List.iter observers ~f:disallow_future_use;
                 stabilize ();
-                let consumed = Time_ns.Span.(-) (cpu_used ()) before in
-                if verbose then Debug.ams [%here] "consumed" (num_observers, consumed)
-                                  [%sexp_of: int * Time_ns.Span.t];
-                assert (Time_ns.Span.(<) consumed (sec 1.));
-              done;
-            end
+                let consumed = Time_ns.Span.( - ) (cpu_used ()) before in
+                if verbose
+                then
+                  Debug.ams
+                    [%here]
+                    "consumed"
+                    (num_observers, consumed)
+                    [%sexp_of: int * Time_ns.Span.t];
+                assert (Time_ns.Span.( < ) consumed (sec 1.))
+              done
           ;;
 
           let%test_unit _ =
@@ -3541,27 +3788,32 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                child. *)
             let c1 = const 12 in
             let c2 = const 12 in
-            let o1 = observe (map2 c1 c2 ~f:(+)) in (* c2 is child 1, o1 is parent 0 *)
+            let o1 = observe (map2 c1 c2 ~f:( + )) in
+            (* c2 is child 1, o1 is parent 0 *)
             stabilize_ [%here];
-            let o2 = observe (map c2 ~f:Fn.id) in (* c2 is child 0, o2 is parent 1 *)
+            let o2 = observe (map c2 ~f:Fn.id) in
+            (* c2 is child 0, o2 is parent 1 *)
             stabilize_ [%here];
-            Observer.disallow_future_use o1; (* o2 is parent 0, so c2 is child 1 for that index *)
+            Observer.disallow_future_use o1;
+            (* o2 is parent 0, so c2 is child 1 for that index *)
             stabilize_ [%here];
             Observer.disallow_future_use o2;
             stabilize_ [%here]
           ;;
 
-          let%test_unit _ = (* [bind_lhs_change_should_invalidate_rhs = false] *)
+          let%test_unit _ =
+            (* [bind_lhs_change_should_invalidate_rhs = false] *)
             if not M.bind_lhs_change_should_invalidate_rhs
-            then begin
+            then (
               let va = Var.create 0 in
               let vb = Var.create 0 in
               let r = ref None in
               let o1 =
-                observe (bind (watch va) ~f:(fun a ->
-                  let t = map (watch vb) ~f:(fun b -> a + b) in
-                  if a = 0 then r := Some t;
-                  t))
+                observe
+                  (bind (watch va) ~f:(fun a ->
+                     let t = map (watch vb) ~f:(fun b -> a + b) in
+                     if a = 0 then r := Some t;
+                     t))
               in
               stabilize_ [%here];
               let o2 = observe (Option.value_exn !r) in
@@ -3580,8 +3832,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               Var.set vb 3;
               stabilize_ [%here];
               [%test_result: int] (Observer.value_exn o2) ~expect:3;
-              disallow_future_use o2;
-            end;
+              disallow_future_use o2)
           ;;
 
           module Expert = Expert
@@ -3590,32 +3841,37 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           module Expert_test = struct
             (* This tests add_dependency/remove_dependency, invalidity (in particular a node
                becomes invalid before being replaced by a valid one). *)
-            include Join(struct
-                let join : type a. a t t -> a t = fun t ->
-                  let prev_rhs = ref None in
-                  let join = E.Node.create (fun () ->
-                    E.Dependency.value (Option.value_exn !prev_rhs))
-                  in
-                  let lhs_change = map t ~f:(fun rhs ->
-                    let rhs_dep = E.Dependency.create rhs in
-                    E.Node.add_dependency join rhs_dep;
-                    Option.iter !prev_rhs ~f:(fun v ->
-                      E.Node.remove_dependency join v);
-                    prev_rhs := Some rhs_dep)
-                  in
-                  E.Node.add_dependency join (E.Dependency.create lhs_change);
-                  E.Node.watch join
+            include Join (struct
+                let join : type a. a t t -> a t =
+                  fun t ->
+                    let prev_rhs = ref None in
+                    let join =
+                      E.Node.create (fun () ->
+                        E.Dependency.value (Option.value_exn !prev_rhs))
+                    in
+                    let lhs_change =
+                      map t ~f:(fun rhs ->
+                        let rhs_dep = E.Dependency.create rhs in
+                        E.Node.add_dependency join rhs_dep;
+                        Option.iter !prev_rhs ~f:(fun v ->
+                          E.Node.remove_dependency join v);
+                        prev_rhs := Some rhs_dep)
+                    in
+                    E.Node.add_dependency join (E.Dependency.create lhs_change);
+                    E.Node.watch join
                 ;;
               end)
 
-            let%test_unit _ = (* plugging an already invalid incremental node make
-                                 the expert node invalid *)
+            let%test_unit _ =
+              (* plugging an already invalid incremental node make
+                 the expert node invalid *)
               let t = E.Node.create ignore in
               E.Node.add_dependency t (E.Dependency.create invalid);
-              assert (is_invalid (E.Node.watch t));
+              assert (is_invalid (E.Node.watch t))
             ;;
 
-            let%test_unit _ = (* [invalidate] does invalidate *)
+            let%test_unit _ =
+              (* [invalidate] does invalidate *)
               let var = Var.create `Valid in
               let result = E.Node.create ignore in
               let result_incr = E.Node.watch result in
@@ -3648,201 +3904,212 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                         | `On_change of k * v2 option
                         | `Per_key of k
                         | `Right of k
-                        | `Unequal of k ] ->
-                        unit)
+                        | `Unequal of k ]
+                        -> unit)
               -> (k, v1, 'comparator) Map.t t
               -> f:(k -> v1 t -> v2 option t)
-              -> (k, v2, 'comparator) Map.t t = fun ~on_event lhs ~f ->
-              let prev_map = ref None in
-              let prev_nodes = ref None in
-              let acc = ref None in
-              let result =
-                E.Node.create (fun () -> on_event `Main; Option.value_exn !acc)
-              in
-              let rec lhs_change = lazy (map lhs ~f:(fun map ->
-                on_event `Lhs_change;
-                let empty_map = Map.Using_comparator.empty ~comparator:(Map.comparator map) in
-                if Option.is_none !acc then acc := Some empty_map;
-                let symmetric_diff =
-                  Map.symmetric_diff ~data_equal:phys_equal
-                    (Option.value !prev_map ~default:empty_map) map
+              -> (k, v2, 'comparator) Map.t t =
+              fun ~on_event lhs ~f ->
+                let prev_map = ref None in
+                let prev_nodes = ref None in
+                let acc = ref None in
+                let result =
+                  E.Node.create (fun () ->
+                    on_event `Main;
+                    Option.value_exn !acc)
                 in
-                let new_nodes =
-                  Sequence.fold symmetric_diff
-                    ~init:(Option.value !prev_nodes ~default:empty_map)
-                    ~f:(fun nodes (key, changed) ->
-                      match changed with
-                      | `Unequal _ ->
-                        on_event (`Unequal key);
-                        let node, _dep = Map.find_exn nodes key in
-                        E.Node.make_stale node;
-                        nodes
-                      | `Left _ ->
-                        on_event (`Left key);
-                        let (node, dep) = Map.find_exn nodes key in
-                        let nodes = Map.remove nodes key in
-                        E.Node.remove_dependency result dep;
-                        acc := Some (Map.remove (Option.value_exn !acc) key);
-                        E.Node.invalidate node;
-                        nodes
-                      | `Right _ ->
-                        on_event (`Right key);
-                        let node = E.Node.create (fun () ->
-                          on_event (`Per_key key);
-                          Map.find_exn (Option.value_exn !prev_map) key
-                        ) in
-                        E.Node.add_dependency node (E.Dependency.create (force lhs_change));
-                        let user_function_dep =
-                          E.Dependency.create
-                            (f key (E.Node.watch node))
-                            ~on_change:(fun opt ->
-                              on_event (`On_change (key, opt));
-                              let old = Option.value_exn !acc in
-                              acc := Some (
-                                match opt with
-                                | None -> if Map.mem old key then Map.remove old key else old
-                                | Some v -> Map.set old ~key ~data:v))
-                        in
-                        E.Node.add_dependency result user_function_dep;
-                        Map.set nodes ~key ~data:(node, user_function_dep))
+                let rec lhs_change =
+                  lazy
+                    (map lhs ~f:(fun map ->
+                       on_event `Lhs_change;
+                       let empty_map =
+                         Map.Using_comparator.empty ~comparator:(Map.comparator map)
+                       in
+                       if Option.is_none !acc then acc := Some empty_map;
+                       let symmetric_diff =
+                         Map.symmetric_diff
+                           ~data_equal:phys_equal
+                           (Option.value !prev_map ~default:empty_map)
+                           map
+                       in
+                       let new_nodes =
+                         Sequence.fold
+                           symmetric_diff
+                           ~init:(Option.value !prev_nodes ~default:empty_map)
+                           ~f:(fun nodes (key, changed) ->
+                             match changed with
+                             | `Unequal _ ->
+                               on_event (`Unequal key);
+                               let node, _dep = Map.find_exn nodes key in
+                               E.Node.make_stale node;
+                               nodes
+                             | `Left _ ->
+                               on_event (`Left key);
+                               let node, dep = Map.find_exn nodes key in
+                               let nodes = Map.remove nodes key in
+                               E.Node.remove_dependency result dep;
+                               acc := Some (Map.remove (Option.value_exn !acc) key);
+                               E.Node.invalidate node;
+                               nodes
+                             | `Right _ ->
+                               on_event (`Right key);
+                               let node =
+                                 E.Node.create (fun () ->
+                                   on_event (`Per_key key);
+                                   Map.find_exn (Option.value_exn !prev_map) key)
+                               in
+                               E.Node.add_dependency
+                                 node
+                                 (E.Dependency.create (force lhs_change));
+                               let user_function_dep =
+                                 E.Dependency.create
+                                   (f key (E.Node.watch node))
+                                   ~on_change:(fun opt ->
+                                     on_event (`On_change (key, opt));
+                                     let old = Option.value_exn !acc in
+                                     acc :=
+                                       Some
+                                         (match opt with
+                                          | None ->
+                                            if Map.mem old key
+                                            then Map.remove old key
+                                            else old
+                                          | Some v -> Map.set old ~key ~data:v))
+                               in
+                               E.Node.add_dependency result user_function_dep;
+                               Map.set nodes ~key ~data:(node, user_function_dep))
+                       in
+                       prev_nodes := Some new_nodes;
+                       prev_map := Some map))
                 in
-                prev_nodes := Some new_nodes;
-                prev_map := Some map;
-              ))
-              in
-              E.Node.add_dependency result (E.Dependency.create (force lhs_change));
-              E.Node.watch result
+                E.Node.add_dependency result (E.Dependency.create (force lhs_change));
+                E.Node.watch result
             ;;
 
             let%test_unit _ =
-              let module M =
-                On_update_queue (struct
-                  type 'a t =
-                    [ `Left of string
-                    | `Lhs_change
-                    | `Main
-                    | `On_change of string * int option
-                    | `Per_key of string
-                    | `Right of string
-                    | `Unequal of string ]
-                  [@@deriving compare, sexp_of]
-                end)
+              let module M = On_update_queue (struct
+                               type 'a t =
+                                 [ `Left of string
+                                 | `Lhs_change
+                                 | `Main
+                                 | `On_change of string * int option
+                                 | `Per_key of string
+                                 | `Right of string
+                                 | `Unequal of string ]
+                               [@@deriving compare, sexp_of]
+                             end)
               in
               let push, check = M.on_update_queue () in
-              let var = Var.create (String.Map.of_alist_exn ["a", 1; "b", 2; "c", 3]) in
+              let var =
+                Var.create (String.Map.of_alist_exn [ "a", 1; "b", 2; "c", 3 ])
+              in
               let increment = Var.create 1 in
               let assert_incremental_computation_is_correct observer =
                 let from_scratch =
                   let map = Var.latest_value var in
                   let j = Var.latest_value increment in
                   Map.filter_mapi map ~f:(fun ~key:_ ~data:i ->
-                    if (i + j) mod 10 = 0 then None
-                    else Some (i + j))
+                    if (i + j) mod 10 = 0 then None else Some (i + j))
                 in
-                [%test_result: int String.Map.t] (value observer) ~expect:from_scratch;
+                [%test_result: int String.Map.t]
+                  (value observer)
+                  ~expect:from_scratch
               in
               let result =
-                map_filter_mapi ~on_event:push (Var.watch var)
+                map_filter_mapi
+                  ~on_event:push
+                  (Var.watch var)
                   ~f:(fun _key value_incr ->
                     map2 value_incr (Var.watch increment) ~f:(fun i j ->
-                      if (i + j) mod 10 = 0 then None
-                      else Some (i + j)))
+                      if (i + j) mod 10 = 0 then None else Some (i + j)))
               in
               let o = observe result in
               stabilize_ [%here];
               assert_incremental_computation_is_correct o;
-              check [ `Lhs_change
-                    ; `Right "a"
-                    ; `Right "b"
-                    ; `Right "c"
-                    ; `Per_key "c"
-                    ; `Per_key "b"
-                    ; `Per_key "a"
-                    ; `On_change ("a", Some 2)
-                    ; `On_change ("b", Some 3)
-                    ; `On_change ("c", Some 4)
-                    ; `Main
-                    ];
-
+              check
+                [ `Lhs_change
+                ; `Right "a"
+                ; `Right "b"
+                ; `Right "c"
+                ; `Per_key "c"
+                ; `Per_key "b"
+                ; `Per_key "a"
+                ; `On_change ("a", Some 2)
+                ; `On_change ("b", Some 3)
+                ; `On_change ("c", Some 4)
+                ; `Main
+                ];
               let update f = Var.set var (f (Var.value var)) in
-
               update (fun map -> Map.set map ~key:"b2" ~data:12);
               stabilize_ [%here];
               assert_incremental_computation_is_correct o;
-              check [ `Lhs_change
-                    ; `Right "b2"
-                    ; `Per_key "b2"
-                    ; `On_change ("b2", Some 13)
-                    ; `Main
-                    ];
-
+              check
+                [ `Lhs_change
+                ; `Right "b2"
+                ; `Per_key "b2"
+                ; `On_change ("b2", Some 13)
+                ; `Main
+                ];
               update (fun map -> Map.set map ~key:"b2" ~data:18);
               stabilize_ [%here];
               assert_incremental_computation_is_correct o;
-              check [ `Lhs_change
-                    ; `Unequal "b2"
-                    ; `Per_key "b2"
-                    ; `On_change ("b2", Some 19)
-                    ; `Main
-                    ];
-
+              check
+                [ `Lhs_change
+                ; `Unequal "b2"
+                ; `Per_key "b2"
+                ; `On_change ("b2", Some 19)
+                ; `Main
+                ];
               update (fun map -> Map.set map ~key:"b2" ~data:19);
               stabilize_ [%here];
               assert_incremental_computation_is_correct o;
-              check [ `Lhs_change
-                    ; `Unequal "b2"
-                    ; `Per_key "b2"
-                    ; `On_change ("b2", None)
-                    ; `Main
-                    ];
-
+              check
+                [ `Lhs_change
+                ; `Unequal "b2"
+                ; `Per_key "b2"
+                ; `On_change ("b2", None)
+                ; `Main
+                ];
               update (fun map -> Map.set map ~key:"b2" ~data:18);
               stabilize_ [%here];
               assert_incremental_computation_is_correct o;
-              check [ `Lhs_change
-                    ; `Unequal "b2"
-                    ; `Per_key "b2"
-                    ; `On_change ("b2", Some 19)
-                    ; `Main
-                    ];
-
+              check
+                [ `Lhs_change
+                ; `Unequal "b2"
+                ; `Per_key "b2"
+                ; `On_change ("b2", Some 19)
+                ; `Main
+                ];
               update (fun map -> Map.remove map "b2");
               stabilize_ [%here];
               assert_incremental_computation_is_correct o;
-              check [ `Lhs_change
-                    ; `Left "b2"
-                    ; `Main
-                    ];
-
+              check [ `Lhs_change; `Left "b2"; `Main ];
               Var.set increment 9;
               stabilize_ [%here];
               assert_incremental_computation_is_correct o;
-              check [ `On_change ("a", None)
-                    ; `On_change ("c", Some 12)
-                    ; `On_change ("b", Some 11)
-                    ; `Main
-                    ];
-
+              check
+                [ `On_change ("a", None)
+                ; `On_change ("c", Some 12)
+                ; `On_change ("b", Some 11)
+                ; `Main
+                ];
               update (fun map -> Map.remove map "a");
               stabilize_ [%here];
               assert_incremental_computation_is_correct o;
-              check [ `Lhs_change
-                    ; `Left "a"
-                    ; `Main
-                    ];
-
-              update (fun map -> Map.set (Map.remove (Map.remove map "b") "c") ~key:"a" ~data:2);
+              check [ `Lhs_change; `Left "a"; `Main ];
+              update (fun map ->
+                Map.set (Map.remove (Map.remove map "b") "c") ~key:"a" ~data:2);
               stabilize_ [%here];
               assert_incremental_computation_is_correct o;
-              check [ `Lhs_change
-                    ; `Right "a"
-                    ; `Left "b"
-                    ; `Left "c"
-                    ; `Per_key "a"
-                    ; `On_change ("a", Some 11)
-                    ; `Main
-                    ];
-
+              check
+                [ `Lhs_change
+                ; `Right "a"
+                ; `Left "b"
+                ; `Left "c"
+                ; `Per_key "a"
+                ; `On_change ("a", Some 11)
+                ; `Main
+                ];
               disallow_future_use o;
               stabilize_ [%here];
               check [];
@@ -3852,12 +4119,13 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               let o = observe result in
               stabilize_ [%here];
               assert_incremental_computation_is_correct o;
-              check [ `Lhs_change
-                    ; `Unequal "a"
-                    ; `Per_key "a"
-                    ; `On_change ("a", Some 12)
-                    ; `Main
-                    ];
+              check
+                [ `Lhs_change
+                ; `Unequal "a"
+                ; `Per_key "a"
+                ; `On_change ("a", Some 12)
+                ; `Main
+                ]
             ;;
 
             (* This one checks
@@ -3868,128 +4136,137 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               on_event:([ `Scheduling
                         | `Is_eq of a
                         | `Add_reverse_dep of a
-                        | `Remove_reverse_dep of a ] -> unit)
+                        | `Remove_reverse_dep of a ]
+                        -> unit)
               -> a Hashtbl.Hashable.t
               -> a t
               -> (a -> bool t) Staged.t =
               fun ~on_event hashable incr ->
                 let last = ref None in
-                let reverse_dependencies = Hashtbl.Using_hashable.create ~hashable () in
+                let reverse_dependencies =
+                  Hashtbl.Using_hashable.create ~hashable ()
+                in
                 let scheduling_node =
                   I.map incr ~f:(fun v ->
                     on_event `Scheduling;
                     Option.iter !last ~f:(fun old_v ->
-                      Option.iter (Hashtbl.find reverse_dependencies old_v) ~f:E.Node.make_stale);
-                    Option.iter (Hashtbl.find reverse_dependencies v) ~f:E.Node.make_stale;
+                      Option.iter
+                        (Hashtbl.find reverse_dependencies old_v)
+                        ~f:E.Node.make_stale);
+                    Option.iter
+                      (Hashtbl.find reverse_dependencies v)
+                      ~f:E.Node.make_stale;
                     last := Some v)
                 in
                 Staged.stage (fun a ->
-                  let rec result = lazy (
-                    E.Node.create (fun () ->
-                      let v = Option.value_exn !last in
-                      on_event (`Is_eq a); (hashable.compare a v) = 0)
-                      ~on_observability_change:(fun ~is_now_observable ->
-                        if is_now_observable
-                        then begin
-                          on_event (`Add_reverse_dep a);
-                          Hashtbl.add_exn reverse_dependencies ~key:a ~data:(force result)
-                        end else begin
-                          on_event (`Remove_reverse_dep a);
-                          Hashtbl.remove reverse_dependencies a
-                        end))
+                  let rec result =
+                    lazy
+                      (E.Node.create
+                         (fun () ->
+                            let v = Option.value_exn !last in
+                            on_event (`Is_eq a);
+                            hashable.compare a v = 0)
+                         ~on_observability_change:(fun ~is_now_observable ->
+                           if is_now_observable
+                           then (
+                             on_event (`Add_reverse_dep a);
+                             Hashtbl.add_exn
+                               reverse_dependencies
+                               ~key:a
+                               ~data:(force result))
+                           else (
+                             on_event (`Remove_reverse_dep a);
+                             Hashtbl.remove reverse_dependencies a)))
                   in
                   let dep = E.Dependency.create scheduling_node in
                   E.Node.add_dependency (force result) dep;
-                  E.Node.watch (force result)
-                )
+                  E.Node.watch (force result))
             ;;
 
             let%test_unit _ =
-              let module M =
-                On_update_queue (struct
-                  type 'a t =
-                    [ `Scheduling
-                    | `Is_eq of int
-                    | `Add_reverse_dep of int
-                    | `Remove_reverse_dep of int ]
-                  [@@deriving compare, sexp_of]
-                end)
+              let module M = On_update_queue (struct
+                               type 'a t =
+                                 [ `Scheduling
+                                 | `Is_eq of int
+                                 | `Add_reverse_dep of int
+                                 | `Remove_reverse_dep of int ]
+                               [@@deriving compare, sexp_of]
+                             end)
               in
               let push, check = M.on_update_queue () in
               let var = Var.create 2 in
               let switch = Var.create true in
-              let input = if_ (Var.watch switch) ~then_:(Var.watch var) ~else_:invalid in
-              let is_focused = Staged.unstage (staged_eq Int.hashable ~on_event:push input) in
+              let input =
+                if_ (Var.watch switch) ~then_:(Var.watch var) ~else_:invalid
+              in
+              let is_focused =
+                Staged.unstage (staged_eq Int.hashable ~on_event:push input)
+              in
               let all = all (List.init 5 ~f:is_focused) in
               let assert_incremental_computation_is_correct observer =
-                let from_scratch = List.init 5 ~f:((=) (Var.latest_value var)) in
-                [%test_result: bool list] (value observer) ~expect:from_scratch;
+                let from_scratch = List.init 5 ~f:(( = ) (Var.latest_value var)) in
+                [%test_result: bool list] (value observer) ~expect:from_scratch
               in
               let o = observe all in
-
               stabilize_ [%here];
               assert_incremental_computation_is_correct o;
-              check [ `Add_reverse_dep 4
-                    ; `Add_reverse_dep 3
-                    ; `Add_reverse_dep 2
-                    ; `Add_reverse_dep 1
-                    ; `Add_reverse_dep 0
-                    ; `Scheduling
-                    ; `Is_eq 0
-                    ; `Is_eq 1
-                    ; `Is_eq 2
-                    ; `Is_eq 3
-                    ; `Is_eq 4
-                    ];
-
+              check
+                [ `Add_reverse_dep 4
+                ; `Add_reverse_dep 3
+                ; `Add_reverse_dep 2
+                ; `Add_reverse_dep 1
+                ; `Add_reverse_dep 0
+                ; `Scheduling
+                ; `Is_eq 0
+                ; `Is_eq 1
+                ; `Is_eq 2
+                ; `Is_eq 3
+                ; `Is_eq 4
+                ];
               Var.set var 0;
               stabilize_ [%here];
               assert_incremental_computation_is_correct o;
-              check [ `Scheduling
-                    ; `Is_eq 0
-                    ; `Is_eq 2
-                    ];
-
+              check [ `Scheduling; `Is_eq 0; `Is_eq 2 ];
               disallow_future_use o;
               stabilize_ [%here];
-              check [ `Remove_reverse_dep 4
-                    ; `Remove_reverse_dep 3
-                    ; `Remove_reverse_dep 2
-                    ; `Remove_reverse_dep 1
-                    ; `Remove_reverse_dep 0
-                    ];
-
+              check
+                [ `Remove_reverse_dep 4
+                ; `Remove_reverse_dep 3
+                ; `Remove_reverse_dep 2
+                ; `Remove_reverse_dep 1
+                ; `Remove_reverse_dep 0
+                ];
               Var.set var 1;
               stabilize_ [%here];
               check [];
               let o = observe all in
               stabilize_ [%here];
               assert_incremental_computation_is_correct o;
-              check [ `Add_reverse_dep 4
-                    ; `Add_reverse_dep 3
-                    ; `Add_reverse_dep 2
-                    ; `Add_reverse_dep 1
-                    ; `Add_reverse_dep 0
-                    ; `Scheduling
-                    ; `Is_eq 1
-                    ; `Is_eq 0
-                    ];
-
+              check
+                [ `Add_reverse_dep 4
+                ; `Add_reverse_dep 3
+                ; `Add_reverse_dep 2
+                ; `Add_reverse_dep 1
+                ; `Add_reverse_dep 0
+                ; `Scheduling
+                ; `Is_eq 1
+                ; `Is_eq 0
+                ];
               Var.set switch false;
               stabilize_ [%here];
               assert (skip_invalidity_check || not (is_valid all));
-              disallow_future_use o;
+              disallow_future_use o
             ;;
           end
         end :
-                   (* This signature constraint is here to remind us to add a unit test
-                      whenever Incremental's interface changes. *)
-                   Incremental.S
-        )
+          (* This signature constraint is here to remind us to add a unit test
+             whenever Incremental's interface changes. *)
+          Incremental.S)
 
         (* Situations that cause failures. *)
 
-        let%test_unit _ = (* stabilizing while stabilizing *)
+        let%test_unit _ =
+          (* stabilizing while stabilizing *)
           let module I = Make () in
           let open I in
           let o = observe (const () >>| fun () -> stabilize ()) in
@@ -3997,7 +4274,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           disallow_future_use o
         ;;
 
-        let%test_unit _ = (* calling [set_max_height_allowed] while stabilizing *)
+        let%test_unit _ =
+          (* calling [set_max_height_allowed] while stabilizing *)
           let module I = Make () in
           let open I in
           let o = observe (const () >>| fun () -> State.(set_max_height_allowed t) 13) in
@@ -4005,7 +4283,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           disallow_future_use o
         ;;
 
-        let%test_unit _ = (* creating a cycle *)
+        let%test_unit _ =
+          (* creating a cycle *)
           let module I = Make () in
           let open I in
           let x = Var.create 1 in
@@ -4025,17 +4304,25 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let open I in
           let r = ref None in
           let x = Var.create 13 in
-          let o = observe (Var.watch x >>= fun i -> r := Some (const i); return ()) in
+          let o =
+            observe
+              (Var.watch x
+               >>= fun i ->
+               r := Some (const i);
+               return ())
+          in
           stabilize_ [%here];
           let inner = Option.value_exn !r in
           disallow_future_use o;
-          stabilize_ [%here]; (* make [inner's] scope unnecessary *)
+          stabilize_ [%here];
+          (* make [inner's] scope unnecessary *)
           let o = observe inner in
           assert (does_raise stabilize);
           disallow_future_use o
         ;;
 
-        let%test_unit _ = (* stabilizing in an on-update handler *)
+        let%test_unit _ =
+          (* stabilizing in an on-update handler *)
           let module I = Make () in
           let open I in
           let x = Var.create 13 in
@@ -4045,7 +4332,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           disallow_future_use o
         ;;
 
-        let%test_unit _ = (* snapshot cycle *)
+        let%test_unit _ =
+          (* snapshot cycle *)
           let module I = Make () in
           let open I in
           let x = Var.create (const 14) in
@@ -4055,7 +4343,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           assert (does_raise stabilize)
         ;;
 
-        let%test_unit _ = (* snapshot cycle in the future *)
+        let%test_unit _ =
+          (* snapshot cycle in the future *)
           let module I = Make () in
           let open I in
           let r = ref None in
@@ -4069,8 +4358,8 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           stabilize_ [%here];
           (* [advance_clock] should raise because the snapshot's [value_at] depends on
              the snapshot itself. *)
-          assert (does_raise (fun () ->
-            advance_clock ~to_:(Time_ns.add (now ()) (sec 2.))));
+          assert (
+            does_raise (fun () -> advance_clock ~to_:(Time_ns.add (now ()) (sec 2.))));
           Gc.keep_alive (o1, o2)
         ;;
 
@@ -4083,17 +4372,18 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let a = join (Var.watch v) in
           let b = join (Var.watch w) in
           let os = observe a, observe b in
-          assert (does_raise (fun () ->
-            for _i=1 to 200 do
-              Var.set w a;
-              stabilize ();
-              Var.set w (const 0);
-              stabilize ();
-              Var.set v b;
-              stabilize ();
-              Var.set v (const 0);
-              stabilize ();
-            done));
+          assert (
+            does_raise (fun () ->
+              for _i = 1 to 200 do
+                Var.set w a;
+                stabilize ();
+                Var.set w (const 0);
+                stabilize ();
+                Var.set v b;
+                stabilize ();
+                Var.set v (const 0);
+                stabilize ()
+              done));
           Gc.keep_alive os
         ;;
 
@@ -4104,7 +4394,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let w = Var.create (const 0) in
           let a = join (Var.watch v) in
           let b = join (Var.watch w) in
-          let o = observe (map2 ~f:(+) a b) in
+          let o = observe (map2 ~f:( + ) a b) in
           (* [b] depends on [a] *)
           Var.set w a;
           Var.set v (const 2);
@@ -4120,25 +4410,26 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
         let%test_unit _ =
           let module I = Incremental_Make () in
           let open I in
-          List.iter [join; fun x -> (x >>= fun x -> x)] ~f:(fun join ->
-            let v = Var.create (const 0) in
-            let w = Var.create (const 0) in
-            let a = join (Var.watch v) in
-            let b = join (Var.watch w) in
-            let o = observe (map2 ~f:(+) a b) in
-            stabilize ();
-            assert (Observer.value_exn o = 0);
-            (* [b] depends on [a], doing [Var.set]s in other order. *)
-            Var.set v (const 2);
-            Var.set w a;
-            stabilize ();
-            assert (Observer.value_exn o = 4);
-            (* [a] depends on [b], doing [Var.set]s in other order. *)
-            Var.set v b;
-            Var.set w (const 3);
-            stabilize ();
-            assert (Observer.value_exn o = 6);
-          )
+          List.iter
+            [ join; (fun x -> x >>= fun x -> x) ]
+            ~f:(fun join ->
+              let v = Var.create (const 0) in
+              let w = Var.create (const 0) in
+              let a = join (Var.watch v) in
+              let b = join (Var.watch w) in
+              let o = observe (map2 ~f:( + ) a b) in
+              stabilize ();
+              assert (Observer.value_exn o = 0);
+              (* [b] depends on [a], doing [Var.set]s in other order. *)
+              Var.set v (const 2);
+              Var.set w a;
+              stabilize ();
+              assert (Observer.value_exn o = 4);
+              (* [a] depends on [b], doing [Var.set]s in other order. *)
+              Var.set v b;
+              Var.set w (const 3);
+              stabilize ();
+              assert (Observer.value_exn o = 6))
         ;;
 
         (* Demonstrates the cycle that isn't created in the above two tests. *)
@@ -4149,7 +4440,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let w = Var.create (const 0) in
           let a = join (Var.watch v) in
           let b = join (Var.watch w) in
-          let o = observe (map2 ~f:(+) a b) in
+          let o = observe (map2 ~f:( + ) a b) in
           Var.set v b;
           Var.set w a;
           assert (does_raise stabilize);
@@ -4163,17 +4454,18 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let p = Var.watch v in
           let a = ref (const 0) in
           let b = ref (const 0) in
-          a := p >>= (fun p -> if p then const 2 else !b);
-          b := p >>= (fun p -> if p then !a else const 3);
-          let o = observe (map2 ~f:(+) !a !b) in
+          (a := p >>= fun p -> if p then const 2 else !b);
+          (b := p >>= fun p -> if p then !a else const 3);
+          let o = observe (map2 ~f:( + ) !a !b) in
           stabilize ();
           assert (Observer.value_exn o = 4);
           Var.set v false;
-          assert (does_raise stabilize)
+          assert (does_raise stabilize);
           (* assert (Observer.value_exn o = 6);
            * Var.set v true;
            * stabilize ();
            * assert (Observer.value_exn o = 4); *)
+          ()
         ;;
 
         let%test_unit _ =
@@ -4190,14 +4482,18 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let module I =
             Incremental.Make_with_config (struct
               let bind_lhs_change_should_invalidate_rhs = true
+
               let timing_wheel_config =
                 Timing_wheel_ns.Config.create
-                  ~alarm_precision:(Alarm_precision.(mul about_one_millisecond ~pow2:3))
-                  ~level_bits:(Timing_wheel_ns.Level_bits.create_exn
-                                 [ 11; 10; 10; 10; 10; 10 ])
+                  ~alarm_precision:Alarm_precision.(mul about_one_millisecond ~pow2:3)
+                  ~level_bits:
+                    (Timing_wheel_ns.Level_bits.create_exn [ 11; 10; 10; 10; 10; 10 ])
                   ()
+              ;;
+
               let start = Time_ns.of_string "2014-01-09 00:00:00.000000-05:00"
-            end)()
+            end)
+              ()
           in
           let open I in
           advance_clock ~to_:(Time_ns.of_string "2014-01-09 09:35:05.030000-05:00");
@@ -4211,18 +4507,21 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           stabilize ();
           Observer.disallow_future_use o
         ;;
-
       end)
+    ;;
   end
 
   let%test_module "" =
     (module struct
+      ;;
       List.iter [ true; false ] ~f:(fun bool ->
-        let module M = Test (struct let bind_lhs_change_should_invalidate_rhs = bool end) in
+        let module M = Test (struct
+                         let bind_lhs_change_should_invalidate_rhs = bool
+                       end)
+        in
         ())
     end)
   ;;
 end
 
 include Test (Incremental)
-

@@ -17,7 +17,6 @@ type t [@@deriving sexp_of]
 include Invariant.S with type t := t
 
 val create : max_height_allowed:int -> t
-
 val length : t -> int
 
 (** It is required that all nodes have [n.height <= max_height_allowed t].  Any attempt
@@ -25,7 +24,8 @@ val length : t -> int
 
     One can call [set_max_height_allowed] to change the maximum-allowed height.
     [set_max_height_allowed t m] raises if [m < max_height_seen t]. *)
-val max_height_allowed     : t -> int
+val max_height_allowed : t -> int
+
 val set_max_height_allowed : t -> int -> unit
 
 (** [max_height_seen t] returns the maximum height of any node ever created, not just
@@ -70,9 +70,4 @@ val set_height : t -> _ Node.t -> int -> unit
     [adjust_heights] raises if a node's height needs to be increased beyond
     [max_height_allowed t].
 *)
-val adjust_heights
-  :  t
-  -> Recompute_heap.t
-  -> child: _ Node.t
-  -> parent:_ Node.t
-  -> unit
+val adjust_heights : t -> Recompute_heap.t -> child:_ Node.t -> parent:_ Node.t -> unit

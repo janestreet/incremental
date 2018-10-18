@@ -28,27 +28,23 @@ open! Import
     with different types.  We reduce the chance of this bug by minimizing the scopes in
     which we deal with packed nodes. *)
 module Packed : sig
-
-  type t = Types.Packed_node.t [@@deriving sexp_of]
+  type t = Types.Node.Packed.t = T : _ Types.Node.t -> t
+  [@@unboxed] [@@deriving sexp_of]
 
   include Invariant.S with type t := t
 
   (** [As_list] allows one to view a node as a list w.r.t. a particular [next] pointer
       contained within it.  The recompute heap uses this with [next_in_recompute_heap],
       and the adjust-heights heap uses this with [next_in_adjust_heights_heap]. *)
-  module As_list
-      (M : sig
-         val next : t -> t Uopt.t
-       end) : sig
-
-    type t = Types.Packed_node.t Uopt.t [@@deriving sexp_of]
+  module As_list (M : sig
+      val next : t -> t Uopt.t
+    end) : sig
+    type t = Types.Node.Packed.t Uopt.t [@@deriving sexp_of]
 
     include Invariant.S with type t := t
 
     val length : t -> int
-
-    val iter : t -> f:(Types.Packed_node.t -> unit) -> unit
-
+    val iter : t -> f:(Types.Node.Packed.t -> unit) -> unit
   end
 
   (** [iter_descendants ts ~f] calls [f] on every node in [ts] and all of their
@@ -56,10 +52,13 @@ module Packed : sig
   val iter_descendants : t list -> f:(t -> unit) -> unit
 
   val save_dot : string -> t list -> unit
-
 end
 
-include module type of struct include Types.Node end
+include
+module type of struct
+  include Types.Node
+end
+  with module Packed := Types.Node.Packed
 
 include Invariant.S1 with type 'a t := 'a t
 
@@ -69,13 +68,10 @@ val create : Scope.t -> 'a Kind.t -> 'a t
     violate invariants. *)
 val set_kind : 'a t -> 'a Kind.t -> unit
 
-val pack : _ t -> Packed.t
-
 val same : _ t -> _ t -> bool
 
 (** [iteri_children t ~f] applies [f] to all children of [t]. *)
 val iteri_children : _ t -> f:(int -> Packed.t -> unit) -> unit
-
 (*_
   (** [iteri_parents  t ~f] applies [f] to all necessary parents of [t]. *)
   val iteri_parents  : _ t -> f:(int -> Packed.t -> unit) -> unit
@@ -84,18 +80,18 @@ val iteri_children : _ t -> f:(int -> Packed.t -> unit) -> unit
 (** [get_parent t ~index] raises unless [0 <= index < t.num_parents]. *)
 val get_parent : _ t -> index:int -> Packed.t
 
-val add_parent    : child:'a t -> parent:'b t -> child_index:int -> unit
+val add_parent : child:'a t -> parent:'b t -> child_index:int -> unit
 val remove_parent : child:'a t -> parent:'b t -> child_index:int -> unit
+
 val swap_children_except_in_kind
   :  _ t
-  -> child1       : _ t
-  -> child_index1 : int
-  -> child2       : _ t
-  -> child_index2 : int
+  -> child1:_ t
+  -> child_index1:int
+  -> child2:_ t
+  -> child_index2:int
   -> unit
 
-val is_const             : _ t -> bool
-
+val is_const : _ t -> bool
 val is_in_recompute_heap : _ t -> bool
 
 (** [is_necessary t] iff [t] is a descendant of an observer or [t] is a [Freeze] node. *)
@@ -124,9 +120,9 @@ val needs_to_be_computed : _ t -> bool
 
     [value_exn t] raises iff [Uopt.is_none t.value_opt].
     [unsafe_value t] is safe iff [Uopt.is_some t.value_opt]. *)
-val value_exn    : 'a t -> 'a
-val unsafe_value : 'a t -> 'a
+val value_exn : 'a t -> 'a
 
+val unsafe_value : 'a t -> 'a
 val get_cutoff : 'a t -> 'a Cutoff.t
 val set_cutoff : 'a t -> 'a Cutoff.t -> unit
 
@@ -136,13 +132,16 @@ val on_update : 'a t -> 'a On_update_handler.t -> unit
 (** [run_on_update_handlers t node_update ~now] runs [t]'s on-update handlers, except
     those created at the stabilization [now]. *)
 val run_on_update_handlers
-  : 'a t -> 'a On_update_handler.Node_update.t -> now:Stabilization_num.t -> unit
+  :  'a t
+  -> 'a On_update_handler.Node_update.t
+  -> now:Stabilization_num.t
+  -> unit
 
 val keep_node_creation_backtrace : bool ref
-
-val user_info     : _ t -> Info.t option
+val user_info : _ t -> Info.t option
 val set_user_info : _ t -> Info.t option -> unit
 
 (** These functions are meant for debug, as they are not very efficient. *)
-val has_child  : _ t -> child  : _ t -> bool
-val has_parent : _ t -> parent : _ t -> bool
+val has_child : _ t -> child:_ t -> bool
+
+val has_parent : _ t -> parent:_ t -> bool

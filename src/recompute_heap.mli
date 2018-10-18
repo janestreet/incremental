@@ -14,14 +14,14 @@ type t [@@deriving sexp_of]
 include Invariant.S with type t := t
 
 val create : max_height_allowed:int -> t
-
 val length : t -> int
 
 (** [max_height_allowed] is the maximum [node.height] allowed for [node] in [t].
 
     It is an error to call [set_max_height_allowed t m] if there is a [node] in [t] with
     [node.height > m]. *)
-val max_height_allowed     : t -> int
+val max_height_allowed : t -> int
+
 val set_max_height_allowed : t -> int -> unit
 
 (** [min_height t] returns the smallest height of any element in [t], or
@@ -60,4 +60,3 @@ val remove_min : t -> Node.Packed.t
     It changes [node.height_in_recompute_heap] to equal [node.height] and adjusts [node]'s
     position in [t]. *)
 val increase_height : t -> _ Node.t -> unit
-

@@ -7,7 +7,9 @@
 open! Core_kernel
 open! Import
 
-include module type of struct include Types.Freeze end
+include module type of struct
+  include Types.Freeze
+end
 
 include Invariant.S1 with type 'a t := 'a t
-include Sexp_of.  S1 with type 'a t := 'a t
+include Sexp_of.S1 with type 'a t := 'a t

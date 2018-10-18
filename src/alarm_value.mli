@@ -14,6 +14,6 @@ end
 type t = Types.Alarm_value.t
 
 include Invariant.S with type t := t
-include Sexp_of.S   with type t := t
+include Sexp_of.S with type t := t
 
 val create : Action.t -> t

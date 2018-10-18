@@ -7,10 +7,12 @@
 open! Core_kernel
 open! Import
 
-include module type of struct include Types.Unordered_array_fold end
+include module type of struct
+  include Types.Unordered_array_fold
+end
 
 include Invariant.S2 with type ('a, 'acc) t := ('a, 'acc) t
-include Sexp_of.  S2 with type ('a, 'acc) t := ('a, 'acc) t
+include Sexp_of.S2 with type ('a, 'acc) t := ('a, 'acc) t
 
 val create
   :  init:'acc
@@ -23,7 +25,12 @@ val create
 
 val compute : (_, 'acc) t -> 'acc
 
-val child_changed : ('a, _) t -> old_value_opt:'a Uopt.t -> new_value:'a -> unit
+val child_changed
+  :  ('a, _) t
+  -> child:'b Types.Node.t
+  -> child_index:int
+  -> old_value_opt:'b Uopt.t
+  -> new_value:'b
+  -> unit
 
 val force_full_compute : (_, _) t -> unit
-

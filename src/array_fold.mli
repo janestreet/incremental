@@ -7,10 +7,11 @@
 open! Core_kernel
 open! Import
 
-include module type of struct include Types.Array_fold end
+include module type of struct
+  include Types.Array_fold
+end
 
 include Sexp_of.S2 with type ('a, 'b) t := ('a, 'b) t
-
 include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
 
 val compute : (_, 'b) t -> 'b

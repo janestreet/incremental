@@ -69,8 +69,6 @@
    scope.ml
    scope.mli
    sexp_of.ml
-   should_not_use.ml
-   should_not_use.mli
    snapshot.ml
    snapshot.mli
    stabilization_num.ml

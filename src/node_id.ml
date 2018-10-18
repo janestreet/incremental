@@ -1,6 +1,5 @@
 open Core_kernel
 open! Import
-
 include Int
 
 let invariant t = assert (t >= 1)

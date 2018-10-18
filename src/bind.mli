@@ -28,12 +28,14 @@
 open! Core_kernel
 open! Import
 
-include module type of struct include Types.Bind end
+include module type of struct
+  include Types.Bind
+end
 
 include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
-include Sexp_of.  S2 with type ('a, 'b) t := ('a, 'b) t
+include Sexp_of.S2 with type ('a, 'b) t := ('a, 'b) t
 
 (** [is_valid t] iff the scope in which [t] was created is valid. *)
 val is_valid : (_, _) t -> bool
 
-val iter_nodes_created_on_rhs : (_, _) t -> f:(Types.Packed_node.t -> unit) -> unit
+val iter_nodes_created_on_rhs : (_, _) t -> f:(Types.Node.Packed.t -> unit) -> unit

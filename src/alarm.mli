@@ -4,8 +4,7 @@
 open! Core_kernel
 open! Import
 
-type t = Types.Alarm.t
-[@@deriving sexp_of]
+type t = Types.Alarm.t [@@deriving sexp_of]
 
 include Invariant.S with type t := t
 

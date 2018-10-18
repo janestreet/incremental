@@ -1,2 +1,4 @@
-type t = Before | After
+type t =
+  | Before
+  | After
 [@@deriving sexp_of]

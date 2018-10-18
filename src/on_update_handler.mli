@@ -19,5 +19,4 @@ end
 type 'a t [@@deriving sexp_of]
 
 val create : ('a Node_update.t -> unit) -> at:Stabilization_num.t -> 'a t
-
 val run : 'a t -> 'a Node_update.t -> now:Stabilization_num.t -> unit

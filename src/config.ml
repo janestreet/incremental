@@ -1,11 +1,9 @@
 open Core_kernel
 open Import
-
 include Config_intf
 
 module Default () = struct
   let bind_lhs_change_should_invalidate_rhs = true
-
   let start = Time_ns.now ()
 
   module Alarm_precision = Timing_wheel_ns.Alarm_precision

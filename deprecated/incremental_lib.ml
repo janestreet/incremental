@@ -5,4 +5,3 @@ end
 
 module Incremental = Incremental
 [@@deprecated "[since 2018-06] Use the [Incremental] library directly."]
-

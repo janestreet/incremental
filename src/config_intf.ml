@@ -2,7 +2,6 @@ open! Core_kernel
 open! Import
 
 module type Incremental_config = sig
-
   (** [bind_lhs_change_should_invalidate_rhs = false] is a hack to enable code that worked
       with earlier versions of Incremental that did not support invalidation to be more
       easily used with this version of Incremental.  Except in that situation, one
@@ -10,7 +9,6 @@ module type Incremental_config = sig
   val bind_lhs_change_should_invalidate_rhs : bool
 
   val start : Time_ns.t
-
   val timing_wheel_config : Timing_wheel_ns.Config.t
 end
 

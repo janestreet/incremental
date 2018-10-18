@@ -1,13 +1,14 @@
 open Core_kernel
 open! Import
-
 module Node = Types.Node
-
 include Types.Scope
 
 let top = Top
 
-let is_top = function Top -> true | Bind _ -> false
+let is_top = function
+  | Top -> true
+  | Bind _ -> false
+;;
 
 let invariant = function
   | Top -> ()
@@ -39,5 +40,5 @@ let add_node t (node : _ Node.t) =
   | Top -> ()
   | Bind bind ->
     node.next_node_in_same_scope <- bind.all_nodes_created_on_rhs;
-    bind.all_nodes_created_on_rhs <- Uopt.some (Node.pack node);
+    bind.all_nodes_created_on_rhs <- Uopt.some (Types.Node.Packed.T node)
 ;;

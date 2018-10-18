@@ -9,5 +9,3 @@ end
 module type S2 = sig
   type ('a, 'b) t [@@deriving sexp_of]
 end
-
-

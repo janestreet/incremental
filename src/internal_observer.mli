@@ -10,18 +10,13 @@ open! Import
 type 'a t = 'a Types.Internal_observer.t
 
 include Invariant.S1 with type 'a t := 'a t
-include Sexp_of.  S1 with type 'a t := 'a t
+include Sexp_of.S1 with type 'a t := 'a t
 
 val same : _ t -> _ t -> bool
-
 val observing : 'a t -> 'a Node.t
-
 val use_is_allowed : _ t -> bool
-
 val value_exn : 'a t -> 'a
-
 val on_update_exn : 'a t -> 'a On_update_handler.t -> unit
-
 val unlink : _ t -> unit
 
 module Packed : sig
@@ -30,6 +25,6 @@ module Packed : sig
 
   include Invariant.S with type t := t
 
-  val next_in_all     : t -> t Uopt.t
+  val next_in_all : t -> t Uopt.t
   val set_prev_in_all : t -> t Uopt.t -> unit
 end
