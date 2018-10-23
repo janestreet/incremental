@@ -1739,6 +1739,14 @@ let advance_clock t ~to_ =
   if debug then invariant t
 ;;
 
+let now_dummy =
+  { Var.value = Time_ns.epoch
+  ; value_set_during_stabilization = Uopt.none
+  ; set_at = Stabilization_num.zero
+  ; watch = Node.create Top Kind.Invalid
+  }
+;;
+
 let create (module Config : Config.Incremental_config) ~max_height_allowed =
   let adjust_heights_heap = Adjust_heights_heap.create ~max_height_allowed in
   let recompute_heap = Recompute_heap.create ~max_height_allowed in
@@ -1762,7 +1770,7 @@ let create (module Config : Config.Incremental_config) ~max_height_allowed =
     ; set_during_stabilization = Stack.create ()
     ; handle_after_stabilization = Stack.create ()
     ; run_on_update_handlers = Stack.create ()
-    ; now = Obj.magic None (* set below. *)
+    ; now = now_dummy
     ; handle_fired
     ; fired_alarm_values = Uopt.none
     ; timing_wheel
