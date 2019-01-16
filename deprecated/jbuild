@@ -1,8 +1,0 @@
-(library
- ((name incremental_lib)
-  (libraries (incremental))
-  (preprocess (pps (ppx_jane ppxlib.runner)))))
-
-
-
-(jbuild_version 1)
