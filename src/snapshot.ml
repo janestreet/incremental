@@ -8,6 +8,7 @@ type 'a t = 'a Types.Snapshot.t =
   ; at : Time_ns.t
   ; before : 'a
   ; value_at : 'a Node.t
+  ; clock : Types.Clock.t sexp_opaque
   }
 [@@deriving fields, sexp_of]
 
@@ -25,5 +26,6 @@ let invariant invariant_a t =
            | _ -> assert false))
       ~at:ignore
       ~before:(check invariant_a)
-      ~value_at:ignore)
+      ~value_at:ignore
+      ~clock:ignore)
 ;;

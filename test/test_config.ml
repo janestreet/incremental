@@ -2,8 +2,8 @@ open! Core
 open! Import
 
 let%expect_test "default timing-wheel precision and level durations" =
-  let module Config = Incremental.Config.Default () in
-  let config = Config.timing_wheel_config in
+  let module I = Incremental.Make () in
+  let config = I.Clock.default_timing_wheel_config in
   let durations = Timing_wheel_ns.Config.durations config in
   require [%here] (Time_ns.Span.( >= ) (List.last_exn durations) Time_ns.Span.day);
   print_s

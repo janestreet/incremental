@@ -8,6 +8,7 @@ type t = Types.At_intervals.t =
   ; base : Time_ns.t
   ; interval : Time_ns.Span.t
   ; mutable alarm : Alarm.t
+  ; clock : Types.Clock.t sexp_opaque
   }
 [@@deriving fields, sexp_of]
 
@@ -23,5 +24,6 @@ let invariant t =
            | _ -> assert false))
       ~base:ignore
       ~interval:(check (fun interval -> assert (Time_ns.Span.is_positive interval)))
-      ~alarm:(check Alarm.invariant))
+      ~alarm:(check Alarm.invariant)
+      ~clock:ignore)
 ;;

@@ -8,6 +8,7 @@ type 'a t = 'a Types.Step_function.t =
   ; mutable value : 'a
   ; mutable upcoming_steps : (Time_ns.t * 'a) list
   ; mutable alarm : Alarm.t
+  ; clock : Types.Clock.t sexp_opaque
   }
 [@@deriving fields, sexp_of]
 
@@ -29,7 +30,8 @@ let invariant invariant_a t =
              List.is_sorted upcoming_steps ~compare:(fun (time1, _) (time2, _) ->
                Time_ns.compare time1 time2));
            List.iter upcoming_steps ~f:(fun (_, a) -> invariant_a a)))
-      ~alarm:(check Alarm.invariant))
+      ~alarm:(check Alarm.invariant)
+      ~clock:ignore)
 ;;
 
 let advance t ~time_passed =

@@ -9,16 +9,7 @@ module type Incremental_config = Config.Incremental_config
 module Config = Config
 
 module Make_with_config (Incremental_config : Incremental_config) () = struct
-  module Incremental_config = struct
-    include Incremental_config
-
-    (* Make sure [start] is rounded to the nearest microsecond.  Otherwise, if you
-       feed [Clock.now ()] to a time function, it can be rounded down to a time in
-       the past, causing errors. *)
-    let start = Time_ns.of_time (Time_ns.to_time start)
-  end
-
-  module Before_or_after = Before_or_after
+  module Incremental_config = Incremental_config
   module Cutoff = Cutoff
 
   module State = struct
@@ -157,15 +148,61 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
     let sexp_of_t sexp_of_a t = value t |> [%sexp_of: a Or_error.t]
   end
 
-  let alarm_precision = Timing_wheel_ns.alarm_precision state.timing_wheel
-  let now () = State.now state
-  let watch_now () = state.now.watch
-  let at time = State.at state time
-  let after span = State.after state span
-  let at_intervals span = State.at_intervals state span
-  let advance_clock ~to_ = State.advance_clock state ~to_
-  let step_function ~init steps = State.step_function state ~init steps
-  let snapshot t ~at ~before = State.snapshot state t ~at ~before
+  module Before_or_after = Before_or_after
+
+  module type Implicit_clock =
+    Implicit_clock
+    with module Before_or_after := Before_or_after
+    with type 'a incremental := 'a incremental
+
+  module Clock = struct
+    include State.Clock
+
+    let default_timing_wheel_config =
+      let alarm_precision = Alarm_precision.about_one_millisecond in
+      let level_bits = [ 14; 13; 5 ] in
+      Timing_wheel_ns.Config.create
+        ~alarm_precision
+        ~level_bits:(Timing_wheel_ns.Level_bits.create_exn level_bits)
+        ()
+    ;;
+
+    let create ?(timing_wheel_config = default_timing_wheel_config) ~start () =
+      (* Make sure [start] is rounded to the nearest microsecond.  Otherwise, if you
+         feed [Clock.now ()] to a time function, it can be rounded down to a time in
+         the past, causing errors. *)
+      let start = Time_ns.of_time (Time_ns.to_time start) in
+      State.create_clock state ~timing_wheel_config ~start
+    ;;
+
+    let alarm_precision t = Timing_wheel_ns.alarm_precision t.timing_wheel
+    let timing_wheel_length = State.timing_wheel_length
+    let now = State.now
+    let watch_now t = t.now.watch
+    let at t time = State.at state t time
+    let after t span = State.after state t span
+    let at_intervals t span = State.at_intervals state t span
+    let advance_clock t ~to_ = State.advance_clock state t ~to_
+    let step_function t ~init steps = State.step_function state t ~init steps
+    let snapshot t incr ~at ~before = State.snapshot state t incr ~at ~before
+
+    let implicit_clock t =
+      ( module struct
+        let alarm_precision = alarm_precision t
+        let timing_wheel_length () = timing_wheel_length t
+        let now () = now t
+        let watch_now () = watch_now t
+        let at time = at t time
+        let after span = after t span
+        let at_intervals span = at_intervals t span
+        let advance_clock ~to_ = advance_clock t ~to_
+        let step_function ~init steps = step_function t ~init steps
+        let snapshot incr ~at ~before = snapshot t incr ~at ~before
+      end
+      : Implicit_clock )
+    ;;
+  end
+
   let freeze ?(when_ = fun _ -> true) t = State.freeze state t ~only_freeze_when:when_
   let depend_on t ~depend_on = State.depend_on state t ~depend_on
   let necessary_if_alive input = State.necessary_if_alive state input
@@ -236,6 +273,11 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
 end
 
 module Make () = Make_with_config (Config.Default ()) ()
+
+module Make_with_implicit_clock () = struct
+  include Make ()
+  include (val Clock.implicit_clock (Clock.create ~start:(Time_ns.now ()) ()))
+end
 
 module Private = struct
   let debug = debug

@@ -257,7 +257,6 @@
     - the set of observers
     - a recompute heap -- nodes that need to be recomputed, ordered by height.
     - an adjust-heights heap -- nodes whose height needs increasing, ordered by height.
-    - a timing wheel -- used to implement time-based operations.
 
     The goals of stabilization are to:
 
@@ -393,6 +392,29 @@
 
 open Core_kernel
 open! Import
+
+module type Implicit_clock = sig
+  type 'a incremental
+
+  val alarm_precision : Time_ns.Span.t
+  val timing_wheel_length : unit -> int
+  val now : unit -> Time_ns.t
+  val watch_now : unit -> Time_ns.t incremental
+  val advance_clock : to_:Time_ns.t -> unit
+
+  module Before_or_after : sig
+    type t =
+      | Before
+      | After
+    [@@deriving sexp_of]
+  end
+
+  val at : Time_ns.t -> Before_or_after.t incremental
+  val after : Time_ns.Span.t -> Before_or_after.t incremental
+  val at_intervals : Time_ns.Span.t -> unit incremental
+  val step_function : init:'a -> (Time_ns.t * 'a) list -> 'a incremental
+  val snapshot : 'a incremental -> at:Time_ns.t -> before:'a -> 'a incremental Or_error.t
+end
 
 module type S = sig
   (** [type 'a t] is the type of incrementals that have a value of type ['a].
@@ -1124,7 +1146,6 @@ module type S = sig
     val num_nodes_recomputed_directly_because_min_height : t -> int
     val num_stabilizes : t -> int
     val num_var_sets : t -> int
-    val timing_wheel_length : t -> int
 
     (** [Stats] contains information about the DAG intended for human consumption.
 
@@ -1190,31 +1211,6 @@ module type S = sig
       that change as its time passes.  One must explicitly call [advance_clock] to change
       incremental's clock; there is no implicit call based on the passage of time. *)
 
-  (** The [alarm_precision] of the underlying timing wheel. *)
-  val alarm_precision : Time_ns.Span.t
-
-  (** [now t] returns the current time of incremental's clock. *)
-  val now : unit -> Time_ns.t
-
-  (** [watch_now t] returns an incremental that tracks the current time. *)
-  val watch_now : unit -> Time_ns.t t
-
-  (** [advance_clock t ~to_] moves incremental's clock forward to [to_].  [advance_clock]
-      raises if [to_ < now t].  As with [Var.set], the effect of [advance_clock] is not
-      seen on incremental values until the next stabilization.  Unlike [Var.set], calling
-      [advance_clock] during stabilization raises.
-
-      In certain pathological cases, [advance_clock] can raise due to it detecting a
-      cycle in the incremental graph. *)
-  val advance_clock : to_:Time_ns.t -> unit
-
-  (** [at time] returns an incremental that is [Before] when [now () <= time] and
-      [After] when [now () >= time + alarm_precision].  When [now ()] is between [time]
-      and [time + alarm_precision], [at time] might be [Before] or [After], due to the
-      fundamental imprecision of the timing wheel.  One is guaranteed that an [at] never
-      becomes [After] too early, but it may become [After] up to [alarm_precision] late.
-
-      [after span] is [at (Time_ns.add (now ()) span)]. *)
   module Before_or_after : sig
     type t =
       | Before
@@ -1222,55 +1218,109 @@ module type S = sig
     [@@deriving sexp_of]
   end
 
-  val at : Time_ns.t -> Before_or_after.t t
-  val after : Time_ns.Span.t -> Before_or_after.t t
+  module type Implicit_clock =
+    Implicit_clock
+    with module Before_or_after := Before_or_after
+    with type 'a incremental := 'a incremental
 
-  (** [at_intervals interval] returns an incremental whose value changes at time intervals
-      of the form:
+  module Clock : sig
+    type t [@@deriving sexp_of]
 
-      {[
-        Time_ns.next_multiple ~base ~after ~interval
-      ]}
+    (** The default timing-wheel configuration, with one millisecond precision with alarms
+        up to 30 days in the future. *)
+    val default_timing_wheel_config : Timing_wheel_ns.Config.t
 
-      where [base] is [now ()] when [at_intervals] was called and [after] is the current
-      [now ()].  As with [at], [at_intervals] might fire up to [alarm_precision] late.
+    val create
+      :  ?timing_wheel_config:Timing_wheel_ns.Config.t
+      -> start:Time_ns.t
+      -> unit
+      -> t
 
-      [at_intervals] raises if [interval < alarm_precision].  The [unit t] that
-      [at_intervals] returns has its cutoff set to [Cutoff.never], so that although its
-      value is always [()], incrementals that depend on it will refire each time it is
-      set.  The result of [at_intervals] remains alive and is updated until the left-hand
-      side of its defining bind changes, at which point it becomes invalid. *)
-  val at_intervals : Time_ns.Span.t -> unit t
+    (** The [alarm_precision] of the underlying timing wheel. *)
+    val alarm_precision : t -> Time_ns.Span.t
 
-  (** [step_function ~init [(t1, v1); ...; (tn, vn)]] returns an incremental whose initial
-      value is [init] and takes on the values [v1], ..., [vn] in sequence taking on the
-      value [vi] when the clock's time passes [ti].  As with [at], the steps might take
-      effect up to [alarm_precision] late.
+    val timing_wheel_length : t -> int
 
-      It is possible for [vi] to be skipped if time advances from [t(i-1)] to some time
-      greater than [t(i+1)].
+    (** [now t] returns the current time of incremental's clock. *)
+    val now : t -> Time_ns.t
 
-      The times must be in nondecreasing order, i.e. [step_function] raises if for some [i
-      < j], [ti > tj]. *)
-  val step_function : init:'a -> (Time_ns.t * 'a) list -> 'a t
+    (** [watch_now t] returns an incremental that tracks the current time. *)
+    val watch_now : t -> Time_ns.t incremental
 
-  (** [snapshot value_at ~at ~before] returns an incremental whose value is [before]
-      before [at] and whose value is frozen to the value of [value_at] during the first
-      stabilization after which the time passes [at].  [snapshot] causes [value_at] to be
-      necessary during the first stabilization after which time passes [at] even if the
-      [snapshot] node itself is not necessary, but not thereafter (although of course
-      [value_at] could remain necessary for other reasons).  The result of [snapshot] will
-      only be invalidated if [value_at] is invalid at the moment of the snapshot.
+    (** [advance_clock t ~to_] moves incremental's clock forward to [to_].
+        [advance_clock] raises if [to_ < now t].  As with [Var.set], the effect of
+        [advance_clock] is not seen on incremental values until the next stabilization.
+        Unlike [Var.set], calling [advance_clock] during stabilization raises.
 
-      [snapshot] returns [Error] if [at < now ()], because it is impossible to take the
-      snapshot because the time has already passed. *)
-  val snapshot : 'a t -> at:Time_ns.t -> before:'a -> 'a t Or_error.t
+        In certain pathological cases, [advance_clock] can raise due to it detecting a
+        cycle in the incremental graph. *)
+    val advance_clock : t -> to_:Time_ns.t -> unit
+
+    (** [at time] returns an incremental that is [Before] when [now () <= time] and
+        [After] when [now () >= time + alarm_precision].  When [now ()] is between [time]
+        and [time + alarm_precision], [at time] might be [Before] or [After], due to the
+        fundamental imprecision of the timing wheel.  One is guaranteed that an [at] never
+        becomes [After] too early, but it may become [After] up to [alarm_precision] late.
+
+        [after span] is [at (Time_ns.add (now ()) span)]. *)
+    val at : t -> Time_ns.t -> Before_or_after.t incremental
+
+    val after : t -> Time_ns.Span.t -> Before_or_after.t incremental
+
+    (** [at_intervals interval] returns an incremental whose value changes at time
+        intervals of the form:
+
+        {[
+          Time_ns.next_multiple ~base ~after ~interval
+        ]}
+
+        where [base] is [now ()] when [at_intervals] was called and [after] is the current
+        [now ()].  As with [at], [at_intervals] might fire up to [alarm_precision] late.
+
+        [at_intervals] raises if [interval < alarm_precision].  The [unit t] that
+        [at_intervals] returns has its cutoff set to [Cutoff.never], so that although its
+        value is always [()], incrementals that depend on it will refire each time it is
+        set.  The result of [at_intervals] remains alive and is updated until the
+        left-hand side of its defining bind changes, at which point it becomes invalid. *)
+    val at_intervals : t -> Time_ns.Span.t -> unit incremental
+
+    (** [step_function ~init [(t1, v1); ...; (tn, vn)]] returns an incremental whose
+        initial value is [init] and takes on the values [v1], ..., [vn] in sequence taking
+        on the value [vi] when the clock's time passes [ti].  As with [at], the steps
+        might take effect up to [alarm_precision] late.
+
+        It is possible for [vi] to be skipped if time advances from [t(i-1)] to some time
+        greater than [t(i+1)].
+
+        The times must be in nondecreasing order, i.e. [step_function] raises if for some
+        [i < j], [ti > tj]. *)
+    val step_function : t -> init:'a -> (Time_ns.t * 'a) list -> 'a incremental
+
+    (** [snapshot value_at ~at ~before] returns an incremental whose value is [before]
+        before [at] and whose value is frozen to the value of [value_at] during the first
+        stabilization after which the time passes [at].  [snapshot] causes [value_at] to
+        be necessary during the first stabilization after which time passes [at] even if
+        the [snapshot] node itself is not necessary, but not thereafter (although of
+        course [value_at] could remain necessary for other reaspons).  The result of
+        [snapshot] will only be invalidated if [value_at] is invalid at the moment of the
+        snapshot.
+
+        [snapshot] returns [Error] if [at < now ()], because it is impossible to take the
+        snapshot because the time has already passed. *)
+    val snapshot
+      :  t
+      -> 'a incremental
+      -> at:Time_ns.t
+      -> before:'a
+      -> 'a incremental Or_error.t
+
+    val implicit_clock : t -> (module Implicit_clock)
+  end
 
   (** The weak versions of the memoization functions use a {!Weak_hashtbl} for the memo
       table.  This keeps a weak pointer to each result, and so the garbage collector
       automatically removes unused results.  Furthermore, [stabilize] removes the table
       entries whose result is unused.  *)
-
   val weak_memoize_fun
     :  ?initial_size:int (** default is [4]. *)
     -> 'a Hashtbl.Hashable.t
@@ -1285,18 +1335,23 @@ module type S = sig
     -> ('a -> 'b Heap_block.t) Staged.t
 end
 
+module type S_with_implicit_clock = sig
+  include S
+  include Implicit_clock
+end
+
 module type Incremental = sig
   module type Incremental_config = Config.Incremental_config
   module type S = S
+  module type S_with_implicit_clock = S_with_implicit_clock
 
   module Config : Config_intf.Config
 
-  (** [Make] returns a new incremental implementation.  Incremental uses a timing wheel
-      for its time-based functions.  [Make] uses [Config.Default ()].
-
-      [Make_with_config] allows one to specify the timing-wheel configuration. *)
+  (** [Make] returns a new incremental implementation.  [Make] uses [Config.Default
+      ()]. *)
 
   module Make () : S
+  module Make_with_implicit_clock () : S_with_implicit_clock
   module Make_with_config (C : Incremental_config) () : S
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:

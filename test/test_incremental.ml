@@ -17,19 +17,12 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
     let check_invalidity = M.bind_lhs_change_should_invalidate_rhs
     let skip_invalidity_check = not check_invalidity
 
-    module Incremental_Make () =
-      Incremental.Make_with_config (struct
-        include Incremental.Config.Default ()
-
-        let bind_lhs_change_should_invalidate_rhs =
-          M.bind_lhs_change_should_invalidate_rhs
-        ;;
-      end)
-        ()
+    module Incremental_Make () = Incremental.Make_with_config (M) ()
 
     (* A little wrapper around [Incremental_Make] to add some utilities for testing. *)
     module Make () = struct
       include Incremental_Make ()
+      include (val Clock.implicit_clock (Clock.create () ~start:(Time_ns.now ())))
 
       let value = Observer.value_exn
       let watch = Var.watch
@@ -139,7 +132,6 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
 
             let%test_unit _ = invariant t
 
-            let timing_wheel_length = timing_wheel_length
             let max_height_allowed = max_height_allowed
 
             (* the default *)
@@ -2143,8 +2135,14 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             [%test_result: Float.t] (value o) ~expect:0.
           ;;
 
+          module Clock = Clock
+
+          module type Implicit_clock = Implicit_clock
+
+          let timing_wheel_length = timing_wheel_length
+
           (* nothing to test? *)
-          let alarm_precision = alarm_precision
+          let _alarm_precision = alarm_precision
 
           (* *)
           let now = now
@@ -2586,7 +2584,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               ; (fun () -> relative_step_function ~init:() [ 1, () ])
               ]
               ~f:(fun create_time_based_incremental ->
-                let num_alarms = State.(timing_wheel_length t) in
+                let num_alarms = timing_wheel_length () in
                 let x = Var.create_ [%here] 0 in
                 let o =
                   observe
@@ -2603,15 +2601,12 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                   then
                     [%test_result: int]
                       ~expect:(num_alarms + 1)
-                      State.(timing_wheel_length t)
+                      (timing_wheel_length ())
                 done;
                 Var.set x (-1);
                 stabilize_ [%here];
                 if check_invalidity
-                then
-                  [%test_result: int]
-                    ~expect:num_alarms
-                    State.(timing_wheel_length t);
+                then [%test_result: int] ~expect:num_alarms (timing_wheel_length ());
                 disallow_future_use o)
           ;;
 
@@ -4482,20 +4477,23 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let module I =
             Incremental.Make_with_config (struct
               let bind_lhs_change_should_invalidate_rhs = true
-
-              let timing_wheel_config =
-                Timing_wheel_ns.Config.create
-                  ~alarm_precision:Alarm_precision.(mul about_one_millisecond ~pow2:3)
-                  ~level_bits:
-                    (Timing_wheel_ns.Level_bits.create_exn [ 11; 10; 10; 10; 10; 10 ])
-                  ()
-              ;;
-
-              let start = Time_ns.of_string "2014-01-09 00:00:00.000000-05:00"
             end)
               ()
           in
           let open I in
+          let clock =
+            Clock.create
+              ~timing_wheel_config:
+                (Timing_wheel_ns.Config.create
+                   ~alarm_precision:Alarm_precision.(mul about_one_millisecond ~pow2:3)
+                   ~level_bits:
+                     (Timing_wheel_ns.Level_bits.create_exn [ 11; 10; 10; 10; 10; 10 ])
+                   ())
+              ~start:(Time_ns.of_string "2014-01-09 00:00:00.000000-05:00")
+              ()
+          in
+          let module Implicit_clock = (val Clock.implicit_clock clock) in
+          let open Implicit_clock in
           advance_clock ~to_:(Time_ns.of_string "2014-01-09 09:35:05.030000-05:00");
           let t = at_intervals (sec 1.) in
           let o = observe t in

@@ -46,6 +46,7 @@ and At : sig
     { main : Before_or_after.t Node.t
     ; at : Time_ns.t
     ; mutable alarm : Alarm.t
+    ; clock : Clock.t
     }
 end =
   At
@@ -56,6 +57,7 @@ and At_intervals : sig
     ; base : Time_ns.t
     ; interval : Time_ns.Span.t
     ; mutable alarm : Alarm.t
+    ; clock : Clock.t
     }
 end =
   At_intervals
@@ -72,6 +74,16 @@ and Bind : sig
     }
 end =
   Bind
+
+and Clock : sig
+  type t =
+    { timing_wheel : Alarm_value.t Timing_wheel_ns.t
+    ; now : Time_ns.t Var.t
+    ; handle_fired : Alarm.t -> unit
+    ; mutable fired_alarm_values : Alarm_value.t Uopt.t
+    }
+end =
+  Clock
 
 and Expert : sig
   type 'a edge =
@@ -358,6 +370,7 @@ and Snapshot : sig
     ; at : Time_ns.t
     ; before : 'a
     ; value_at : 'a Node.t
+    ; clock : Clock.t
     }
 end =
   Snapshot
@@ -368,6 +381,7 @@ and Step_function : sig
     ; mutable value : 'a
     ; mutable upcoming_steps : (Time_ns.t * 'a) list
     ; mutable alarm : Alarm.t
+    ; clock : Clock.t
     }
 end =
   Step_function

@@ -7,6 +7,7 @@ type t = Types.At.t =
   { main : Before_or_after.t Node.t
   ; at : Time_ns.t
   ; mutable alarm : Alarm.t
+  ; clock : Types.Clock.t sexp_opaque
   }
 [@@deriving fields, sexp_of]
 
@@ -22,5 +23,6 @@ let invariant t =
            | At t' -> assert (phys_equal t t')
            | _ -> assert false))
       ~at:ignore
-      ~alarm:(check Alarm.invariant))
+      ~alarm:(check Alarm.invariant)
+      ~clock:ignore)
 ;;
