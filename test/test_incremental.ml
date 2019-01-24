@@ -22,8 +22,17 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
     (* A little wrapper around [Incremental_Make] to add some utilities for testing. *)
     module Make () = struct
       include Incremental_Make ()
-      include (val Clock.implicit_clock (Clock.create () ~start:(Time_ns.now ())))
 
+      let clock = Clock.create () ~start:(Time_ns.now ())
+      let timing_wheel_length () = Clock.timing_wheel_length clock
+      let now () = Clock.now clock
+      let watch_now () = Clock.watch_now clock
+      let advance_clock ~to_ = Clock.advance_clock clock ~to_
+      let after span = Clock.after clock span
+      let at time = Clock.at clock time
+      let at_intervals span = Clock.at_intervals clock span
+      let snapshot incr ~at = Clock.snapshot clock incr ~at
+      let step_function steps = Clock.step_function clock steps
       let value = Observer.value_exn
       let watch = Var.watch
       let disallow_future_use = Observer.disallow_future_use
@@ -2137,18 +2146,6 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
 
           module Clock = Clock
 
-          module type Implicit_clock = Implicit_clock
-
-          let timing_wheel_length = timing_wheel_length
-
-          (* nothing to test? *)
-          let _alarm_precision = alarm_precision
-
-          (* *)
-          let now = now
-          let watch_now = watch_now
-          let advance_clock = advance_clock
-
           let%test_unit _ =
             let w = observe (watch_now ()) in
             stabilize_ [%here];
@@ -2163,8 +2160,6 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (Time_ns.equal (value w) to_)
           ;;
 
-          let after = after
-          let at = at
           let is observer v = Poly.equal (value observer) v
 
           let%test _ =
@@ -2233,8 +2228,6 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             assert (!r = 1);
             assert (is o After)
           ;;
-
-          let at_intervals = at_intervals
 
           let%test _ = does_raise (fun () -> at_intervals (sec (-1.)))
           let%test _ = does_raise (fun () -> at_intervals (sec 0.))
@@ -2305,8 +2298,6 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             (* [interval < alarm precision] raises *)
             assert (does_raise (fun () -> at_intervals (sec 0.0005)))
           ;;
-
-          let snapshot = snapshot
 
           let%test_unit _ =
             (* [at] in the past *)
@@ -2416,8 +2407,6 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             (* the 5 [snapshot]s that became [freeze] plus the [const] *)
             [%test_result: int] i2 ~expect:(i1 + 6)
           ;;
-
-          let step_function = step_function
 
           let relative_step_function ~init steps =
             let now = now () in
@@ -4492,10 +4481,10 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
               ~start:(Time_ns.of_string "2014-01-09 00:00:00.000000-05:00")
               ()
           in
-          let module Implicit_clock = (val Clock.implicit_clock clock) in
-          let open Implicit_clock in
-          advance_clock ~to_:(Time_ns.of_string "2014-01-09 09:35:05.030000-05:00");
-          let t = at_intervals (sec 1.) in
+          Clock.advance_clock
+            clock
+            ~to_:(Time_ns.of_string "2014-01-09 09:35:05.030000-05:00");
+          let t = Clock.at_intervals clock (sec 1.) in
           let o = observe t in
           stabilize ();
           (* Here, we advance to a time that has the bad property mentioned above.  A

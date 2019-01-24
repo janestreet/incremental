@@ -393,29 +393,6 @@
 open Core_kernel
 open! Import
 
-module type Implicit_clock = sig
-  type 'a incremental
-
-  val alarm_precision : Time_ns.Span.t
-  val timing_wheel_length : unit -> int
-  val now : unit -> Time_ns.t
-  val watch_now : unit -> Time_ns.t incremental
-  val advance_clock : to_:Time_ns.t -> unit
-
-  module Before_or_after : sig
-    type t =
-      | Before
-      | After
-    [@@deriving sexp_of]
-  end
-
-  val at : Time_ns.t -> Before_or_after.t incremental
-  val after : Time_ns.Span.t -> Before_or_after.t incremental
-  val at_intervals : Time_ns.Span.t -> unit incremental
-  val step_function : init:'a -> (Time_ns.t * 'a) list -> 'a incremental
-  val snapshot : 'a incremental -> at:Time_ns.t -> before:'a -> 'a incremental Or_error.t
-end
-
 module type S = sig
   (** [type 'a t] is the type of incrementals that have a value of type ['a].
 
@@ -1218,11 +1195,6 @@ module type S = sig
     [@@deriving sexp_of]
   end
 
-  module type Implicit_clock =
-    Implicit_clock
-    with module Before_or_after := Before_or_after
-    with type 'a incremental := 'a incremental
-
   module Clock : sig
     type t [@@deriving sexp_of]
 
@@ -1313,8 +1285,6 @@ module type S = sig
       -> at:Time_ns.t
       -> before:'a
       -> 'a incremental Or_error.t
-
-    val implicit_clock : t -> (module Implicit_clock)
   end
 
   (** The weak versions of the memoization functions use a {!Weak_hashtbl} for the memo
@@ -1335,15 +1305,9 @@ module type S = sig
     -> ('a -> 'b Heap_block.t) Staged.t
 end
 
-module type S_with_implicit_clock = sig
-  include S
-  include Implicit_clock
-end
-
 module type Incremental = sig
   module type Incremental_config = Config.Incremental_config
   module type S = S
-  module type S_with_implicit_clock = S_with_implicit_clock
 
   module Config : Config_intf.Config
 
@@ -1351,7 +1315,6 @@ module type Incremental = sig
       ()]. *)
 
   module Make () : S
-  module Make_with_implicit_clock () : S_with_implicit_clock
   module Make_with_config (C : Incremental_config) () : S
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:

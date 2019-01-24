@@ -150,11 +150,6 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
 
   module Before_or_after = Before_or_after
 
-  module type Implicit_clock =
-    Implicit_clock
-    with module Before_or_after := Before_or_after
-    with type 'a incremental := 'a incremental
-
   module Clock = struct
     include State.Clock
 
@@ -185,22 +180,6 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
     let advance_clock t ~to_ = State.advance_clock state t ~to_
     let step_function t ~init steps = State.step_function state t ~init steps
     let snapshot t incr ~at ~before = State.snapshot state t incr ~at ~before
-
-    let implicit_clock t =
-      ( module struct
-        let alarm_precision = alarm_precision t
-        let timing_wheel_length () = timing_wheel_length t
-        let now () = now t
-        let watch_now () = watch_now t
-        let at time = at t time
-        let after span = after t span
-        let at_intervals span = at_intervals t span
-        let advance_clock ~to_ = advance_clock t ~to_
-        let step_function ~init steps = step_function t ~init steps
-        let snapshot incr ~at ~before = snapshot t incr ~at ~before
-      end
-      : Implicit_clock )
-    ;;
   end
 
   let freeze ?(when_ = fun _ -> true) t = State.freeze state t ~only_freeze_when:when_
@@ -273,11 +252,6 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
 end
 
 module Make () = Make_with_config (Config.Default ()) ()
-
-module Make_with_implicit_clock () = struct
-  include Make ()
-  include (val Clock.implicit_clock (Clock.create ~start:(Time_ns.now ()) ()))
-end
 
 module Private = struct
   let debug = debug
