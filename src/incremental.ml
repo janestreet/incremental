@@ -166,7 +166,10 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
       (* Make sure [start] is rounded to the nearest microsecond.  Otherwise, if you
          feed [Clock.now ()] to a time function, it can be rounded down to a time in
          the past, causing errors. *)
-      let start = Time_ns.of_time (Time_ns.to_time start) in
+      let start =
+        Time_ns.of_time_float_round_nearest_microsecond
+          (Time_ns.to_time_float_round_nearest_microsecond start)
+      in
       State.create_clock state ~timing_wheel_config ~start
     ;;
 
