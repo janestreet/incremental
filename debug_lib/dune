@@ -1,6 +1,6 @@
 (library (name incremental_debug)
  (libraries core_kernel.balanced_reducer core_kernel core_kernel.uopt
-  core_kernel.weak_hashtbl)
+  core_kernel.thread_safe_queue core_kernel.weak_hashtbl)
  (preprocessor_deps debug.mlh) (preprocess (pps ppx_jane)))
 
 (rule
