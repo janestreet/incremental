@@ -600,6 +600,12 @@ module type S = sig
       over the [ts]. *)
   val all : 'a t list -> 'a list t
 
+  (** [both t1 t2] returns an incremental whose value is pair of values of [t1] and [t2].
+      Both [map (both t1 t2) ~f] and [map2 t1 t2 ~f:(fun a1 a2 -> f (a1, a2))] return an
+      incremental with the same behavior, but the [map2] version is more efficient,
+      because it creates a single node, whereas the [both] version creates two nodes. *)
+  val both : 'a t -> 'b t -> ('a * 'b) t
+
   (** {1 Array folds and sums} *)
 
   (** [array_fold ts ~init ~f] creates an incremental [t] whose value is:

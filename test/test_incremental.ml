@@ -1650,6 +1650,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           ;;
 
           let all = all
+          let both = both
           let exists = exists
           let for_all = for_all
 

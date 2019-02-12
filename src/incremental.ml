@@ -90,6 +90,7 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
   let all ts = State.all state ts
   let exists ts = State.exists state ts
   let for_all ts = State.for_all state ts
+  let both t1 t2 = map2 t1 t2 ~f:Tuple2.create
 
   let sum ?full_compute_every_n_changes ts ~zero ~add ~sub =
     State.sum state ?full_compute_every_n_changes ts ~zero ~add ~sub
