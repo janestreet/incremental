@@ -1,0 +1,326 @@
+[%%org {|
+#+TITLE: Incremental tutorial, Part 4: Pitfalls
+
+Incremental is really useful, sometimes making it massively easier to
+write your program in a way that's easy to understand and reasonably
+performant.
+
+But Incremental also has a number of pitfalls -- mistakes that are all
+too easy to make, especially when you're new to the library. Here are
+some suggestions to help you avoid those mistakes.
+
+** Don't over-incrementalize
+
+When people first start using Incremental, they think of it as being
+something they can sprinkle costlessly throughout their program to
+improve its performance.  This is far from the truth. Incremental
+nodes themselves are expensive to construct, expensive to fire, and
+take up a lot of memory.  To be clear, they're not /that/ expensive;
+you can fire millions of incremental nodes per second. But they're
+still orders of magnitude more expensive than a simple addition.
+
+So, when optimizing with Incremental, try to do so in a way that is
+mindful of the cost of an incremental node.  And make a point of
+benchmarking your code so you can tell if your changes are making
+things better or worse.
+
+** Don't use mutable state, especially not for capturing history
+
+For a functional programming shop, we do an awful lot of imperative
+programming, and mostly, there's nothing wrong with that.  But
+Incremental programs are much easier to understand if you avoid
+imperative state religiously.
+
+In particular, the mental model you should bring to writing an
+Incremental computation is that of optimizing a pure computation over
+pure data.  At its core, Incremental operates by allowing you to
+compare new versions of your computation to old ones.  Using mutable
+data undermines this in fairly fundamental ways.
+
+People will sometimes use imperative state to capture the history of
+an incremental computation, allowing you to record and depend on
+previous things that were computed. Beware! This is surprisingly
+tricky to reason about. Incremental is very careful not to do
+unnecessary computations, which means that it's hard to predict which
+parts of an incremental computation will actually be run on any given
+stabilization.  As a result, putting effects in the right hand side of
+a bind or map to capture historical information is going to be
+confusing.
+
+It's generally better to capture historical data in variables at the
+edge of your incremental computation, rather than in the middle of it.
+
+** Be wary of ~bind~ (and especially ~return~)
+
+Incremental has both ~map~-like operations (including ~map2~, ~map3~,
+etc), which allow you to build static dependency graphs, and ~bind~,
+which lets you build dynamic graphs, where dependencies can change
+and new hunks of graph can be created in the course of a computation.
+
+~bind~ is powerful, but it's also problematic.  It's all too easy to
+create a computation using ~bind~ that looks incremental at first
+glance, but in reality just recreates the entire computation graph any
+time anything changes.  This is worse than useless, giving you a
+massively slower program and zero incrementality.
+
+Let's start off with an example showing how to use ~bind~ in a
+reasonable way, and then show some examples that use it unreasonably.
+
+First, the reasonable example.  Consider the following function for
+filtering a map based on an incremental search string.
+|}]
+
+open Core
+module Incr = Incremental.Make ()
+open Incr.Let_syntax
+module Incr_map = Incr_map.Make(Incr);;
+#verbose true;;
+
+let filter_key_by_string map pattern =
+  let%bind pattern = pattern in
+  Incr_map.filter_mapi map ~f:(fun ~key ~data ->
+    if String.Search_pattern.matches pattern key then Some data else None)
+[%%expect {|
+val filter_key_by_string :
+  (string, 'a, 'b) Map.t Incr.t ->
+  String.Search_pattern.t Incr.t -> (string, 'a, 'b) Map.t Incr.t = <fun>
+|}];;
+
+[%%org {|
+Now, let's think for a moment about the incremental performance of
+this computation.  When the map changes, ~Incr_map.filter_mapi~ will
+only do work proportional to the number of changes to the map, rather
+than rescanning the entire map on each change.
+
+But when the pattern changes, the entire computation will be redone
+from scratch, in a non-incremental fashion.
+
+For many applications, this is fine. The pattern will change rarely,
+and when it does, a rescan of the full data is hard to beat in the
+general case.
+
+This example shows both the power and the peril of ~bind~. It lets you
+write things that are otherwise hard to express, but it does so in a
+way that can be quite expensive.
+
+Basically, ~bind~ can make sense in two cases:
+
+- First, if the scope of what's recomputed on the right-hand side is
+  really small, so it doesn't matter that it's non-incremental.
+- Second, if the left hand side changes rarely enough that doing the
+  full recomputation on the right hand side isn't a problem.
+
+Using ~bind~ in other cases is almost always a mistake.  And just
+converting an example that uses ~map~ into a seemingly equivalent one
+that uses binds is pretty much always a mistake.  Consider the
+following simple example from [[./part1-preliminaries.mlt][part 1]]:
+
+|}]
+
+let sum x y z =
+  let%map x = x and y = y and z = z in
+  x +. y +. z
+[%%expect {|
+val sum : float Incr.t -> float Incr.t -> float Incr.t -> float Incr.t =
+  <fun>
+|}];;
+
+[%%org {|
+We could have rendered this as follows:
+|}]
+
+let sum x y z =
+  let%bind x = x in
+  let%bind y = y in
+  let%bind z = z in
+  return (x +. y +. z)
+[%%expect {|
+val sum : float Incr.t -> float Incr.t -> float Incr.t -> float Incr.t =
+  <fun>
+|}];;
+
+[%%org {|
+While it has the same signature, the second ~sum~ has much worse
+performance, needing to allocate new incrementals every time any input
+changes.
+
+Here's another example of Incremental gone wrong.  Imagine we want to
+use our filter function above on a model that contains both the
+pattern and data.
+|}]
+
+#verbose false;;
+type model = { pattern: String.Search_pattern.t
+             ; data: int Map.M(String).t
+             }
+[@@deriving fields];;
+#verbose true;;
+
+let filter_model m =
+  let%bind m = m in
+  filter_key_by_string (return m.data) (return m.pattern)
+[%%expect {|
+val filter_model :
+  model Incr.t -> (string, int, String.comparator_witness) Map.t Incr.t =
+  <fun>
+|}];;
+
+[%%org {|
+Again, we're using incremental functions, but there's no real
+incrementality here, since ~filter_key_by_string~ is just being rerun
+from scratch every time the model changes in any way.  The use of
+~return~ here is a dead giveaway -- you almost never use ~return~ in
+Incremental, since it creates a new incremental node that can't be
+efficiently compared to any previous incremental node. That means you
+get the overhead of Incremental with none of its benefits.
+
+If you want to get the right incrementality, you instead need to
+project out the components of the model individually, and feed them to
+~filter_key_by_string~, as follows.
+|}]
+
+let filter_model m =
+  filter_key_by_string (m >>| data) (m >>| pattern)
+[%%expect {|
+val filter_model :
+  model Incr.t -> (string, int, String.comparator_witness) Map.t Incr.t =
+  <fun>
+|}];;
+
+
+[%%org {|
+
+** Be wary of physical equality and cutoffs
+
+Sometimes, we build calculations whose performance depends critically
+on whether a given node cuts off.  Unfortunately, the fact that
+cutoffs use physical equality can make this tricky to think about.
+
+Here's an example, based on the ~index_by~ function we wrote in
+[[./part3-map.mlt][Part 3]].  Here's the function as it appeared
+there:
+
+|}]
+
+let index_by inner_comparator outer_comparator map get_outer_index =
+  let add ~key ~data acc =
+    let idx = get_outer_index data in
+    Map.update acc idx ~f:(function
+      | None -> Map.empty inner_comparator
+      | Some inner_map -> Map.set inner_map ~key ~data)
+  in
+  let remove ~key ~data acc =
+    let idx = get_outer_index data in
+    Map.update acc idx ~f:(function
+      | None -> assert false
+      | Some inner_map -> Map.remove inner_map key)
+  in
+  Incr_map.unordered_fold
+    map
+    ~init:(Map.empty outer_comparator)
+    ~add
+    ~update:(fun ~key ~old_data:_ ~new_data:data -> add ~key ~data)
+    ~remove
+[%%expect{|
+val index_by :
+  ('a, 'b) Map.comparator ->
+  ('c, 'd) Map.comparator ->
+  ('a, 'e, 'f) Map.t Incr.t ->
+  ('e -> 'c) -> ('c, ('a, 'e, 'b) Map.t, 'd) Map.t Incr.t = <fun>
+|}]
+
+[%%org {|
+One thing you might notice about this function is that it doesn't
+strictly speaking need to take both comparators as arguments. In
+particular, the inner comparator will typically be the same as the
+comparator for the input map, since they both use the same type of key
+(the polymorphic type ~'a~ in the above.)
+
+We can fix this by grabbing the comparator from the map directly,
+using ~Map.comparator_s~.
+|}]
+
+let index_by outer_comparator map get_outer_index =
+  let%bind inner_comparator = map >>| Map.comparator_s in
+  let add ~key ~data acc =
+    let idx = get_outer_index data in
+    Map.update acc idx ~f:(function
+      | None -> Map.empty inner_comparator
+      | Some inner_map -> Map.set inner_map ~key ~data)
+  in
+  let remove ~key ~data acc =
+    let idx = get_outer_index data in
+    Map.update acc idx ~f:(function
+      | None -> assert false
+      | Some inner_map -> Map.remove inner_map key)
+  in
+  Incr_map.unordered_fold
+    map
+    ~init:(Map.empty outer_comparator)
+    ~add
+    ~update:(fun ~key ~old_data:_ ~new_data:data -> add ~key ~data)
+    ~remove
+[%%expect{|
+val index_by :
+  ('a, 'b) Map.comparator ->
+  ('c, 'd, 'e) Map.t Incr.t ->
+  ('d -> 'a) -> ('a, ('c, 'd, 'e) Map.t, 'b) Map.t Incr.t = <fun>
+|}]
+
+[%%org {|
+This looks reasonable on its face: the comparator of a map can never
+change, after all.  That's because each instance of a comparator has a
+fresh type, so two comparators with the same type must be the same.
+
+Or at least, they must be logically the same; but they needn't be the
+same physical object.  It turns out that ~Map.comparator_s~ allocates
+a new first-class module to wrap the comparator in, so different calls
+to ~Map.Comparator_s~ yield different heap-allocated objects.
+
+As a result, the above function has been horrifically de-optimized,
+and is now even worse than a simple all-at-once version of the
+computation, since in addition to doing the core computation from
+scratch on every change, it also allocates some unnecessary
+incrementals.
+
+FWIW, we can make this function work by forcing in a cutoff that
+reflects the fact that the comparator can't actually change.
+|}]
+
+let index_by outer_comparator map get_outer_index =
+  let comparator = map >>| Map.comparator_s in
+  (* Safe because comparators are uniquely determined by their type *)
+  Incr.set_cutoff map (Incr.Cutoff.of_equal (fun _ _ -> true));
+  let%bind inner_comparator = comparator in
+  let add ~key ~data acc =
+    let idx = get_outer_index data in
+    Map.update acc idx ~f:(function
+      | None -> Map.empty inner_comparator
+      | Some inner_map -> Map.set inner_map ~key ~data)
+  in
+  let remove ~key ~data acc =
+    let idx = get_outer_index data in
+    Map.update acc idx ~f:(function
+      | None -> assert false
+      | Some inner_map -> Map.remove inner_map key)
+  in
+  Incr_map.unordered_fold
+    map
+    ~init:(Map.empty outer_comparator)
+    ~add
+    ~update:(fun ~key ~old_data:_ ~new_data:data -> add ~key ~data)
+    ~remove
+[%%expect{|
+val index_by :
+  ('a, 'b) Map.comparator ->
+  ('c, 'd, 'e) Map.t Incr.t ->
+  ('d -> 'a) -> ('a, ('c, 'd, 'e) Map.t, 'b) Map.t Incr.t = <fun>
+|}]
+
+[%%org {|
+This is still a little slower than the initial version, since every
+time ~map~ changes, the incremental for the comparator will refire,
+and ~Map.comparator_s~ will be re-run again. But the computation will
+short-circuit there, and won't lead to a new call to
+~Incr_map.unordered_fold~.
+|}]

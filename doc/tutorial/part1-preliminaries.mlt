@@ -1,0 +1,542 @@
+[%%org {|
+#+TITLE: Incremental tutorial, Part 1: Preliminaries
+
+* What is Incremental for?
+
+At its core, Incremental is an optimization tool. If you're not trying
+to solve a performance problem, you probably shouldn't be using it.
+In particular, Incremental is really good at letting you write code
+that is easy to read and understand, while at the same time having
+good /incremental performance/, i.e., performance in the presence of
+small updates to your input data.
+
+Incremental has some constraints that are worth understanding.
+
+- *It requires that you write your code in a functional style.* That
+  means that it can be easier to add Incremental to a codebase that's
+  already written in a functional style.
+
+- *It's likely to make the full cost of computing whatever it is your
+  program needs to compute worse.* That's for two reasons: first,
+  writing in a functional style is typically slower than the best
+  available imperative solution.  Also, Incremental itself has some
+  overhead.
+
+- *It works best if the information you're using fits in memory*. If
+  you need to deal with data that doesn't fit nicely in RAM, you might
+  want to consider another approach.
+
+- *Incremental is fast, but it isn't super fast*. If you need a truly
+  high-performance solution, Incremental is probably not the right
+  library for you.
+
+* The computational model
+
+Incremental operates a lot like a build system: it lets you organize
+your computation as a graph with explicit dependencies, and it caches
+previous computations in the nodes of the graph. That way, when one of
+the inputs to your computation is updated, only the part of the graph
+that depends on that input needs to be re-evalauted.
+
+There are three basic parts to an incremental graph: /variables/,
+which constitute the inputs to the computation, /incrementals/ which
+correspond to the intermediate stages of the computation, and
+/observers/, which are nodes from which you can read the output of a
+computation.
+
+Let's look at an example.  The first thing we need to do is to
+instantiate the Incremental library. Incremental keeps the state of
+the overall computation graph as module-level imperative state, so you
+want to be able to mint disjoint incremental worlds that won't interfere
+with each other.  We do that by instantiating Incremental via functor
+application.
+|}]
+
+open Core
+module Incr = Incremental.Make ()
+
+[%%org {|
+
+Now we'll declare a few variables, initialized with different floating
+point values.
+
+|}]
+
+#verbose true;;
+let (x_v,y_v,z_v) = Incr.Var.(create 3., create 0.5, create 1.5)
+[%%expect {|
+val x_v : float Incr.Var.t = <abstr>
+val y_v : float Incr.Var.t = <abstr>
+val z_v : float Incr.Var.t = <abstr>
+|}];;
+
+[%%org {|
+To be able to compute with these incremental variables, we need to
+grab the incremental variables corresponding to those values.
+|}]
+
+let (x,y,z) = Incr.Var.(watch x_v, watch y_v, watch z_v)
+[%%expect {|
+val x : float Incr.t = <abstr>
+val y : float Incr.t = <abstr>
+val z : float Incr.t = <abstr>
+|}];;
+
+[%%org {|
+We can create a sum by hand using the ~map2~ operator.
+|}]
+
+let sum =
+  Incr.map2
+    z
+    (Incr.map2 x y ~f:(fun x y -> x +. y))
+    ~f:(fun z x_and_y -> z +. x_and_y);;
+[%%expect {|
+val sum : float Incr.t = <abstr>
+|}];;
+
+[%%org {|
+Alternately, using let syntax, we can write this as:
+|}]
+
+open Incr.Let_syntax
+
+let sum =
+  let%map x_and_y =
+    let%map x = x and y = y in
+    x +. y
+  and z = z in
+  z +. x_and_y
+[%%expect {|
+val sum : float Incr.t = <abstr>
+|}];;
+
+[%%org {|
+Note that the ~and~ is used to make a parallel binding, which gets you
+the moral equivalent of ~map2~.
+
+In order to read the value out, we have to create an observer, at
+which point we can grab the current value.  Before reading the value,
+however, we need to call /stabilize/, which makes sure that the output
+of the computation is up-to-date.
+|}]
+
+let sum_o = Incr.observe sum
+[%%expect {|
+val sum_o : float Incr.Observer.t = <abstr>
+|}];;
+
+let show x =
+  Incr.stabilize ();
+  print_s [%sexp (Incr.Observer.value_exn x : float)];;
+[%%expect {|
+val show : float Incr.Observer.t -> unit = <fun>
+|}];;
+
+let () =
+  show sum_o;
+[%%expect {|
+5
+|}];;
+
+[%%org {|
+The function for getting the value from an observer is called
+~value_exn~ because it will throw in the case that the observer in
+question has not been made valid by a stabilize.
+
+We can of course update the value by changing the inputs, i.e., the
+variables.  Incremental variables are really closer to refs, so it's
+useful to adopt some of the same syntactic conventions, so we'll
+define a couple of functions to do just that.
+|}]
+
+let (:=) = Incr.Var.set
+let (!) = Incr.Var.value
+
+[%%expect{|
+val ( := ) : 'a Incr.Var.t -> 'a -> unit = <fun>
+val ( ! ) : 'a Incr.Var.t -> 'a = <fun>
+|}]
+
+[%%org {|
+Now we can go ahead and update a value, and see how that affects the
+final result.
+|}]
+
+let () =
+  z_v := 100.;
+  show sum_o;
+[%%expect{|
+103.5
+|}]
+
+[%%org {|
+Note that this only required the redoing of a single addition; the
+addition of ~x~ and ~y~ was cached from the original.  Obviously, this
+isn't too exciting on its own: there's not really much computation
+that you're saving here. In fact, the overhead of using Incremental in
+the first place is way more than the cost of the underlying math.
+
+Indeed, it would probably be a little more efficient to have written
+~sum~ as:
+|}]
+
+
+let sum =
+  let%map x = x and y = y and z = z in
+  x +. y +. z
+;;
+[%%expect {|
+val sum : float Incr.t = <abstr>
+|}];;
+
+
+[%%org {|
+That's less incremental, since modifying any of the inputs causes the
+entire computation to be redone.  But in this case, the
+incrementalization isn't buying us much.
+
+* A more meaningful example
+
+Let's expand this to a slightly less trivial example that lets
+Incremental show off its ability to optimize a bit more.  Instead of
+just summing up a single number, what if we want to add together many
+numbers?  We might write that as follows.
+
+|}]
+
+let incr_list_sum l =
+  match List.reduce_balanced l ~f:(Incr.map2 ~f:( +. )) with
+  | None -> return 0.
+  | Some x -> x
+[%%expect {|
+val incr_list_sum : float Incr.t list -> float Incr.t = <fun>
+|}];;
+
+[%%org {|
+This just builds up a binary tree of Incremental nodes, each one
+summing up a pair of nodes below.
+
+Now let's wire this up to some actual inputs.
+|}]
+
+#verbose false;;
+let inputs = Array.init 10_000 ~f:(fun _ -> Incr.Var.create 0.);;
+#verbose true;;
+let sum =
+  List.map ~f:Incr.Var.watch (Array.to_list inputs)
+  |> incr_list_sum
+  |> Incr.observe
+[%%expect {|
+val sum : float Incr.Observer.t = <abstr>
+|}];;
+let () = show sum
+[%%expect {|
+0
+|}];;
+let () =
+  let incr i x = inputs.(i) := !(inputs.(i)) +. x in
+  incr 100 1.6;
+  incr 72 0.2;
+  incr 105 0.4;
+  show sum
+[%%expect {|
+2.2
+|}];;
+
+[%%org {|
+If we were to benchmark this code, we'd see a real speedup here, since
+rather than having to recompute the full sum over all ten thousand
+elements, we instead just have to walk up the spine of the tree of
+incremental nodes, which takes a small fraction of the time.
+
+That said, Incremental has real overhead, and if you use only 50 or so
+nodes, you'll see no speedup at all, and for less than 50 nodes, the
+incremental version will be slower.
+
+Now, your mileage will vary depending on how complex the computations
+being done are.  This code is kind of the worst possible case, since
+addition is such a cheap operation to begin with.  The larger the
+amount of work you get to skip, the more Incremental can help you.
+
+* Projections and cutoffs
+
+Another useful trick when building an incremental computation is to
+break up a complex data-type by projecting out individual components
+of that data type, and then doing further incremental work on those
+components directly.
+
+Here's a trivial example of how this approach works.  Let's start with
+a little nonsensical data type with two components.
+|}]
+
+#verbose false;;
+type z =
+  { a: int list
+  ; b: (int * int)
+  }
+[@@deriving fields]
+#verbose true;;
+
+[%%org {|
+Now, we're going to write a function that multiplies together the
+integers in ~a~ and ~b~ respectively, and then sums them up.
+|}]
+
+let sumproduct z =
+  let a_prod =
+    let%map a = z >>| a in
+    printf "a\n";
+    List.fold ~init:1 ~f:( * ) a
+  in
+  let b_prod =
+    let%map (b1,b2) = z >>| b in
+    printf "b\n";
+    b1 * b2
+  in
+  let%map a_prod = a_prod and b_prod = b_prod in
+  a_prod + b_prod
+[%%expect{|
+val sumproduct : z Incr.t -> int Incr.t = <fun>
+|}]
+
+[%%org {|
+
+The shape of the implied graph is something like this:
+
+#+BEGIN_SRC picture
+            +---+   +--------+
+         .->| a |-->| a_prod |-.
+        /   +---+   +--------+  \
+  +---+/                         '->+--------+
+  | z |                             | result |
+  +---+\                         .->+--------+
+        \   +---+   +--------+  /
+         '->| b |-->| b_prod |-'
+            +---+   +--------+
+#+END_SRC
+
+This graph shape derives from the style in which ~sumproduct~ was
+written.  In particular, first we projected out the relevant component
+using map, and then we did a map on the result, with a pattern that
+looks like this: ~let%map a = z >>| a in ...~.  You can see the two nodes
+if you think about how this desugars.  In particular, the above
+pattern is the same as:
+
+#+BEGIN_SRC ocaml
+   let a_i = Incr.map z ~f:(fun x -> x.a) in
+   Incr.map a_i ~f:(fun a -> ...)
+#+END_SRC
+
+The two invocations of ~Incr.map~ are now clearly visible.
+
+If we actually wire this up and run it, we can see whether the upper
+path or lower path fires by looking at the printed output.
+|}]
+
+let z = Incr.Var.create { a = [3;2]; b = (1,4) }
+let result = Incr.observe (sumproduct (Incr.Var.watch z))
+let show () =
+  Incr.stabilize ();
+  printf "result: %d\n" (Incr.Observer.value_exn result)
+[%%expect {|
+val z : z Incr.Var.t = <abstr>
+val result : int Incr.Observer.t = <abstr>
+val show : unit -> unit = <fun>
+|}];;
+
+[%%org {|
+When we call ~show~ for the first time, we'll see both sides of the
+computation get run.
+|}]
+
+let () = show ()
+[%%expect{|
+b
+a
+result: 10
+|}]
+
+[%%org {|
+But now, if we just update one side, we'll see only the corresponding
+computation is run.
+|}]
+
+let () =
+  z := { !z with b = (1,1) };
+  show ()
+[%%expect{|
+b
+result: 7
+|}]
+
+[%%org {|
+This happens because Incremental's change-propagation algorithm cuts
+off when the value of a given node doesn't change.  That said, the
+notion of "doesn't change" isn't necessarily what you expect.  In
+particular, Incremental nodes by default cut off change propagation on
+physical equality of inputs.  I.e., if the value in question is
+exactly the same (for an immediate) or the same pointer (for
+heap-allocated objects), then propagation stops.
+
+The use of physical equality can have surprising results.  For
+example, if I set ~b~ again to the same value, the computation will
+again be rerun, since I'll be setting it to a newly allocated tuple.
+|}]
+
+let () =
+  z := { !z with b = (1,1) };
+  show ()
+[%%expect{|
+b
+result: 7
+|}]
+
+[%%org {|
+However, if I make sure to use the same tuple multiple times in a row,
+then the computation only happens the first time.
+|}]
+
+let new_b = (3,2)
+[%%expect {|
+val new_b : int * int = (3, 2)
+|}];;
+
+let () =
+  z := { !z with b = new_b };
+  show ()
+[%%expect {|
+b
+result: 12
+|}];;
+
+let () =
+  z := { !z with b = new_b };
+  show ()
+[%%expect {|
+result: 12
+|}];;
+
+[%%org {|
+This cutoff behavior is something one needs to be cognizant of.  Note
+that the style we used above of using functional updates guarantees
+physical equality in many circumstances.  But if it's important to
+make sure that a given incremental cuts off, it often makes sense to
+set a custom cutoff function, which you can do using this function:
+|}]
+
+let _ = Incr.set_cutoff
+[%%expect{|
+- : 'a Incr.t -> 'a Incr.Cutoff.t -> unit = <fun>
+|}]
+
+[%%org {|
+And you can create a cutoff from a simple equality function.
+|}]
+
+let int_cutoff = Incr.Cutoff.of_equal Int.equal
+[%%expect {|
+val int_cutoff : int Incr.Cutoff.t = <abstr>
+|}];;
+
+[%%org {|
+Now let's see what happens if we don't create that intermediate map
+node by replacing this style
+
+#+BEGIN_SRC ocaml
+let%map a = z >>| a in ...
+#+END_SRC ocaml
+
+with something more direct, like:
+
+#+BEGIN_SRC ocaml
+let%map { a; _ } = z in ...
+#+END_SRC
+
+|}]
+
+let sumproduct z =
+  let a_prod =
+    let%map { a; _ } = z in
+    printf "a\n";
+    List.fold ~init:1 ~f:( * ) a
+  in
+  let b_prod =
+    let%map {b = (b1,b2); _ } = z in
+    printf "b\n";
+    b1 * b2
+  in
+  let%map a_prod = a_prod and b_prod = b_prod in
+  a_prod + b_prod
+[%%expect{|
+val sumproduct : z Incr.t -> int Incr.t = <fun>
+|}]
+
+[%%org {|
+This function computes the same thing, but the graph is very
+different.  In particular, there's only one map node created per
+branch, and that one map node depends directly on ~z~, rather than
+depending on an intermediate node that has just the minimal
+information.
+
+The graph would look something like this.
+
+#+BEGIN_SRC picture
+            +--------+
+         .->| a_prod |-.
+        /   +--------+  \
+  +---+/                 '->+--------+
+  | z |                     | result |
+  +---+\                 .->+--------+
+        \   +--------+  /
+         '->| b_prod |-'
+            +--------+
+#+END_SRC
+
+We don't have the ~a~ and ~b~ nodes to short-circuit the computation,
+so the computation of ~a_prod~ and ~b_prod~ will always happen
+whenever ~z~ changes.
+
+We can see that below.  First, let's set everything up with the new
+~sumproduct~ implementation.
+|}]
+
+let z = Incr.Var.create { a = [3;2]; b = (1,4) }
+let result = Incr.observe (sumproduct (Incr.Var.watch z))
+let show () =
+  Incr.stabilize ();
+  printf "result: %d\n" (Incr.Observer.value_exn result)
+[%%expect {|
+val z : z Incr.Var.t = <abstr>
+val result : int Incr.Observer.t = <abstr>
+val show : unit -> unit = <fun>
+|}];;
+
+let () = show ()
+[%%expect {|
+b
+a
+result: 10
+|}];;
+
+[%%org {|
+The initial result is the same, but now let's look at what happens
+when we modify just ~b~.
+|}]
+
+let () =
+  z := { !z with b = (1,1) };
+  show ()
+[%%expect{|
+a
+b
+result: 7
+|}]
+
+[%%org {|
+As you can see, both computations fired, even though we only changed
+~b~.
+
+We'll talk more about how to think about the use of cutoffs and why
+they're important later on in the tutorial.
+|}]

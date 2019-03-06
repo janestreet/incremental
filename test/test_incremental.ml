@@ -5,7 +5,7 @@ let sec = Time_ns.Span.of_sec
 
 module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
   open Incremental.Private
-  module Alarm_precision = Timing_wheel_ns.Alarm_precision
+  module Alarm_precision = Timing_wheel.Alarm_precision
 
   let does_raise = Exn.does_raise
   let verbose = verbose
@@ -3437,10 +3437,17 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
 
             let _ = create
             let of_compare = of_compare
+            let of_equal = of_equal
             let should_cutoff = should_cutoff
 
             let%test_unit _ =
               let t = of_compare Int.compare in
+              assert (should_cutoff t ~old_value:0 ~new_value:0);
+              assert (not (should_cutoff t ~old_value:0 ~new_value:1))
+            ;;
+
+            let%test_unit _ =
+              let t = of_equal Int.equal in
               assert (should_cutoff t ~old_value:0 ~new_value:0);
               assert (not (should_cutoff t ~old_value:0 ~new_value:1))
             ;;
@@ -4474,10 +4481,10 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let clock =
             Clock.create
               ~timing_wheel_config:
-                (Timing_wheel_ns.Config.create
+                (Timing_wheel.Config.create
                    ~alarm_precision:Alarm_precision.(mul about_one_millisecond ~pow2:3)
                    ~level_bits:
-                     (Timing_wheel_ns.Level_bits.create_exn [ 11; 10; 10; 10; 10; 10 ])
+                     (Timing_wheel.Level_bits.create_exn [ 11; 10; 10; 10; 10; 10 ])
                    ())
               ~start:(Time_ns.of_string "2014-01-09 00:00:00.000000-05:00")
               ()

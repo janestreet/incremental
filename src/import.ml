@@ -61,4 +61,4 @@ module Uopt = struct
   let unsafe_value = if debug then value_exn else unsafe_value
 end
 
-module Alarm_precision = Timing_wheel_ns.Alarm_precision
+module Alarm_precision = Timing_wheel.Alarm_precision

@@ -880,6 +880,7 @@ module type S = sig
 
     val create : (old_value:'a -> new_value:'a -> bool) -> 'a t
     val of_compare : ('a -> 'a -> int) -> 'a t
+    val of_equal : ('a -> 'a -> bool) -> 'a t
     val always : _ t
     val never : _ t
     val phys_equal : _ t
@@ -1206,10 +1207,10 @@ module type S = sig
 
     (** The default timing-wheel configuration, with one millisecond precision with alarms
         up to 30 days in the future. *)
-    val default_timing_wheel_config : Timing_wheel_ns.Config.t
+    val default_timing_wheel_config : Timing_wheel.Config.t
 
     val create
-      :  ?timing_wheel_config:Timing_wheel_ns.Config.t
+      :  ?timing_wheel_config:Timing_wheel.Config.t
       -> start:Time_ns.t
       -> unit
       -> t

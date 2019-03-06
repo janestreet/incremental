@@ -157,9 +157,9 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
     let default_timing_wheel_config =
       let alarm_precision = Alarm_precision.about_one_millisecond in
       let level_bits = [ 14; 13; 5 ] in
-      Timing_wheel_ns.Config.create
+      Timing_wheel.Config.create
         ~alarm_precision
-        ~level_bits:(Timing_wheel_ns.Level_bits.create_exn level_bits)
+        ~level_bits:(Timing_wheel.Level_bits.create_exn level_bits)
         ()
     ;;
 
@@ -174,7 +174,7 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
       State.create_clock state ~timing_wheel_config ~start
     ;;
 
-    let alarm_precision t = Timing_wheel_ns.alarm_precision t.timing_wheel
+    let alarm_precision t = Timing_wheel.alarm_precision t.timing_wheel
     let timing_wheel_length = State.timing_wheel_length
     let now = State.now
     let watch_now t = t.now.watch

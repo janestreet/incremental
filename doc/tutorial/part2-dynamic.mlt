@@ -1,0 +1,206 @@
+[%%org {|
+#+TITLE: Incremental tutorial, Part 2: Dynamic computations with bind
+
+The computations we've contemplated thus far have been static, which
+is to say that the basic shape of the computation doesn't change.  For
+example, our last example in the previous section was summing together
+a fixed set of inputs.  The individual values could change, but not
+which inputs are included.
+
+Bind, it turns out, provides us with one simple mechanism for making
+computations more dynamic.  To illustrate how it works, let's consider
+two different ways of expressing an if statement, one using ~map~, one
+using ~bind~.
+
+|}]
+open Core
+module Incr = Incremental.Make ()
+open Incr.Let_syntax;;
+#verbose true;;
+
+let if_with_map c t e =
+  let%map c = c and t = t and e = e in
+  if c then t else e
+[%%expect {|
+val if_with_map : bool Incr.t -> 'a Incr.t -> 'a Incr.t -> 'a Incr.t = <fun>
+|}]
+
+[%%org {|
+
+This creates a computation graph that looks something like this.
+
+#+BEGIN_SRC picture
+  +---+
+  | c |-.
+  +---+  \
+  +---+   '->+----+
+  | t |----->| if |
+  +---+   .->+----+
+  +---+  /
+  | e |-'
+  +---+
+#+END_SRC
+
+In other words, the condition, then and else branch are all hooked up,
+and if any input changes, the if will be re-evaluated.  But this
+really overapproximates the necessary dependencies, since, when the
+condition ~c~ is true, the ~if~ node should only depend on the ~t~,
+not on the ~e~ node; and the reverse when ~c~ is false.  In other
+words, the dependency structure should depend dynamically on the data.
+
+We can write that using ~bind~ as follows.
+|}]
+
+let if_with_bind c t e =
+  let%bind c = c in
+  if c then t else e
+[%%expect{|
+val if_with_bind : bool Incr.t -> 'a Incr.t -> 'a Incr.t -> 'a Incr.t = <fun>
+|}]
+
+[%%org {|
+Here, we bind on ~c~, and pick the corresponding incremental depending
+on the value of ~c~.  The dependency structure now will look like one
+of the following two pictures:
+
+#+BEGIN_SRC picture
+    if c is true             if c is false
+
+   +---+                    +---+
+   | c |-.                  | c |-.
+   +---+  \                 +---+  \
+   +---+   '->+----+        +---+   '->+----+
+   | t |----->| if |        | t |      | if |
+   +---+      +----+        +---+   .->+----+
+   +---+                    +---+  /
+   | e |                    | e |-'
+   +---+                    +---+
+#+END_SRC
+
+That's the very simplest form of dynamism, where the only thing that's
+changing dynamically is a single dependency. But ~bind~ lets you do more
+than just change dependencies; you can also create new computations
+with new nodes.
+
+Here's an example of this in action. First, let's bring back the
+function for summing together a list of incrementals from the previous
+part.
+|}]
+
+let incr_list_sum l =
+  match List.reduce_balanced l ~f:(Incr.map2 ~f:( +. )) with
+  | None -> return 0.
+  | Some x -> x
+[%%expect {|
+val incr_list_sum : float Incr.t list -> float Incr.t = <fun>
+|}];;
+
+[%%org {|
+And let's get a starting set of input values.
+|}]
+
+#verbose false;;
+let inputs = Array.init 10_000 ~f:(fun i -> Incr.Var.create (Float.of_int i));;
+let (:=) = Incr.Var.set
+let (!) = Incr.Var.value;;
+#verbose true;;
+
+[%%org {|
+Now, let's also create an incremental that dynamically chooses which
+values to sum together.  Here, we'll initialize it to indices of the
+first 100 elements.
+|}]
+
+let things_to_sum = Incr.Var.create (List.init ~f:Fn.id 100)
+[%%expect{|
+val things_to_sum : int list Incr.Var.t = <abstr>
+|}]
+
+[%%org {|
+Now we can use ~bind~ to build a computation that sums together the
+elements from ~inputs~ as indicated by ~things_to_sum~.
+|}]
+
+let dynamic_sum =
+  let%bind things_to_sum = Incr.Var.watch things_to_sum in
+  incr_list_sum
+    (List.map things_to_sum ~f:(fun i ->
+       Incr.Var.watch inputs.(i)))
+[%%expect{|
+val dynamic_sum : float Incr.t = <abstr>
+|}]
+
+[%%org {|
+Now, let's observe the value and write some code to stabilize the
+computation and print out the results.
+|}]
+
+#verbose false;;
+let dynamic_sum_obs = Incr.observe dynamic_sum
+let print () =
+  Incr.stabilize ();
+  printf "%f\n" (Incr.Observer.value_exn dynamic_sum_obs);;
+#verbose true;;
+let () = print ()
+[%%expect{|
+4950.000000
+|}]
+
+[%%org {|
+Now we can update the computation by either changing the values in the
+~inputs~ array, or by changing ~things_to_sum~.
+|}]
+
+let () =
+  inputs.(3) := !(inputs.(3)) +. 50.;
+  print ()
+[%%expect{|
+5000.000000
+|}]
+let () =
+  things_to_sum := [1;10;100];
+  print ()
+[%%expect{|
+111.000000
+|}]
+
+[%%org {|
+* Incremental performance, and why you often want to avoid bind
+
+We've now used incremental to build a computation that dynamically
+changes its structure. But let's stop for a moment to think about the
+performance characteristics of this version of the computation.  After
+all, incremental is an optimization framework! If you're not thinking
+about performance, you probably shouldn't be using incremental at all.
+
+In particular, what is the /incremental performance/ of ~dynamic_sum~?
+I.e., what is the computational cost of stabilizing the computation
+after the inputs change?
+
+Generally speaking, the incremental performance of a computation
+depends on the nature of the change to its inputs. In this specific
+case, there are two simple cases worth thinking about: the cost of a
+change to the ~inputs~ array, and a change to ~things_to_sum~.
+
+When the ~inputs~ array change, the cost is logarithmic in the size of
+the summation tree, i.e., logarithmic in the length of
+~things_to_sum~.
+
+When ~things_to_sum~ itself changes, however, you'll find the cost is
+quite a lot larger.  Every time ~things_to_sum~ changes, the ~bind~ in
+the computation of ~dynamic_sum~ fires, and we have to rerun
+~incr_list_sum~.  That means we have to rebuild the summation tree
+from scratch, the cost of which is linear in the length of
+~things_to_sum~.
+
+This highlights an important fact: *~bind~ is often expensive*. In
+particular, if you make large parts of your graph dynamic by dint of
+using ~bind~, you tend to make that part of the computation entirely
+non-incremental.  A common anti-pattern people trip over when writing
+incremental code is to use ~bind~ in places where they should be using
+~map~, thereby destroying the incremental performance of their
+programs. (More on this later, in [[./part4-pitfalls.mlt][Part 4: Pitfalls]].)
+
+In the next part, we'll discuss other techniques for building dynamic,
+incremental computations.
+|}]

@@ -12,7 +12,7 @@ open Core_kernel
 open Import
 
 module rec Alarm : sig
-  type t = Alarm_value.t Timing_wheel_ns.Alarm.t
+  type t = Alarm_value.t Timing_wheel.Alarm.t
 end =
   Alarm
 
@@ -77,7 +77,7 @@ end =
 
 and Clock : sig
   type t =
-    { timing_wheel : Alarm_value.t Timing_wheel_ns.t
+    { timing_wheel : Alarm_value.t Timing_wheel.t
     ; now : Time_ns.t Var.t
     ; handle_fired : Alarm.t -> unit
     ; mutable fired_alarm_values : Alarm_value.t Uopt.t

@@ -142,12 +142,12 @@ module Clock = struct
   type t = Types.Clock.t =
     { (* We use [timing_wheel] for time-based incrementals.  [now] is a variable holding
          the current time.  [handle_fired] is the closure passed to
-         [Timing_wheel_ns.advance_clock].  It links all the fired alarm values into
-         [fired_alarm_values].  After [Timing_wheel_ns.advance_clock] returns, it then
+         [Timing_wheel.advance_clock].  It links all the fired alarm values into
+         [fired_alarm_values].  After [Timing_wheel.advance_clock] returns, it then
          walks through the linked list and actually fires them.  This two-pass approach is
-         necessary because one is not allowed to call [Timing_wheel_ns] functions from the
-         [handle_fired] that one passes to [Timing_wheel_ns.advance_clock]. *)
-      timing_wheel : Alarm_value.t Timing_wheel_ns.t
+         necessary because one is not allowed to call [Timing_wheel] functions from the
+         [handle_fired] that one passes to [Timing_wheel.advance_clock]. *)
+      timing_wheel : Alarm_value.t Timing_wheel.t
     ; now : Time_ns.t Var.t
     ; handle_fired : Alarm.t -> unit
     ; mutable fired_alarm_values : Alarm_value.t Uopt.t
@@ -160,24 +160,24 @@ module Clock = struct
       Fields.iter
         ~now:
           (check (fun (now : _ Var.t) ->
-             assert (Time_ns.equal now.value (Timing_wheel_ns.now t.timing_wheel))))
+             assert (Time_ns.equal now.value (Timing_wheel.now t.timing_wheel))))
         ~handle_fired:ignore
         ~fired_alarm_values:
           (check (fun fired_alarm_values -> assert (Uopt.is_none fired_alarm_values)))
-        ~timing_wheel:(check (Timing_wheel_ns.invariant Alarm_value.invariant)))
+        ~timing_wheel:(check (Timing_wheel.invariant Alarm_value.invariant)))
   ;;
 end
 
 let now (clock : Clock.t) = clock.now.value
-let timing_wheel_length (clock : Clock.t) = Timing_wheel_ns.length clock.timing_wheel
+let timing_wheel_length (clock : Clock.t) = Timing_wheel.length clock.timing_wheel
 let num_stabilizes t = Stabilization_num.to_int t.stabilization_num
 let max_height_allowed t = Adjust_heights_heap.max_height_allowed t.adjust_heights_heap
 let max_height_seen t = Adjust_heights_heap.max_height_seen t.adjust_heights_heap
 
 let alarm_would_have_fired (clock : Clock.t) ~at =
-  Timing_wheel_ns.Interval_num.( > )
-    (Timing_wheel_ns.now_interval_num clock.timing_wheel)
-    (Timing_wheel_ns.interval_num clock.timing_wheel at)
+  Timing_wheel.Interval_num.( > )
+    (Timing_wheel.now_interval_num clock.timing_wheel)
+    (Timing_wheel.interval_num clock.timing_wheel at)
 ;;
 
 let iter_observers t ~f =
@@ -408,8 +408,8 @@ and became_unnecessary : type a. t -> a Node.t -> unit =
 ;;
 
 let remove_alarm (clock : Clock.t) alarm =
-  if Timing_wheel_ns.mem clock.timing_wheel alarm
-  then Timing_wheel_ns.remove clock.timing_wheel alarm
+  if Timing_wheel.mem clock.timing_wheel alarm
+  then Timing_wheel.remove clock.timing_wheel alarm
 ;;
 
 (* An invalid node is node whose kind is [Invalid].  A node's kind is set to [Invalid]
@@ -1613,7 +1613,7 @@ let freeze t child ~only_freeze_when =
 
 let add_alarm clock ~at alarm_value =
   if debug then assert (not (alarm_would_have_fired clock ~at));
-  Timing_wheel_ns.add clock.timing_wheel ~at alarm_value
+  Timing_wheel.add clock.timing_wheel ~at alarm_value
 ;;
 
 let at t clock time =
@@ -1633,9 +1633,9 @@ let after t clock span = at t clock (Time_ns.add (now clock) span)
    k * interval] such that an alarm at [time] would have not yet gone off. *)
 let next_interval_alarm (clock : Clock.t) ~base ~interval =
   let after =
-    Timing_wheel_ns.interval_num_start
+    Timing_wheel.interval_num_start
       clock.timing_wheel
-      (Timing_wheel_ns.now_interval_num clock.timing_wheel)
+      (Timing_wheel.now_interval_num clock.timing_wheel)
   in
   (* Due to floating-point imprecision, we could have [after < now t], which would allow
      [at < now t], which would cause us to return an [at] whose alarm would already have
@@ -1647,7 +1647,7 @@ let next_interval_alarm (clock : Clock.t) ~base ~interval =
 ;;
 
 let at_intervals t (clock : Clock.t) interval =
-  if Time_ns.Span.( < ) interval (Timing_wheel_ns.alarm_precision clock.timing_wheel)
+  if Time_ns.Span.( < ) interval (Timing_wheel.alarm_precision clock.timing_wheel)
   then
     failwiths "at_intervals got too small interval" interval [%sexp_of: Time_ns.Span.t];
   let main = create_node t Uninitialized in
@@ -1720,7 +1720,7 @@ let advance_clock t (clock : Clock.t) ~to_ =
   ensure_not_stabilizing t ~name:"advance_clock" ~allow_in_update_handler:true;
   if debug then invariant t;
   set_var_while_not_stabilizing t clock.now to_;
-  Timing_wheel_ns.advance_clock clock.timing_wheel ~to_ ~handle_fired:clock.handle_fired;
+  Timing_wheel.advance_clock clock.timing_wheel ~to_ ~handle_fired:clock.handle_fired;
   while Uopt.is_some clock.fired_alarm_values do
     let alarm_value = Uopt.unsafe_value clock.fired_alarm_values in
     clock.fired_alarm_values <- alarm_value.next_fired;
@@ -1760,7 +1760,7 @@ let now_dummy =
 ;;
 
 let create_clock t ~timing_wheel_config ~start =
-  let timing_wheel = Timing_wheel_ns.create ~config:timing_wheel_config ~start in
+  let timing_wheel = Timing_wheel.create ~config:timing_wheel_config ~start in
   let rec clock : Clock.t =
     { now = create_var t start
     ; handle_fired
@@ -1768,7 +1768,7 @@ let create_clock t ~timing_wheel_config ~start =
     ; timing_wheel
     }
   and handle_fired alarm =
-    let alarm_value = Timing_wheel_ns.Alarm.value clock.timing_wheel alarm in
+    let alarm_value = Timing_wheel.Alarm.value clock.timing_wheel alarm in
     if verbose
     then Debug.ams [%here] "handle_fired" alarm_value [%sexp_of: Alarm_value.t];
     alarm_value.next_fired <- clock.fired_alarm_values;

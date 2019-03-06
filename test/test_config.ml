@@ -4,12 +4,12 @@ open! Import
 let%expect_test "default timing-wheel precision and level durations" =
   let module I = Incremental.Make () in
   let config = I.Clock.default_timing_wheel_config in
-  let durations = Timing_wheel_ns.Config.durations config in
+  let durations = Timing_wheel.Config.durations config in
   require [%here] (Time_ns.Span.( >= ) (List.last_exn durations) Time_ns.Span.day);
   print_s
     [%message
       ""
-        ~alarm_precision:(Timing_wheel_ns.Config.alarm_precision config : Time_ns.Span.t)
+        ~alarm_precision:(Timing_wheel.Config.alarm_precision config : Time_ns.Span.t)
         (durations : Time_ns.Span.t list)];
   [%expect
     {|
