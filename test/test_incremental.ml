@@ -3650,7 +3650,9 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let weak_memoize_fun = weak_memoize_fun
           let weak_memoize_fun_by_key = weak_memoize_fun_by_key
 
-          let test_memoize_fun memoize_fun =
+          let test_memoize_fun
+                (memoize_fun : (module Base.Hashtbl.Key with type t = int) -> _ -> _)
+            =
             let x = Var.create_ [%here] 13 in
             let y = Var.create_ [%here] 14 in
             let z = Var.create_ [%here] 15 in
@@ -3663,7 +3665,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
                         incr num_calls;
                         map (watch y) ~f:(fun i3 -> i1 + i2 + i3)
                       in
-                      return (unstage (memoize_fun Int.hashable f))))
+                      return (unstage (memoize_fun (module Int) f))))
                    ~f:(fun f -> bind (watch z) ~f))
             in
             stabilize_ [%here];
@@ -3721,9 +3723,12 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
             let num_calls = ref 0 in
             let f =
               unstage
-                (weak_memoize_fun Int.hashable (function i ->
-                   incr num_calls;
-                   Heap_block.create_exn (ref i)))
+                (weak_memoize_fun
+                   (module Int)
+                   (function
+                     | i ->
+                       incr num_calls;
+                       Heap_block.create_exn (ref i)))
             in
             let f i = Heap_block.value (f i) in
             let x0 = f 13 in

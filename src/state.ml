@@ -1450,7 +1450,7 @@ let memoize_fun_by_key
 
      {[
        let table =
-         Hashtbl.Using_hashable.of_alist_exn ~hashable
+         Hashtbl.of_alist_exn hashable
            (List.map all_possible_a_values ~f:(fun a -> (project_key a, f a))
        in
        stage (fun key -> Hashtbl.find_exn table (project_key a))
@@ -1464,7 +1464,7 @@ let memoize_fun_by_key
      current at the point of the call to [memoize_fun_by_key] so that we can think of the
      [table] as having been created then, when it in reality is created on-demand. *)
   let scope = t.current_scope in
-  let table = Hashtbl.Using_hashable.create ~size:initial_size ~hashable () in
+  let table = Hashtbl.create hashable ~size:initial_size in
   stage (fun a ->
     let key = project_key a in
     match Hashtbl.find table key with
@@ -1821,7 +1821,7 @@ let weak_memoize_fun_by_key
       f
   =
   let scope = t.current_scope in
-  let table = Weak_hashtbl.Using_hashable.create ~size:initial_size hashable in
+  let table = Weak_hashtbl.create ~size:initial_size hashable in
   let packed = Packed_weak_hashtbl.T table in
   Weak_hashtbl.set_run_when_unused_data table ~thread_safe_f:(fun () ->
     Thread_safe_queue.enqueue t.weak_hashtbls packed);

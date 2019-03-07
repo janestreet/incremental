@@ -1,13 +1,17 @@
 [%%org {|
 #+TITLE: An Introduction to Incremental
 
-Incremental is a useful tool, but one that a lot of people don't feel
-entirely comfortable with.  It's also a tool that's easy to misuse,
-which can leave you with confusing code and hard-to-predict behavior.
+Incremental is a tool for optimizing the /incremental performance/ of
+your code. In other words, incremental makes it easier to build
+computations that update efficiently when their input data changes in
+small ways.
+
+It's a useful tool, but one that a lot of people don't feel entirely
+comfortable with.  It's also a tool that's easy to misuse, which can
+leave you with confusing code and hard-to-predict behavior.
 
 But all in, if you know how to approach it, Incremental is powerful,
-and can take what would otherwise be a really complicated thing to
-write and make it simple.
+and can simplify certain tasks immensely.
 
 This guide will give you an overview of the library, explaining what
 kinds of problems Incremental can help with, and some tips for making
@@ -15,23 +19,21 @@ the most out of it.
 
 The tutorial is broken up into parts:
 
-- [[./part1-preliminaries.mlt][Preliminaries]], which covers what
-  Incremental is for, and walks through the basic patterns of the
-  language.
-- [[./part2-dynamic.mlt][Dynamic computations with bind]], which shows
-  you how to use ~bind~ to build dynamic computations.
-- [[./part3-map.mlt][Incr_map]], which shows you how to use the
-  ~Incr_map~ libraries to build efficient computations on ~Map.t~'s.
-- [[./part4-pitfalls.mlt][Pitfalls]]
-- [[./part5-time.mlt][Time]], which shows
-  how to use Incremental's built-in Clock support for building
-  time-sensitive computations.
+- [[./part1-preliminaries.mlt][Preliminaries]] covers what Incremental
+  is for, and walks through the basics.
+- [[./part2-dynamic.mlt][Dynamic computations with bind]] shows you
+  how to use ~bind~ to build computations whose structure changes
+  dynamically over time.
+- [[./part3-map.mlt][Incr\_map]] shows you how to use the ~Incr_map~
+  libraries to build efficient computations on ~Map.t~'s.
+- [[./part4-pitfalls.mlt][Pitfalls]] highlights some of the mistakes
+  people typically make when first using Incremental.
+- [[./part5-time.mlt][Time]] demonstrates Incremental's support for
+  building computations over time.
 - [[./part6-patterns.mlt][Patterns]] covers ~ppx_pattern_bind~,
   which provides specialized support for doing incremental
   computations involving pattern matches.
 
-
 |}]
-
 
 

@@ -16,19 +16,19 @@ Incremental has some constraints that are worth understanding.
   means that it can be easier to add Incremental to a codebase that's
   already written in a functional style.
 
-- *It's likely to make the full cost of computing whatever it is your
-  program needs to compute worse.* That's for two reasons: first,
-  writing in a functional style is typically slower than the best
-  available imperative solution.  Also, Incremental itself has some
-  overhead.
+- *It's likely to make the from-scratch cost of your computation
+  worse.* That's for two reasons: first, writing in a functional style
+  is typically slower than the best available imperative solution.
+  Also, Incremental itself has some overhead.
 
-- *It works best if the information you're using fits in memory*. If
-  you need to deal with data that doesn't fit nicely in RAM, you might
-  want to consider another approach.
+- *It works best if the information you're using fits in memory*.
+  There's no built-in support for dealing with on-disk stores, though
+  you can combine incremental with other techniques for fetching data
+  from disk when necessary.
 
-- *Incremental is fast, but it isn't super fast*. If you need a truly
-  high-performance solution, Incremental is probably not the right
-  library for you.
+- *Incremental is fast, but it isn't super fast*. In particular, it's
+  largely not compatible with zero-alloc approaches. It excels at
+  providing pretty-good performance with a small amount of effort.
 
 * The computational model
 
@@ -47,9 +47,8 @@ computation.
 Let's look at an example.  The first thing we need to do is to
 instantiate the Incremental library. Incremental keeps the state of
 the overall computation graph as module-level imperative state, so you
-want to be able to mint disjoint incremental worlds that won't interfere
-with each other.  We do that by instantiating Incremental via functor
-application.
+want to be able to mint disjoint incremental worlds that can't
+interfere with each other.  We do that by applying a functor.
 |}]
 
 open Core
@@ -57,9 +56,9 @@ module Incr = Incremental.Make ()
 
 [%%org {|
 
-Now we'll declare a few variables, initialized with different floating
-point values.
-
+Now we can use ~Incr.Var.create~ to declare a few variables. You can
+think of Incremental's variables as imperative ref cells that
+constitute the input to the rest of the computation.
 |}]
 
 #verbose true;;
@@ -72,7 +71,8 @@ val z_v : float Incr.Var.t = <abstr>
 
 [%%org {|
 To be able to compute with these incremental variables, we need to
-grab the incremental variables corresponding to those values.
+grab the incremental variables corresponding to those values, using
+~Incr.Var.watch~.
 |}]
 
 let (x,y,z) = Incr.Var.(watch x_v, watch y_v, watch z_v)
@@ -83,7 +83,8 @@ val z : float Incr.t = <abstr>
 |}];;
 
 [%%org {|
-We can create a sum by hand using the ~map2~ operator.
+Now, let's sum these up with a couple applications of the ~map2~
+operator.
 |}]
 
 let sum =
@@ -96,7 +97,24 @@ val sum : float Incr.t = <abstr>
 |}];;
 
 [%%org {|
-Alternately, using let syntax, we can write this as:
+In order to reason about performance, it's helpful to think about the
+graph that a given incremental computation implies.  Here's the
+graph implied by the above computation.
+
+#+BEGIN_SRC picture
+  +---+
+  | x |-.
+  +---+  \   +---------+
+  +---+   '->| x_and_y |-.
+  | y |----->+---------+  \
+  +---+                    '->+------+
+  +---+                       | sum  |
+  | z |---------------------->+------+
+  +---+
+#+END_SRC
+
+
+We can also rewrite this using let syntax, as follows.
 |}]
 
 open Incr.Let_syntax
@@ -112,8 +130,7 @@ val sum : float Incr.t = <abstr>
 |}];;
 
 [%%org {|
-Note that the ~and~ is used to make a parallel binding, which gets you
-the moral equivalent of ~map2~.
+Note the use of ~and~, which produces the moral equivalent of ~map2~.
 
 In order to read the value out, we have to create an observer, at
 which point we can grab the current value.  Before reading the value,
@@ -146,8 +163,8 @@ question has not been made valid by a stabilize.
 
 We can of course update the value by changing the inputs, i.e., the
 variables.  Incremental variables are really closer to refs, so it's
-useful to adopt some of the same syntactic conventions, so we'll
-define a couple of functions to do just that.
+useful to adopt some of the same syntactic conventions, which we do
+below.
 |}]
 
 let (:=) = Incr.Var.set
@@ -159,8 +176,8 @@ val ( ! ) : 'a Incr.Var.t -> 'a = <fun>
 |}]
 
 [%%org {|
-Now we can go ahead and update a value, and see how that affects the
-final result.
+Now we can see how updating one of the inputs affects the value of
+~sum_o.
 |}]
 
 let () =
@@ -171,16 +188,15 @@ let () =
 |}]
 
 [%%org {|
-Note that this only required the redoing of a single addition; the
-addition of ~x~ and ~y~ was cached from the original.  Obviously, this
-isn't too exciting on its own: there's not really much computation
-that you're saving here. In fact, the overhead of using Incremental in
-the first place is way more than the cost of the underlying math.
+This only required the redoing of a single addition; the addition of
+~x~ and ~y~ was cached from the original.  Obviously, this isn't too
+exciting on its own: there's not really much computation that you're
+saving here. In fact, the overhead of using Incremental in the first
+place is way more than the cost of the underlying math.
 
 Indeed, it would probably be a little more efficient to have written
 ~sum~ as:
 |}]
-
 
 let sum =
   let%map x = x and y = y and z = z in
@@ -194,14 +210,16 @@ val sum : float Incr.t = <abstr>
 [%%org {|
 That's less incremental, since modifying any of the inputs causes the
 entire computation to be redone.  But in this case, the
-incrementalization isn't buying us much.
+incrementalization isn't buying us anything.  Indeed, given that the
+overhead of Incremental is larger than the entire cost of the actual
+computation, it would be cheaper to not use Incremental at all.
 
-* A more meaningful example
+* A bigger example
 
-Let's expand this to a slightly less trivial example that lets
-Incremental show off its ability to optimize a bit more.  Instead of
-just summing up a single number, what if we want to add together many
-numbers?  We might write that as follows.
+Let's look at an example where Incremental actually helps performance.
+Instead of just summing up three numbers, we'll create an incremental
+computation that can sum up an arbitrarily long list of integers.
+Here's some code to do just that.
 
 |}]
 
@@ -214,14 +232,16 @@ val incr_list_sum : float Incr.t list -> float Incr.t = <fun>
 |}];;
 
 [%%org {|
-This just builds up a binary tree of Incremental nodes, each one
-summing up a pair of nodes below.
+Here, we're using ~List.reduce_balanced~, which is a function that
+will combine elements of a list in a balanced, binary tree.  Because
+the function we provide to ~List.reduce_balanced~ is based on
+~Incr.map2~, this builds a binary tree of Incremental nodes.
 
 Now let's wire this up to some actual inputs.
 |}]
 
 #verbose false;;
-let inputs = Array.init 10_000 ~f:(fun _ -> Incr.Var.create 0.);;
+let inputs = Array.init 100_000 ~f:(fun _ -> Incr.Var.create 0.);;
 #verbose true;;
 let sum =
   List.map ~f:Incr.Var.watch (Array.to_list inputs)
@@ -245,19 +265,33 @@ let () =
 |}];;
 
 [%%org {|
-If we were to benchmark this code, we'd see a real speedup here, since
-rather than having to recompute the full sum over all ten thousand
-elements, we instead just have to walk up the spine of the tree of
-incremental nodes, which takes a small fraction of the time.
+Here are the results of benchmarking this against an all-at-once
+implementation.
 
-That said, Incremental has real overhead, and if you use only 50 or so
-nodes, you'll see no speedup at all, and for less than 50 nodes, the
-incremental version will be slower.
+
+| Name | Time/Run     | Percentage |
+|------+--------------+------------|
+| tree | 3_557.77ns   |      1.07% |
+| ord  | 333_760.67ns |    100.00% |
+
+Here, the tree-like implementation runs 100x faster than the
+all-at-once version.  That ratio shows you both that Incremental
+achieves real gains, and that it has real overhead.  Indeed, if we run
+this with 100 nodes instead of 100000, we'll get results that look
+like this.
+
+| Name | Time/Run | Percentage |
+|------+----------+------------|
+| tree | 550.97ns |    100.00% |
+| ord  | 391.41ns |     71.04% |
+
+For this example, the break-even is at something like 100 nodes.
 
 Now, your mileage will vary depending on how complex the computations
-being done are.  This code is kind of the worst possible case, since
-addition is such a cheap operation to begin with.  The larger the
-amount of work you get to skip, the more Incremental can help you.
+being done are.  This kind of example is kind of the worst possible
+case, since addition is such a cheap operation to begin with.  The
+larger the amount of work you get to skip, the more Incremental can
+help.
 
 * Projections and cutoffs
 
@@ -267,7 +301,7 @@ of that data type, and then doing further incremental work on those
 components directly.
 
 Here's a trivial example of how this approach works.  Let's start with
-a little nonsensical data type with two components.
+a data type with two components.
 |}]
 
 #verbose false;;
