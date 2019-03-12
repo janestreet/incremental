@@ -340,14 +340,13 @@ existing incremental computations.  But it does perform materially
 better.  Here's the result of running a benchmark containing both
 approaches.
 
-#+BEGIN_EXAMPLE
-┌────────┬──────────┬─────────┬──────────┬──────────┬────────────┐
-│ Name   │ Time/Run │ mWd/Run │ mjWd/Run │ Prom/Run │ Percentage │
-├────────┼──────────┼─────────┼──────────┼──────────┼────────────┤
-│ nested │  24.80us │ -1.77kw │ -107.32w │ -104.36w │    100.00% │
-│ flat   │  10.31us │  3.55kw │    3.42w │    3.42w │     41.57% │
-└────────┴──────────┴─────────┴──────────┴──────────┴────────────┘
-#+END_EXAMPLE
+
+| Name   | Time/Run | mWd/Run | mjWd/Run | Prom/Run | Percentage |
+|--------+----------+---------+----------+----------+------------|
+| nested | 24.80us  | -1.77kw | -107.32w | -104.36w |    100.00% |
+| flat   | 10.31us  | 3.55kw  | 3.42w    | 3.42w    |     41.57% |
+
+
 
 You can find the code in ~lib/incr_map/bench/shares_per_symbol.ml~,
 but the cost here is for stabilizing the computation after updating

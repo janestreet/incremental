@@ -269,10 +269,10 @@ Here are the results of benchmarking this against an all-at-once
 implementation.
 
 
-| Name | Time/Run     | Percentage |
-|------+--------------+------------|
-| tree | 3_557.77ns   |      1.07% |
-| ord  | 333_760.67ns |    100.00% |
+| Name | Time/Run       | Percentage |
+|------+----------------+------------|
+| tree | ~3_557.77ns~   |      1.07% |
+| ord  | ~333_760.67ns~ |    100.00% |
 
 Here, the tree-like implementation runs 100x faster than the
 all-at-once version.  That ratio shows you both that Incremental
@@ -280,10 +280,10 @@ achieves real gains, and that it has real overhead.  Indeed, if we run
 this with 100 nodes instead of 100000, we'll get results that look
 like this.
 
-| Name | Time/Run | Percentage |
-|------+----------+------------|
-| tree | 550.97ns |    100.00% |
-| ord  | 391.41ns |     71.04% |
+| Name | Time/Run   | Percentage |
+|------+------------+------------|
+| tree | ~550.97ns~ |    100.00% |
+| ord  | ~391.41ns~ |     71.04% |
 
 For this example, the break-even is at something like 100 nodes.
 
