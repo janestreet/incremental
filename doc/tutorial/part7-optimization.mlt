@@ -1,0 +1,80 @@
+[%%org {|
+#+TITLE: Incremental tutorial, Part 7: Performance and Optimization
+
+The whole point of using Incremental is to optimize your program.
+This section is meant to provide a guide to understanding and
+improving the performance of your incremental program.
+
+As is always the case, the most important part of optimization is
+measuring, so whatever else you do, building yourself some benchmarks
+so you can tell when your code is doing better or worse is an
+important starting point.
+
+But it's also good to have a reasonable mental cost model for the
+programming you're doing, and generating such a model for Incremental
+is a little tricky, so we'll talk about that as well.
+
+* The cost model
+
+*Incremental nodes are expensive.* The most important part of that is
+their sheer size. One incremental node being a record of 27 fields,
+meaning that the record alone is 216 bytes, without even counting the
+things pointed to by an incremental node.
+
+Firing an incremental node isn't free either. It takes somewhere
+between 50ns-150ns to fire a single incremental node.  That's not
+huge, but it's a lot more than some of the computations you might put
+inside of an incremental node.  This should be a reminder not to
+over-incrementalize; a very fine-grained incrementalization can be
+both harder to use and slower than a coarse grained one.
+
+*Stabilization, on the other hand, are nearly free.*  A single
+stabilization where there's nothing to be done takes under 100ns.  So
+in most applications, you don't have to worry about the cost of
+stabilizing too often.  (There are, however, some computational
+benefits of batching updates together beyond saving the time of an
+empty stabilization.  We'll discuss those later.)
+
+Another thing worth thinking about when it comes to Incremental is
+which parts of the graph are actually going to be fired.  There are
+two key rules that are worth keeping in mind.
+
+- *Only dependents of nodes which have changed can ever be fired.*  By
+  default, a node counts as having changed if its new value is
+  physically different from its previous value.  This can be changed
+  by modifying the cutoff function for a give node.
+
+- *Only nodes that are /necessary/ will fire.* A node is necessary if
+  there's some observer that transitively depends on that node.
+  Merely holding on to a copy of some incremental node is not enough
+  to make it run; it also has to be connected to an observer.
+
+This means that Incremental provides a kind of best-of-both-worlds
+between demand-driven and change-driven change propagation, in that
+only the intersection of what is changed and what is necessary will be
+recomputed.
+
+This does not amount to a complete cost model, but hopefully it
+provides a solid starting point for thinking about the cost of an
+incremental computation.
+
+With this cost model in hand, let's explore some techniques for
+improving the performance of incremental computations.
+
+* Batching changes
+
+The fact that Incremental separates out updating the variables from
+running stabilization opens up one simple form of optimization, i.e.,
+batching.  By stabilizing less often
+
+* Prefer ~mapi~ to ~mapi'~
+
+* Filter first
+
+* Profiling tools
+
+* Share computations
+
+* Minimize what's observed
+
+|}]

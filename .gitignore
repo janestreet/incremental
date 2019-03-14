@@ -1,4 +1,5 @@
 _build
 *.install
 *.merlin
+_opam
 

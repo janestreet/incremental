@@ -33,6 +33,12 @@ The tutorial is broken up into parts:
 - [[./part6-patterns.mlt][Patterns]] covers ~ppx_pattern_bind~,
   which provides specialized support for doing incremental
   computations involving pattern matches.
+- [[./part7-optimization.mlt][Performance and optimization]] has some
+  notes on how to think about performance of your incremental
+  programs.
+- [[./part8-sharing.mlt][Sharing]] shows you how to optimize your
+  incremental programs further by sharing sub-computations among
+  different parts of your computation.
 
 |}]
 

@@ -1117,12 +1117,17 @@ module type S = sig
         finalization). *)
     val num_active_observers : t -> int
 
-    (** constant-time stats. *)
-    val max_height_seen : t -> int
+    (** {2 constant-time stats} These are counters that are constant time to read, and
+        that are automatically updated in the ordinary course.  *)
 
+    val max_height_seen : t -> int
     val num_nodes_became_necessary : t -> int
     val num_nodes_became_unnecessary : t -> int
+
+    (** Number of times a node has seen its value changed, the determination of which
+        depends on the choice of cutoff. *)
     val num_nodes_changed : t -> int
+
     val num_nodes_created : t -> int
     val num_nodes_invalidated : t -> int
     val num_nodes_recomputed : t -> int

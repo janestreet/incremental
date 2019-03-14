@@ -190,7 +190,7 @@ let index_by inner_comparator outer_comparator map get_outer_index =
   let add ~key ~data acc =
     let idx = get_outer_index data in
     Map.update acc idx ~f:(function
-      | None -> Map.empty inner_comparator
+      | None -> Map.singleton inner_comparator key data
       | Some inner_map -> Map.set inner_map ~key ~data)
   in
   let remove ~key ~data acc =
