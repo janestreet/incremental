@@ -292,7 +292,7 @@ at how to use one of them:
 let _ = Incr.weak_memoize_fun_by_key
 [%%expect {|
 - : ?initial_size:int ->
-    (module Base.Hashtbl.Key with type t = 'a) ->
+    'a Base.Hashtbl.Key.t ->
     ('b -> 'a) -> ('b -> 'c Heap_block.t) -> ('b -> 'c Heap_block.t) Staged.t
 = <fun>
 |}];;

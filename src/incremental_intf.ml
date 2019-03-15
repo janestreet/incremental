@@ -982,13 +982,13 @@ module type S = sig
       contain a uniquely identifying key, but also have other data. *)
   val memoize_fun
     :  ?initial_size:int (** default is [4]. *)
-    -> (module Base.Hashtbl.Key with type t = 'a)
+    -> 'a Base.Hashtbl.Key.t
     -> ('a -> 'b)
     -> ('a -> 'b) Staged.t
 
   val memoize_fun_by_key
     :  ?initial_size:int (** default is [4]. *)
-    -> (module Base.Hashtbl.Key with type t = 'key)
+    -> 'key Base.Hashtbl.Key.t
     -> ('a -> 'key)
     -> ('a -> 'b)
     -> ('a -> 'b) Staged.t
@@ -1305,13 +1305,13 @@ module type S = sig
       entries whose result is unused.  *)
   val weak_memoize_fun
     :  ?initial_size:int (** default is [4]. *)
-    -> (module Base.Hashtbl.Key with type t = 'a)
+    -> 'a Base.Hashtbl.Key.t
     -> ('a -> 'b Heap_block.t)
     -> ('a -> 'b Heap_block.t) Staged.t
 
   val weak_memoize_fun_by_key
     :  ?initial_size:int (** default is [4]. *)
-    -> (module Base.Hashtbl.Key with type t = 'key)
+    -> 'key Base.Hashtbl.Key.t
     -> ('a -> 'key)
     -> ('a -> 'b Heap_block.t)
     -> ('a -> 'b Heap_block.t) Staged.t

@@ -3650,9 +3650,7 @@ module Test (Incremental : Incremental_intf_to_test_againt) : sig end = struct
           let weak_memoize_fun = weak_memoize_fun
           let weak_memoize_fun_by_key = weak_memoize_fun_by_key
 
-          let test_memoize_fun
-                (memoize_fun : (module Base.Hashtbl.Key with type t = int) -> _ -> _)
-            =
+          let test_memoize_fun (memoize_fun : int Base.Hashtbl.Key.t -> _ -> _) =
             let x = Var.create_ [%here] 13 in
             let y = Var.create_ [%here] 14 in
             let z = Var.create_ [%here] 15 in
