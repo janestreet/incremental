@@ -195,16 +195,13 @@ let index_by inner_comparator outer_comparator map get_outer_index =
   in
   let remove ~key ~data acc =
     let idx = get_outer_index data in
-    Map.update acc idx ~f:(function
+    Map.change acc idx ~f:(function
       | None -> assert false
-      | Some inner_map -> Map.remove inner_map key)
+      | Some inner_map ->
+        let inner_map = Map.remove inner_map key in
+        if Map.is_empty inner_map then None else Some inner_map)
   in
-  Incr_map.unordered_fold
-    map
-    ~init:(Map.empty outer_comparator)
-    ~add
-    ~update:(fun ~key ~old_data:_ ~new_data:data -> add ~key ~data)
-    ~remove
+  Incr_map.unordered_fold map ~init:(Map.empty outer_comparator) ~add ~remove
 [%%expect{|
 val index_by :
   ('a, 'b) Map.comparator ->

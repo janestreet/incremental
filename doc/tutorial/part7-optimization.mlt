@@ -61,20 +61,270 @@ incremental computation.
 With this cost model in hand, let's explore some techniques for
 improving the performance of incremental computations.
 
+* Measuring incremental
+
+Incremental has some built in tools for gathering statistics about
+incremental computations.  You'll find these functions in the ~State~
+module.  For example, the following code shows you how to read out the
+number of Incremental nodes that have been created.
+|}]
+
+open Core
+module Incr = Incremental.Make ()
+module Incr_map = Incr_map.Make(Incr);;
+open Incr.Let_syntax
+
+     #verbose true;;
+let _ = Incr.State.num_nodes_created Incr.State.t;;
+[%%expect{|
+- : int = 0
+|}]
+let i = Incr.Var.create 0 |> Incr.Var.watch |> Incr.map ~f:succ;;
+[%%expect {|
+val i : int Incr.t = <abstr>
+|}];;
+let _ = Incr.State.num_nodes_created Incr.State.t;;
+[%%expect {|
+- : int = 2
+|}];;
+
+[%%org {|
+Let's create a little module for capturing and reporting some of the
+stats from ~Incr.State~.
+|}]
+
+module Stats : sig
+  val reporter : unit -> (unit -> unit) Staged.t
+end = struct
+  type t =
+    { created : int
+    ; recomputed : int
+    ; changed : int
+    }
+  [@@deriving sexp]
+
+  let diff t1 t2 =
+    { created = t1.created - t2.created
+    ; recomputed = t1.recomputed - t2.recomputed
+    ; changed = t1.changed - t2.changed
+    }
+  ;;
+
+  let snap () =
+    { created = Incr.State.num_nodes_created Incr.State.t
+    ; recomputed = Incr.State.num_nodes_recomputed Incr.State.t
+    ; changed = Incr.State.num_nodes_changed Incr.State.t
+    }
+  ;;
+
+  let reporter () =
+    let open Expect_test_helpers_kernel in
+    let old_stats = ref (snap ()) in
+    let report () =
+      let stats = snap () in
+      print_s [%sexp (diff stats !old_stats : t)];
+      old_stats := stats
+    in
+    stage report
+  ;;
+end
+[%%expect {|
+module Stats : sig val reporter : unit -> (unit -> unit) Staged.t end
+|}];;
+
+[%%org {|
+We can create a stats reporter now and use it for printing out the
+number of created, changed and recomputed nodes.
+|}]
+
+let report = unstage (Stats.reporter ());;
+[%%expect {|
+val report : unit -> unit = <fun>
+|}];;
+
+let () = report ()
+[%%expect {|
+((created    0)
+ (recomputed 0)
+ (changed    0))
+|}];;
+
+[%%org {|
+Now, let's create a small incremental computation that takes a map
+full of integers and sums the squares together.  From the outside, it
+looks like this should create only three computation nodes.
+|}]
+
+let (input,sum_sq) =
+  let input =
+    let m = Map.of_alist_exn (module Int) (List.init 1_000 ~f:(fun x -> (x,x))) in
+    Incr.Var.create m
+  in
+  let squares = Incr_map.mapi (Incr.Var.watch input) ~f:(fun ~key:_ ~data:x -> x * x) in
+  let sum_sq =
+    let change op ~key:_ ~data acc = op acc data in
+    Incr_map.unordered_fold squares ~init:0 ~add:(change (+)) ~remove:(change (-))
+  in
+  (input, Incr.observe sum_sq)
+
+[%%expect{|
+val input : (int, int, Int.comparator_witness) Map.t Incr.Var.t = <abstr>
+val sum_sq : int Incr.Observer.t = <abstr>
+|}]
+
+[%%org {|
+Now, let's run the reporter and see what actually happened.
+|}]
+
+let () = report ()
+[%%expect {|
+((created    3)
+ (recomputed 0)
+ (changed    0))
+|}];;
+
+[%%org {|
+If we now modify the input, we should see all three nodes change.
+|}]
+
+let () =
+  Incr.Var.set input (Map.remove (Incr.Var.value input) 100);
+  Incr.stabilize ();
+  report ();
+[%%expect{|
+((created    0)
+ (recomputed 3)
+ (changed    3))
+|}]
+
+[%%org {|
+If, on the other hand, we use ~incr_map'~ to do the same computation,
+we'll see very different numbers.
+|}]
+
+let (input,sum_sq) =
+  let input =
+    let m = Map.of_alist_exn (module Int) (List.init 1_000 ~f:(fun x -> (x,x))) in
+    Incr.Var.create m
+  in
+  let squares = Incr_map.mapi' (Incr.Var.watch input) ~f:(fun ~key:_ ~data:x ->
+    let%map x = x in x + 1)
+  in
+  let change op ~key:_ ~data acc = op acc data in
+  let sum_sq =
+    Incr_map.unordered_fold squares ~init:0 ~add:(change (+)) ~remove:(change (-))
+    |> Incr.observe
+  in
+  (input,sum_sq)
+[%%expect {|
+val input : (int, int, Int.comparator_witness) Map.t Incr.Var.t = <abstr>
+val sum_sq : int Incr.Observer.t = <abstr>
+|}];;
+
+let print () =
+  Incr.stabilize ();
+  print_s [%sexp (Incr.Observer.value_exn sum_sq : int)];
+  report ()
+[%%expect {|
+val print : unit -> unit = <fun>
+|}];;
+
+let () = print ()
+[%%expect{|
+500500
+((created    2008)
+ (recomputed 2008)
+ (changed    2008))
+|}]
+
+[%%org {|
+Here we can see that we're creating a bunch more incremental
+nodes. But, when we update just one node, we'll see a small number of changes.
+|}]
+
+let change f =
+  Incr.Var.set input (f (Incr.Var.value input))
+
+let () =
+  change (fun m -> Map.set m ~key:100 ~data:101);
+  print ()
+[%%expect{|
+val change :
+  ((int, int, Int.comparator_witness) Map.t ->
+   (int, int, Int.comparator_witness) Map.t) ->
+  unit = <fun>
+500501
+((created    0)
+ (recomputed 7)
+ (changed    6))
+|}]
+
+[%%org {|
+Note that if we add a new key that wasn't in the map, we'll see nodes
+being created as well.
+|}]
+
+let () =
+  change (fun m -> (Map.set m ~key:1001 ~data:1001));
+  print ()
+[%%expect {|
+501503
+((created    2)
+ (recomputed 7)
+ (changed    6))
+|}];;
+
+[%%org {|
+Grabbing statistics like this from incremental is useful because it
+helps you build up an intuition as to what your program is doing and
+why.
+
+Another useful tool that the [State] exposes is the ability to
+generate a graph specification, suitable for display via
+[[https://www.graphviz.org/doc/info/lang.html][dot]].
+|}]
+
+[%%org {|
+
 * Batching changes
 
 The fact that Incremental separates out updating the variables from
 running stabilization opens up one simple form of optimization, i.e.,
-batching.  By stabilizing less often
+batching.  By stabilizing less often, you can red
+
+|}]
+
+let () =
+  change (fun m -> (Map.remove m 10));
+  change (fun m -> (Map.remove m 30));
+  change (fun m -> (Map.remove m 50));
+  change (fun m -> (Map.remove m 100));
+  print ()
+[%%expect {|
+501308
+((created    0)
+ (recomputed 5)
+ (changed    4))
+|}];;
+
+
+
+[%%org {|
 
 * Prefer ~mapi~ to ~mapi'~
 
 * Filter first
-
-* Profiling tools
 
 * Share computations
 
 * Minimize what's observed
 
 |}]
+
+
+
+[%%org {|
+Removing a node, however, causes fewer nodes to recompute, since you
+only have to recompute nodes at the end.
+|}]
+

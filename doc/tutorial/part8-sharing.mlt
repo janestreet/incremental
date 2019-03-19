@@ -138,7 +138,7 @@ let orders_and_execs model =
   Incr_map.merge (model >>| Model.orders) execs_by_oid ~f:(fun ~key:_ change ->
     match change with
     | `Left order -> Some (Some order, Map.empty (module Exec.Id))
-    | `Right exec -> Some (None, exec)
+    | `Right execs -> Some (None, execs)
     | `Both (order, execs) -> Some (Some order, execs))
 ;;
 [%%expect {|
