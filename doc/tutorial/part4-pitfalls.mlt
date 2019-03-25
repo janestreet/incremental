@@ -323,4 +323,6 @@ time ~map~ changes, the incremental for the comparator will refire,
 and ~Map.comparator_s~ will be re-run again. But the computation will
 short-circuit there, and won't lead to a new call to
 ~Incr_map.unordered_fold~.
+
+[[./part5-time.mlt][Part 5: Time]]
 |}]

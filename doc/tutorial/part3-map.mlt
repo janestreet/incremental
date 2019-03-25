@@ -1,5 +1,5 @@
 [%%org {|
-#+TITLE: Incremental tutorial, Part 3: Incr_map
+#+TITLE: Incremental tutorial, Part 3: Incr\_map
 
 In [[./part2-dynamic.mlt][Part 2]], we discussed how to use ~bind~ for
 building dynamic computations, as well as some of the downsides. In
@@ -365,4 +365,6 @@ and transformation steps, it's often possible to arrange it so that
 the the filtering happens earlier, before you need to use any of the
 primed operators.  As such, you can end up doing the expensive
 calculation on a small subset of the data.
+
+[[./part4-pitfalls.mlt][Part 4: Pitfalls]]
 |}]

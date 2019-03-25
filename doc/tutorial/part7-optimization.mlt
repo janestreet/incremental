@@ -2,33 +2,39 @@
 #+TITLE: Incremental tutorial, Part 7: Performance and Optimization
 
 The whole point of using Incremental is to optimize your program.
-This section is meant to provide a guide to understanding and
-improving the performance of your incremental program.
+This part of the tutorial will focus on providing you with some tools
+for doing that optimization effectively.
 
-As is always the case, the most important part of optimization is
-measuring, so whatever else you do, building yourself some benchmarks
-so you can tell when your code is doing better or worse is an
-important starting point.
+To that end, we'll focus on three things: providing a basic cost
+model, to help you reason about the performance of your code; to
+suggest some concrete optimization techniques; and to give you some
+tips for effectively measuring what's going on in an incremental
+computation.
 
-But it's also good to have a reasonable mental cost model for the
-programming you're doing, and generating such a model for Incremental
-is a little tricky, so we'll talk about that as well.
+We'll start with talking about costs.
 
-* The cost model
+* Costs
 
-*Incremental nodes are expensive.* The most important part of that is
-their sheer size. One incremental node being a record of 27 fields,
-meaning that the record alone is 216 bytes, without even counting the
-things pointed to by an incremental node.
+We'll start by trying to give you some intuition for the time and
+space taken by different incremental operations.  These timings are
+all from native-code usages of Incremental.  The costs when compiled
+to JavaScript should be expected to be higher.
+
+*Incremental nodes are big.* One incremental node being a record of 27
+fields, meaning that the record alone is 216 bytes, without even
+counting the things pointed to by an incremental node.
 
 Firing an incremental node isn't free either. It takes somewhere
-between 50ns-150ns to fire a single incremental node.  That's not
-huge, but it's a lot more than some of the computations you might put
-inside of an incremental node.  This should be a reminder not to
-over-incrementalize; a very fine-grained incrementalization can be
-both harder to use and slower than a coarse grained one.
+between 50ns-150ns to fire a single incremental node.  The exact place
+on that spectrum depends on the shape of the graph.  Linear sequences
+of nodes will put you towards the bottom end.
 
-*Stabilization, on the other hand, are nearly free.*  A single
+These costs aren't huge, but they're bigger than some of the
+computations you might put inside of an incremental node.  This
+highlights why you shouldn't over-incrementalize; a very fine-grained
+incrementalization can end up slower than a coarse grained one.
+
+*Stabilizations, on the other hand, are nearly free.* A single
 stabilization where there's nothing to be done takes under 100ns.  So
 in most applications, you don't have to worry about the cost of
 stabilizing too often.  (There are, however, some computational
@@ -39,42 +45,49 @@ Another thing worth thinking about when it comes to Incremental is
 which parts of the graph are actually going to be fired.  There are
 two key rules that are worth keeping in mind.
 
-- *Only dependents of nodes which have changed can ever be fired.*  By
-  default, a node counts as having changed if its new value is
-  physically different from its previous value.  This can be changed
-  by modifying the cutoff function for a give node.
+- *Only dependents of incrementals which have changed can be fired.*
+  By default, a node counts as having changed if its new value is
+  physically different from its previous value, but this notion of
+  change can be overridden by changing the cutoff of a node.
 
 - *Only nodes that are /necessary/ will fire.* A node is necessary if
   there's some observer that transitively depends on that node.
   Merely holding on to a copy of some incremental node is not enough
   to make it run; it also has to be connected to an observer.
 
-This means that Incremental provides a kind of best-of-both-worlds
-between demand-driven and change-driven change propagation, in that
-only the intersection of what is changed and what is necessary will be
+- *Specialized incremental data-structures further reduce firing*.
+  ~Incr_map.mapi'~ is one example of such a specialized data structure
+  that we've seen.  Notably, there, which nodes fire is
+  data-dependent, rather than being strictly about node-level
+  dependencies.  ~Incr.Clock~ and ~Incr_select~ provide similar
+  functionality.
+
+Note that Incremental provides a kind of best-of-both-worlds between
+demand-driven and change-driven change propagation, in that only the
+intersection of what is changed and what is necessary will be
 recomputed.
 
-This does not amount to a complete cost model, but hopefully it
+The above does not amount to a complete cost model, but hopefully it
 provides a solid starting point for thinking about the cost of an
 incremental computation.
 
 With this cost model in hand, let's explore some techniques for
 improving the performance of incremental computations.
 
-* Measuring incremental
+* Watching incremental
 
-Incremental has some built in tools for gathering statistics about
+Incremental has some built in tools for gathering metadata about
 incremental computations.  You'll find these functions in the ~State~
 module.  For example, the following code shows you how to read out the
-number of Incremental nodes that have been created.
+number of Incremental nodes that have been created thus far.
 |}]
 
 open Core
 module Incr = Incremental.Make ()
 module Incr_map = Incr_map.Make(Incr);;
-open Incr.Let_syntax
+open Incr.Let_syntax;;
 
-     #verbose true;;
+#verbose true;;
 let _ = Incr.State.num_nodes_created Incr.State.t;;
 [%%expect{|
 - : int = 0
@@ -89,8 +102,8 @@ let _ = Incr.State.num_nodes_created Incr.State.t;;
 |}];;
 
 [%%org {|
-Let's create a little module for capturing and reporting some of the
-stats from ~Incr.State~.
+Using these functions, we can create tool capturing and reporting
+statistics about how a given incremental computation is behaving.
 |}]
 
 module Stats : sig
@@ -151,8 +164,7 @@ let () = report ()
 
 [%%org {|
 Now, let's create a small incremental computation that takes a map
-full of integers and sums the squares together.  From the outside, it
-looks like this should create only three computation nodes.
+full of integers and sums the squares together.
 |}]
 
 let (input,sum_sq) =
@@ -173,7 +185,10 @@ val sum_sq : int Incr.Observer.t = <abstr>
 |}]
 
 [%%org {|
-Now, let's run the reporter and see what actually happened.
+From reading this code, we can see three places where it looks like
+incremental nodes are created, and in each case, we can guess that
+just one node is created. But instead of guessing, let's run the
+reporter and see.
 |}]
 
 let () = report ()
@@ -198,7 +213,7 @@ let () =
 |}]
 
 [%%org {|
-If, on the other hand, we use ~incr_map'~ to do the same computation,
+If we use the primed version of the function for the same computation,
 we'll see very different numbers.
 |}]
 
@@ -239,7 +254,8 @@ let () = print ()
 
 [%%org {|
 Here we can see that we're creating a bunch more incremental
-nodes. But, when we update just one node, we'll see a small number of changes.
+nodes. But, when we update just one node, we'll see a small number of
+recomputed and changed nodes, but no nodes created.
 |}]
 
 let change f =
@@ -260,8 +276,8 @@ val change :
 |}]
 
 [%%org {|
-Note that if we add a new key that wasn't in the map, we'll see nodes
-being created as well.
+Now if we add a new key that wasn't in the map, we'll see nodes being
+created as well.
 |}]
 
 let () =
@@ -279,52 +295,117 @@ Grabbing statistics like this from incremental is useful because it
 helps you build up an intuition as to what your program is doing and
 why.
 
-Another useful tool that the [State] exposes is the ability to
+Another useful tool that the ~State! exposes is the ability to
 generate a graph specification, suitable for display via
 [[https://www.graphviz.org/doc/info/lang.html][dot]].
 |}]
 
 [%%org {|
 
-* Batching changes
+* Optimization tips
 
-The fact that Incremental separates out updating the variables from
-running stabilization opens up one simple form of optimization, i.e.,
-batching.  By stabilizing less often, you can red
+In this section, we'll briefly go over some useful tips for
+transforming your computations to make them more efficient.
+
+Take all of these tips with a grain of salt. These are all ways of
+improving the performance of incremental computations, but they all
+come with tradeoffs.  As always, you shouldn't optimize your program
+blindly, but instead balance the clarity of the code against the
+performance improvements you can get.
+
+** Create fewer incrementals in the inner loop
+
+Large incremental graphs are often fairly regular, with some core bits
+of structure repeated over and over.  It's often useful to focus on
+these repeated bits to try to reduce the number of incremental nodes
+they contain.  This can be as simple as replacing multiple incremental
+maps with a single map and ordinary function application.  e.g.,
+consider the following two functions.
 
 |}]
 
-let () =
-  change (fun m -> (Map.remove m 10));
-  change (fun m -> (Map.remove m 30));
-  change (fun m -> (Map.remove m 50));
-  change (fun m -> (Map.remove m 100));
-  print ()
+let z x = x >>| Float.sqrt >>| Float.to_int;;
 [%%expect {|
-501308
-((created    0)
- (recomputed 5)
- (changed    4))
+val z : float Incr.t -> int Incr.t = <fun>
 |}];;
 
-
+let w x = let%map x = x in Float.to_int (Float.sqrt x);;
+[%%expect {|
+val w : float Incr.t -> int Incr.t = <fun>
+|}];;
 
 [%%org {|
+These two functions compute the same result, but ~w~ uses one less
+incremental, and so is likely the better choice here.  Note that this
+kind of transformation isn't always a win: if the first function often
+produced the same result, and the second computation was expensive,
+losing the cutoff could be a net loss.  But in this case, it's clearly
+a win.
 
-* Prefer ~mapi~ to ~mapi'~
+** Filter first
 
-* Filter first
+Complex incremental computations, especially those that use
+~Incr_map~, are often organized in stages, where you have an initial
+data structure that is transformed through multiple steps.  When one
+of those stages filters down the data-set in a material way, it's a
+good idea to put that filtering as soon as you can in the process.
+That will make later stages cheaper, and, even more than computational
+cost, it can do a lot to reduce the amount of memory your program
+consumes.  This is especially true if some of the later stages use the
+primed operators, which generate one incremental per data element.
 
-* Share computations
+** Flatten computations
 
-* Minimize what's observed
+As discussed in [[./part3-map.mlt][Part 3]], nested incrementally, of
+the kind you get with operations like ~Incr_map.mapi'~, is typically
+more expensive, both in memory and in compute time, than the
+flatter-style of computation when using an operation like
+~Incr_map.map~ or ~Incr_map.unordered_fold~.
 
+** Share sub-computations
+
+It's common to have multiple different parts of your computation need
+to reference the same incrementally computed value. When possible,
+it's better to share those computations. [[./part8-sharing.mlt][Part
+8]] discusses this in more detail and demonstrates techniques for
+achieving this sharing.
+
+** Minimize what's necessary
+
+Incremental will only cause the parts of the graph that are currently
+/necessary/ to be recomputed.  A part of the graph is /necessary/ if
+it's in the transitive closure of the current set of observers.  By
+changing over time what's in that transitive closure to only include
+the things you really need, you can effectively quiesce parts of the
+computation.
+
+This can come up in all sorts of cases.  For example, if you have a UI
+with multiple different views, then if you write your code such that
+non-current views are not observed, then you get to avoid paying for
+maintenance of those views.
+
+There is a cost there, however: if you're not keeping the data
+associated with those out-of-sight views up to date, it does mean that
+switching views can then be more expensive.
+
+** Batch computations
+
+While stabilizations are inexpensive, there are still good reasons to
+stabilize less often.  In particular, different changes to your input
+data often flow into the same parts of the computation, which means
+that some work can be saved by batching up changes and stabilizing
+once.  The importance of this effect is going to vary quite a bit from
+computation to computation.
+
+Note that the choice of when stabilizations are done is global across
+the entire incremental graph, so this is something that you can't
+really customize per computation. It's rather something that you
+choose at an application level, when you construct the loop that
+drives stabilization.
+
+[[./part8-sharing.mlt][Part 8: Sharing]]
 |}]
 
 
 
-[%%org {|
-Removing a node, however, causes fewer nodes to recompute, since you
-only have to recompute nodes at the end.
-|}]
 

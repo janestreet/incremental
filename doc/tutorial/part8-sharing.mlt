@@ -190,7 +190,7 @@ val open_interest : Model.t Incr.t -> init:float -> float Incr.t = <fun>
 
 [%%org {|
 And the following function will compute the number of shares executed
-by per symbol, leaning on the same ~orders_and_execs~ function.
+per symbol, leaning on the same ~orders_and_execs~ function.
 |}]
 
 let executed_shares_by_symbol model =
@@ -284,7 +284,7 @@ advance; but at the same time, in practice you're going to need to
 reuse the same computation many times.
 
 When this happens, a good approach is memoization.  Incremental has a
-number of built in memoization functions, but we're going to just look
+number of built-in memoization functions, but we're going to just look
 at how to use one of them:
 
 |}]
@@ -304,7 +304,7 @@ new function with the same signature, but that always returns the same
 heap block, as long as that heap block is still allocated somewhere.
 
 This function takes advantage of /weak pointers/, which provide for a
-nice memory management story here.  In particular, weak pointers don't
+nice memory management story.  In particular, weak pointers don't
 prevent the values they point to from being collected.  As a result,
 this function maintains a cache that will remain populated only so
 long as the incremental computations in question remain in use.
@@ -317,7 +317,7 @@ some functions for computing the cashflow associated with a given
 symbol. (The cashflow of a trade is the amount of money you spend or
 receive on a given trade.)
 
-This first function computes the cashflow give a direction and a map
+This first function computes the cashflow given a direction and a map
 of executions.
 |}]
 
@@ -341,7 +341,7 @@ val cashflow : Dir.t Incr.t -> ('a, Exec.t, 'b) Map.t Incr.t -> float Incr.t =
 
 [%%org {|
 This next function takes an enriched model and a symbol, and filters
-down to the symbol in question, and the computes the cashflow for each
+down to the symbol in question, and then computes the cashflow for each
 order for that symbol, and finally sums those cashflows all together.
 |}]
 

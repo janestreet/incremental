@@ -44,6 +44,14 @@ correspond to the intermediate stages of the computation, and
 /observers/, which are nodes from which you can read the output of a
 computation.
 
+In practice, you always need all three. You initialize a variable just
+like you would a ref; you create an incremental from it, which can be
+used in as many different incremental computations you can dream up;
+as your data changes, you update the value of your variable with
+~Incr.Var.set~; and then those changes propagate through your
+incremental computations to the observers, one for each computation
+that you want to use the output from.
+
 Let's look at an example.  The first thing we need to do is to
 instantiate the Incremental library. Incremental keeps the state of
 the overall computation graph as module-level imperative state, so you
@@ -177,7 +185,7 @@ val ( ! ) : 'a Incr.Var.t -> 'a = <fun>
 
 [%%org {|
 Now we can see how updating one of the inputs affects the value of
-~sum_o.
+~sum_o~.
 |}]
 
 let () =
@@ -573,4 +581,6 @@ As you can see, both computations fired, even though we only changed
 
 We'll talk more about how to think about the use of cutoffs and why
 they're important later on in the tutorial.
+
+[[./part2-dynamic.mlt][Part 2: Dynamic computations with bind]]
 |}]

@@ -186,4 +186,6 @@ And the overall computation has good incremental performance relative
 to time changes.  In particular, the ~Incr.Clock.at~ nodes don't
 update every time the clock advances, but only when the clock crosses
 the appropriate time threshold.
+
+[[./part6-patterns.mlt][Part 6: Patterns]]
 |}]

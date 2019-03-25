@@ -292,4 +292,6 @@ val view : Model.t Incr.t -> string Incr.t = <fun>
 This makes the performance behavior a little more explicit. The code
 is effectively binding on the constructor tag alone first, and then
 doing a map over the data thus obtained.
+
+[[./part7-optimization.mlt][Part 7: Performance and optimization]]
 |}]

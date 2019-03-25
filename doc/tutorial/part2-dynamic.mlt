@@ -203,4 +203,6 @@ programs. (More on this later, in [[./part4-pitfalls.mlt][Part 4: Pitfalls]].)
 
 In the next part, we'll discuss other techniques for building dynamic,
 incremental computations.
+
+[[./part3-map.mlt][Part 3: Incr\_map]]
 |}]
