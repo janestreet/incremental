@@ -96,7 +96,7 @@ type 'a t = 'a Types.Node.t =
   (* [observers] is the head of the doubly-linked list of observers of [t], or
      [Uopt.none] if there are no observers. *)
   ; mutable observers :
-      'a Internal_observer.t sexp_opaque Uopt.t
+      ('a Internal_observer.t[@sexp.opaque]) Uopt.t
   (* [is_in_handle_after_stabilization] is used to avoid pushing the same node multiple
      times onto [state.handle_after_stabilization]. *)
   ; mutable is_in_handle_after_stabilization :

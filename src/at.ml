@@ -7,7 +7,7 @@ type t = Types.At.t =
   { main : Before_or_after.t Node.t
   ; at : Time_ns.t
   ; mutable alarm : Alarm.t
-  ; clock : Types.Clock.t sexp_opaque
+  ; clock : (Types.Clock.t[@sexp.opaque])
   }
 [@@deriving fields, sexp_of]
 

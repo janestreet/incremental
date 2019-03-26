@@ -8,7 +8,7 @@ type t = Types.At_intervals.t =
   ; base : Time_ns.t
   ; interval : Time_ns.Span.t
   ; mutable alarm : Alarm.t
-  ; clock : Types.Clock.t sexp_opaque
+  ; clock : (Types.Clock.t[@sexp.opaque])
   }
 [@@deriving fields, sexp_of]
 

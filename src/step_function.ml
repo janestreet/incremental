@@ -8,7 +8,7 @@ type 'a t = 'a Types.Step_function.t =
   ; mutable value : 'a
   ; mutable upcoming_steps : (Time_ns.t * 'a) list
   ; mutable alarm : Alarm.t
-  ; clock : Types.Clock.t sexp_opaque
+  ; clock : (Types.Clock.t[@sexp.opaque])
   }
 [@@deriving fields, sexp_of]
 

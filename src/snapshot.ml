@@ -8,7 +8,7 @@ type 'a t = 'a Types.Snapshot.t =
   ; at : Time_ns.t
   ; before : 'a
   ; value_at : 'a Node.t
-  ; clock : Types.Clock.t sexp_opaque
+  ; clock : (Types.Clock.t[@sexp.opaque])
   }
 [@@deriving fields, sexp_of]
 

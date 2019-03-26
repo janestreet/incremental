@@ -42,8 +42,8 @@ type 'a t = 'a Types.Internal_observer.t =
   ; mutable next_in_all :
       Packed_.t Uopt.t
   (* [{prev,next}_in_observing] doubly link all observers of [observing]. *)
-  ; mutable prev_in_observing : 'a t sexp_opaque Uopt.t
-  ; mutable next_in_observing : 'a t sexp_opaque Uopt.t
+  ; mutable prev_in_observing : ('a t[@sexp.opaque]) Uopt.t
+  ; mutable next_in_observing : ('a t[@sexp.opaque]) Uopt.t
   }
 [@@deriving fields, sexp_of]
 
