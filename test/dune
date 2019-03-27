@@ -1,3 +1,3 @@
 (library (name incremental_test)
- (libraries core expect_test_helpers_kernel incremental incremental_debug)
+ (libraries core expect_test_helpers_kernel incremental)
  (preprocess (pps ppx_jane)))

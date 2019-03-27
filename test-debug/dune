@@ -1,0 +1,10 @@
+(library (name incremental_debug_test)
+ (libraries core expect_test_helpers_kernel incremental incremental_debug)
+ (preprocess (pps ppx_jane)))
+
+(rule
+ (targets import.ml test_config.ml test_config.mli test_incremental.ml
+  test_incremental.mli test_let_syntax.ml test_let_syntax.mli)
+ (deps (:first_dep generate_debug_test_lib.sh) (glob_files ../test/*.ml)
+  (glob_files ../test/*.mli))
+ (action (bash ./%{first_dep})))
