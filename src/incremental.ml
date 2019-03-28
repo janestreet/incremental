@@ -182,6 +182,7 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
     let after t span = State.after state t span
     let at_intervals t span = State.at_intervals state t span
     let advance_clock t ~to_ = State.advance_clock state t ~to_
+    let advance_clock_by t span = advance_clock t ~to_:(Time_ns.add (now t) span)
     let step_function t ~init steps = State.step_function state t ~init steps
     let snapshot t incr ~at ~before = State.snapshot state t incr ~at ~before
   end

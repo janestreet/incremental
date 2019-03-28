@@ -8,3 +8,7 @@
  (deps (:first_dep generate_debug_test_lib.sh) (glob_files ../test/*.ml)
   (glob_files ../test/*.mli))
  (action (bash ./%{first_dep})))
+
+(rule (targets explicit_dependencies.ml explicit_dependencies.mli)
+ (deps %{workspace_root}/bin/gen-explicit-dependencies.sh)
+ (action (bash "%{deps} incremental")))

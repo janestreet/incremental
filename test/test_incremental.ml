@@ -22,20 +22,9 @@ struct
   module Make () = struct
     include Incremental_Make ()
 
-    let clock = Clock.create () ~start:(Time_ns.now ())
-    let timing_wheel_length () = Clock.timing_wheel_length clock
-    let now () = Clock.now clock
-    let watch_now () = Clock.watch_now clock
-    let advance_clock ~to_ = Clock.advance_clock clock ~to_
-    let after span = Clock.after clock span
-    let at time = Clock.at clock time
-    let at_intervals span = Clock.at_intervals clock span
-    let snapshot incr ~at = Clock.snapshot clock incr ~at
-    let step_function steps = Clock.step_function clock steps
     let value = Observer.value_exn
     let watch = Var.watch
     let disallow_future_use = Observer.disallow_future_use
-    let advance_clock_by span = advance_clock ~to_:(Time_ns.add (now ()) span)
 
     let invalid =
       let r = ref None in
@@ -2129,13 +2118,14 @@ struct
         module Clock = Clock
 
         let%test_unit _ =
-          let w = observe (watch_now ()) in
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let w = observe (Clock.watch_now clock) in
           stabilize_ [%here];
-          let before_advance = now () in
+          let before_advance = Clock.now clock in
           assert (Time_ns.equal before_advance (value w));
           let to_ = Time_ns.add before_advance (sec 1.) in
-          advance_clock ~to_;
-          assert (Time_ns.equal (now ()) to_);
+          Clock.advance_clock clock ~to_;
+          assert (Time_ns.equal (Clock.now clock) to_);
           assert (Time_ns.equal (value w) before_advance);
           (* we didn't yet stabilize *)
           stabilize_ [%here];
@@ -2145,7 +2135,8 @@ struct
         let is observer v = Poly.equal (value observer) v
 
         let%expect_test _ =
-          let o = observe (after (sec 1.)) in
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let o = observe (Clock.after clock (sec 1.)) in
           let show () =
             stabilize_ [%here];
             print_s [%sexp (value o : Before_or_after.t)]
@@ -2153,32 +2144,42 @@ struct
           show ();
           [%expect {|
             Before |}];
-          advance_clock_by (sec 1.);
+          Clock.advance_clock_by clock (sec 1.);
           show ();
           [%expect {|
             Before |}];
-          advance_clock_by (Clock.alarm_precision clock);
+          Clock.advance_clock_by clock (Clock.alarm_precision clock);
           show ();
           [%expect {|
             After |}]
         ;;
 
         let%test _ =
+          let clock = Clock.create ~start:Time_ns.epoch () in
           is_invalidated_on_bind_rhs (fun _ ->
-            at (Time_ns.add (Time_ns.now ()) (sec 1.)))
+            Clock.at clock (Time_ns.add (Clock.now clock) (sec 1.)))
         ;;
 
         let%test _ =
+          let clock = Clock.create ~start:(Time_ns.add Time_ns.epoch (sec 1.)) () in
           is_invalidated_on_bind_rhs (fun _ ->
-            at (Time_ns.add (Time_ns.now ()) (sec (-1.))))
+            Clock.at clock (Time_ns.add (Clock.now clock) (sec (-1.))))
         ;;
 
-        let%test _ = is_invalidated_on_bind_rhs (fun _ -> after (sec 1.))
-        let%test _ = is_invalidated_on_bind_rhs (fun _ -> after (sec (-1.)))
+        let%test _ =
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          is_invalidated_on_bind_rhs (fun _ -> Clock.after clock (sec 1.))
+        ;;
+
+        let%test _ =
+          let clock = Clock.create ~start:(Time_ns.add Time_ns.epoch (sec 1.)) () in
+          is_invalidated_on_bind_rhs (fun _ -> Clock.after clock (sec (-1.)))
+        ;;
 
         let%test_unit _ =
-          let now = now () in
-          let at span = observe (at (Time_ns.add now span)) in
+          let clock = Clock.create ~start:(Time_ns.add Time_ns.epoch (sec 1.)) () in
+          let now = Clock.now clock in
+          let at span = observe (Clock.at clock (Time_ns.add now span)) in
           let i1 = at (sec (-1.)) in
           let i2 = at (sec (-0.1)) in
           let i3 = at (sec 1.) in
@@ -2186,12 +2187,12 @@ struct
           assert (is i1 After);
           assert (is i2 After);
           assert (is i3 Before);
-          advance_clock_by (sec 0.5);
+          Clock.advance_clock_by clock (sec 0.5);
           stabilize_ [%here];
           assert (is i1 After);
           assert (is i2 After);
           assert (is i3 Before);
-          advance_clock_by (sec 1.);
+          Clock.advance_clock_by clock (sec 1.);
           stabilize_ [%here];
           assert (is i1 After);
           assert (is i2 After);
@@ -2200,27 +2201,29 @@ struct
 
         let%test_unit _ =
           (* advancing the clock in the same stabilization cycle as creation *)
-          let i = observe (after (sec 1.)) in
-          advance_clock_by (sec 2.);
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let i = observe (Clock.after clock (sec 1.)) in
+          Clock.advance_clock_by clock (sec 2.);
           stabilize_ [%here];
           assert (is i After)
         ;;
 
         let%test_unit _ =
           (* firing an unnecessary [after] and then observing it *)
-          let i = after (sec (-1.)) in
+          let clock = Clock.create ~start:(Time_ns.add Time_ns.epoch (sec 1.)) () in
+          let i = Clock.after clock (sec (-1.)) in
           stabilize_ [%here];
           let o = observe i in
           stabilize_ [%here];
           assert (is o After);
           let r = ref 0 in
           let i =
-            after (sec 1.)
+            Clock.after clock (sec 1.)
             >>| fun z ->
             incr r;
             z
           in
-          advance_clock_by (sec 2.);
+          Clock.advance_clock_by clock (sec 2.);
           stabilize_ [%here];
           assert (!r = 0);
           stabilize_ [%here];
@@ -2230,55 +2233,68 @@ struct
           assert (is o After)
         ;;
 
-        let%test _ = does_raise (fun () -> at_intervals (sec (-1.)))
-        let%test _ = does_raise (fun () -> at_intervals (sec 0.))
-        let%test _ = is_invalidated_on_bind_rhs (fun _ -> at_intervals (sec 1.))
+        let%test _ =
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          does_raise (fun () -> Clock.at_intervals clock (sec (-1.)))
+        ;;
+
+        let%test _ =
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          does_raise (fun () -> Clock.at_intervals clock (sec 0.))
+        ;;
+
+        let%test _ =
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          is_invalidated_on_bind_rhs (fun _ -> Clock.at_intervals clock (sec 1.))
+        ;;
 
         let%test_unit _ =
           (* advancing the clock does nothing by itself *)
+          let clock = Clock.create ~start:Time_ns.epoch () in
           let r = ref 0 in
-          let i = at_intervals (sec 1.) >>| fun () -> incr r in
+          let i = Clock.at_intervals clock (sec 1.) >>| fun () -> incr r in
           let o = observe i in
           assert (!r = 0);
-          advance_clock_by (sec 2.);
+          Clock.advance_clock_by clock (sec 2.);
           assert (!r = 0);
           disallow_future_use o
         ;;
 
         let%expect_test _ =
+          let clock = Clock.create ~start:Time_ns.epoch () in
           let r = ref (-1) in
-          let i = at_intervals (sec 1.) >>| fun () -> incr r in
+          let i = Clock.at_intervals clock (sec 1.) >>| fun () -> incr r in
           let o = observe i in
           stabilize_ [%here];
           let show_r () = print_s [%sexp (!r : int)] in
           show_r ();
           [%expect {| 0 |}];
-          advance_clock_by (sec 0.5);
+          Clock.advance_clock_by clock (sec 0.5);
           stabilize_ [%here];
           show_r ();
           [%expect {| 1 |}];
-          advance_clock_by (sec 1.);
+          Clock.advance_clock_by clock (sec 1.);
           stabilize_ [%here];
           show_r ();
           [%expect {| 2 |}];
-          advance_clock_by (sec 1.);
+          Clock.advance_clock_by clock (sec 1.);
           show_r ();
           [%expect {| 2 |}];
-          advance_clock_by (sec 1.);
+          Clock.advance_clock_by clock (sec 1.);
           show_r ();
           [%expect {| 2 |}];
-          advance_clock_by (sec 1.);
+          Clock.advance_clock_by clock (sec 1.);
           show_r ();
           [%expect {| 2 |}];
           stabilize_ [%here];
           show_r ();
           [%expect {| 3 |}];
-          advance_clock_by (sec 10.);
+          Clock.advance_clock_by clock (sec 10.);
           stabilize_ [%here];
           show_r ();
           [%expect {| 4 |}];
           disallow_future_use o;
-          advance_clock_by (sec 2.);
+          Clock.advance_clock_by clock (sec 2.);
           stabilize_ [%here];
           show_r ();
           [%expect {| 4 |}];
@@ -2291,15 +2307,16 @@ struct
 
         let%test_unit _ =
           (* advancing exactly to intervals doesn't skip any *)
+          let clock = Clock.create ~start:Time_ns.epoch () in
           let r = ref (-1) in
-          let o = observe (at_intervals (sec 1.) >>| fun () -> incr r) in
+          let o = observe (Clock.at_intervals clock (sec 1.) >>| fun () -> incr r) in
           stabilize_ [%here];
           [%test_result: int] !r ~expect:0;
-          let base = now () in
+          let base = Clock.now clock in
           let curr = ref base in
           for i = 1 to 20 do
             curr := Time_ns.next_multiple ~base ~after:!curr ~interval:(sec 1.) ();
-            advance_clock ~to_:!curr;
+            Clock.advance_clock clock ~to_:!curr;
             stabilize_ [%here];
             [%test_result: int] !r ~expect:i
           done;
@@ -2308,27 +2325,38 @@ struct
 
         let%test_unit _ =
           (* [interval < alarm precision] raises *)
-          assert (does_raise (fun () -> at_intervals (sec 0.0005)))
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          assert (does_raise (fun () -> Clock.at_intervals clock (sec 0.0005)))
         ;;
 
         let%test_unit _ =
           (* [at] in the past *)
+          let clock = Clock.create ~start:Time_ns.epoch () in
           assert (
             is_error
-              (snapshot (const 14) ~at:(Time_ns.sub (now ()) (sec 1.)) ~before:13))
+              (Clock.snapshot
+                 clock
+                 (const 14)
+                 ~at:(Time_ns.sub (Clock.now clock) (sec 1.))
+                 ~before:13))
         ;;
 
         let%test_unit _ =
           (* [at] in the future *)
+          let clock = Clock.create ~start:Time_ns.epoch () in
           let o =
             observe
               (ok_exn
-                 (snapshot (const 14) ~at:(Time_ns.add (now ()) (sec 1.)) ~before:13))
+                 (Clock.snapshot
+                    clock
+                    (const 14)
+                    ~at:(Time_ns.add (Clock.now clock) (sec 1.))
+                    ~before:13))
           in
           stabilize_ [%here];
           assert (value o = 13);
           stabilize_ [%here];
-          advance_clock_by (sec 2.);
+          Clock.advance_clock_by clock (sec 2.);
           assert (value o = 13);
           stabilize_ [%here];
           assert (value o = 14)
@@ -2336,14 +2364,19 @@ struct
 
         let%test_unit _ =
           (* [at] in the future, unobserved *)
+          let clock = Clock.create ~start:Time_ns.epoch () in
           let x = Var.create_ [%here] 13 in
           let i =
             ok_exn
-              (snapshot (Var.watch x) ~at:(Time_ns.add (now ()) (sec 1.)) ~before:15)
+              (Clock.snapshot
+                 clock
+                 (Var.watch x)
+                 ~at:(Time_ns.add (Clock.now clock) (sec 1.))
+                 ~before:15)
           in
           stabilize_ [%here];
           Var.set x 17;
-          advance_clock_by (sec 2.);
+          Clock.advance_clock_by clock (sec 2.);
           stabilize_ [%here];
           Var.set x 19;
           let o = observe i in
@@ -2353,24 +2386,34 @@ struct
 
         let%test_unit _ =
           (* [advance_clock] past [at] prior to stabilization. *)
+          let clock = Clock.create ~start:Time_ns.epoch () in
           let o =
             observe
               (ok_exn
-                 (snapshot (const 15) ~at:(Time_ns.add (now ()) (sec 1.)) ~before:13))
+                 (Clock.snapshot
+                    clock
+                    (const 15)
+                    ~at:(Time_ns.add (Clock.now clock) (sec 1.))
+                    ~before:13))
           in
-          advance_clock_by (sec 2.);
+          Clock.advance_clock_by clock (sec 2.);
           stabilize_ [%here];
           assert (value o = 15)
         ;;
 
         let%test_unit _ =
           (* unobserved, [advance_clock] past [at] prior to stabilization. *)
+          let clock = Clock.create ~start:Time_ns.epoch () in
           let x = Var.create_ [%here] 13 in
           let i =
             ok_exn
-              (snapshot (Var.watch x) ~at:(Time_ns.add (now ()) (sec 1.)) ~before:15)
+              (Clock.snapshot
+                 clock
+                 (Var.watch x)
+                 ~at:(Time_ns.add (Clock.now clock) (sec 1.))
+                 ~before:15)
           in
-          advance_clock_by (sec 2.);
+          Clock.advance_clock_by clock (sec 2.);
           stabilize_ [%here];
           Var.set x 17;
           let o = observe i in
@@ -2380,13 +2423,19 @@ struct
 
         let%test_unit _ =
           (* invalidated *)
+          let clock = Clock.create ~start:Time_ns.epoch () in
           let t =
-            ok_exn (snapshot invalid ~at:(Time_ns.add (now ()) (sec 1.)) ~before:13)
+            ok_exn
+              (Clock.snapshot
+                 clock
+                 invalid
+                 ~at:(Time_ns.add (Clock.now clock) (sec 1.))
+                 ~before:13)
           in
           let o = observe t in
           stabilize_ [%here];
           assert (value o = 13);
-          advance_clock_by (sec 2.);
+          Clock.advance_clock_by clock (sec 2.);
           stabilize_ [%here];
           assert (skip_invalidity_check || not (is_valid t));
           disallow_future_use o
@@ -2394,37 +2443,49 @@ struct
 
         let%test_unit _ =
           (* [snapshot] nodes increment [num_nodes_became_necessary] *)
+          let clock = Clock.create ~start:Time_ns.epoch () in
           let i1 = State.(num_nodes_became_necessary t) in
           let c = const () in
           for _ = 1 to 5 do
             ignore
-              ( ok_exn (snapshot c ~at:(Time_ns.add (now ()) (sec 1.)) ~before:())
+              ( ok_exn
+                  (Clock.snapshot
+                     clock
+                     c
+                     ~at:(Time_ns.add (Clock.now clock) (sec 1.))
+                     ~before:())
                 : _ t )
           done;
-          advance_clock_by (sec 2.);
+          Clock.advance_clock_by clock (sec 2.);
           let i2 = State.(num_nodes_became_necessary t) in
           (* the 5 [snapshot]s that became [freeze] plus the [const] *)
           [%test_result: int] i2 ~expect:(i1 + 6)
         ;;
 
-        let relative_step_function ~init steps =
-          let now = now () in
-          step_function
+        let relative_step_function clock ~init steps =
+          let now = Clock.now clock in
+          Clock.step_function
+            clock
             ~init
             (List.map steps ~f:(fun (after, a) ->
                Time_ns.add now (sec (Float.of_int after)), a))
         ;;
 
-        let%test _ = is_invalidated_on_bind_rhs (fun i -> step_function ~init:i [])
+        let%test _ =
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          is_invalidated_on_bind_rhs (fun i -> Clock.step_function clock ~init:i [])
+        ;;
 
         let%test _ =
+          let clock = Clock.create ~start:Time_ns.epoch () in
           is_invalidated_on_bind_rhs (fun i ->
-            relative_step_function ~init:i [ 1, i + 1 ])
+            relative_step_function clock ~init:i [ 1, i + 1 ])
         ;;
 
         let%test_unit _ =
           (* no steps *)
-          let i = step_function ~init:13 [] in
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let i = Clock.step_function clock ~init:13 [] in
           let o = observe i in
           stabilize_ [%here];
           assert (value o = 13)
@@ -2432,21 +2493,23 @@ struct
 
         let%test_unit _ =
           (* one step at a time *)
-          let i = relative_step_function ~init:13 [ 1, 14; 2, 15 ] in
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let i = relative_step_function clock ~init:13 [ 1, 14; 2, 15 ] in
           let o = observe i in
           stabilize_ [%here];
           assert (value o = 13);
-          advance_clock_by (sec 1.5);
+          Clock.advance_clock_by clock (sec 1.5);
           stabilize_ [%here];
           assert (value o = 14);
-          advance_clock_by (sec 1.);
+          Clock.advance_clock_by clock (sec 1.);
           stabilize_ [%here];
           assert (value o = 15)
         ;;
 
         let%test_unit _ =
           (* all steps in the past *)
-          let i = relative_step_function ~init:13 [ -2, 14; -1, 15 ] in
+          let clock = Clock.create ~start:(Time_ns.add Time_ns.epoch (sec 2.)) () in
+          let i = relative_step_function clock ~init:13 [ -2, 14; -1, 15 ] in
           let o = observe i in
           stabilize_ [%here];
           assert (value o = 15)
@@ -2454,41 +2517,45 @@ struct
 
         let%test_unit _ =
           (* some steps in the past *)
-          let i = relative_step_function ~init:13 [ -1, 14; 1, 15 ] in
+          let clock = Clock.create ~start:(Time_ns.add Time_ns.epoch (sec 1.)) () in
+          let i = relative_step_function clock ~init:13 [ -1, 14; 1, 15 ] in
           let o = observe i in
           stabilize_ [%here];
           assert (value o = 14);
-          advance_clock_by (sec 1.5);
+          Clock.advance_clock_by clock (sec 1.5);
           stabilize_ [%here];
           assert (value o = 15)
         ;;
 
         let%test_unit _ =
           (* cross multiple steps in one stabilization cycle *)
-          let i = relative_step_function ~init:13 [ 1, 14; 2, 15 ] in
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let i = relative_step_function clock ~init:13 [ 1, 14; 2, 15 ] in
           let o = observe i in
           stabilize_ [%here];
           assert (value o = 13);
-          advance_clock_by (sec 1.5);
-          advance_clock_by (sec 1.);
+          Clock.advance_clock_by clock (sec 1.5);
+          Clock.advance_clock_by clock (sec 1.);
           stabilize_ [%here];
           assert (value o = 15)
         ;;
 
         let%test_unit _ =
           (* cross step in same stabilization as creation *)
-          let i = relative_step_function ~init:13 [ 1, 14 ] in
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let i = relative_step_function clock ~init:13 [ 1, 14 ] in
           let o = observe i in
-          advance_clock_by (sec 2.);
+          Clock.advance_clock_by clock (sec 2.);
           stabilize_ [%here];
           assert (value o = 14)
         ;;
 
         let%test_unit _ =
           (* observe after step *)
-          let i = relative_step_function ~init:13 [ 1, 14 ] in
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let i = relative_step_function clock ~init:13 [ 1, 14 ] in
           stabilize_ [%here];
-          advance_clock_by (sec 1.5);
+          Clock.advance_clock_by clock (sec 1.5);
           stabilize_ [%here];
           let o = observe i in
           stabilize_ [%here];
@@ -2497,7 +2564,8 @@ struct
 
         let%expect_test _ =
           (* advancing exactly to steps doesn't skip steps *)
-          let base = now () in
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let base = Clock.now clock in
           let curr = ref base in
           let steps = ref [] in
           for i = 1 to 20 do
@@ -2505,9 +2573,9 @@ struct
             steps := (!curr, i) :: !steps
           done;
           let steps = List.rev !steps in
-          let o = observe (step_function ~init:0 steps) in
+          let o = observe (Clock.step_function clock ~init:0 steps) in
           List.iter steps ~f:(fun (to_, _) ->
-            advance_clock ~to_;
+            Clock.advance_clock clock ~to_;
             stabilize_ [%here];
             print_s [%sexp (value o : int)]);
           [%expect
@@ -2537,16 +2605,17 @@ struct
 
         let%test_unit _ =
           (* Equivalence between [step_function] and reimplementation with [at] *)
+          let clock = Clock.create ~start:Time_ns.epoch () in
           let my_step_function ~init steps =
             let xs =
               Array.map (Array.of_list steps) ~f:(fun (time, x) ->
-                map (at time) ~f:(function
+                map (Clock.at clock time) ~f:(function
                   | Before -> None
                   | After -> Some x))
             in
             array_fold xs ~init ~f:(fun acc x -> Option.value x ~default:acc)
           in
-          let base = now () in
+          let base = Clock.now clock in
           let steps =
             List.map
               ~f:(fun (d, v) -> Time_ns.add base (sec d), v)
@@ -2563,11 +2632,11 @@ struct
               ; 6.0, 7
               ]
           in
-          let o1 = observe (step_function ~init:0 steps) in
+          let o1 = observe (Clock.step_function clock ~init:0 steps) in
           let o2 = observe (my_step_function ~init:0 steps) in
           stabilize_ [%here];
           for i = 1 to 7 do
-            advance_clock ~to_:(Time_ns.add base (sec (Float.of_int i)));
+            Clock.advance_clock clock ~to_:(Time_ns.add base (sec (Float.of_int i)));
             stabilize_ [%here];
             [%test_eq: int] (value o1) (value o2)
           done;
@@ -2577,10 +2646,13 @@ struct
 
         let%test_unit _ =
           (* Advancing to a scheduled time shouldn't break things. *)
-          let fut = Time_ns.add (now ()) (sec 1.0) in
-          let o1 = observe (at fut) in
-          let o2 = observe (ok_exn (snapshot (const 1) ~at:fut ~before:0)) in
-          advance_clock ~to_:fut;
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let fut = Time_ns.add (Clock.now clock) (sec 1.0) in
+          let o1 = observe (Clock.at clock fut) in
+          let o2 =
+            observe (ok_exn (Clock.snapshot clock (const 1) ~at:fut ~before:0))
+          in
+          Clock.advance_clock clock ~to_:fut;
           stabilize_ [%here];
           disallow_future_use o1;
           disallow_future_use o2
@@ -2588,13 +2660,14 @@ struct
 
         let%test_unit _ =
           (* alarms get cleaned up for invalidated time-based incrementals *)
+          let clock = Clock.create ~start:Time_ns.epoch () in
           List.iter
-            [ (fun () -> after (sec 1.) >>| fun _ -> ())
-            ; (fun () -> at_intervals (sec 1.))
-            ; (fun () -> relative_step_function ~init:() [ 1, () ])
+            [ (fun () -> Clock.after clock (sec 1.) >>| fun _ -> ())
+            ; (fun () -> Clock.at_intervals clock (sec 1.))
+            ; (fun () -> relative_step_function clock ~init:() [ 1, () ])
             ]
             ~f:(fun create_time_based_incremental ->
-              let num_alarms = timing_wheel_length () in
+              let num_alarms = Clock.timing_wheel_length clock in
               let x = Var.create_ [%here] 0 in
               let o =
                 observe
@@ -2609,12 +2682,15 @@ struct
                 then
                   [%test_result: int]
                     ~expect:(num_alarms + 1)
-                    (timing_wheel_length ())
+                    (Clock.timing_wheel_length clock)
               done;
               Var.set x (-1);
               stabilize_ [%here];
               if check_invalidity
-              then [%test_result: int] ~expect:num_alarms (timing_wheel_length ());
+              then
+                [%test_result: int]
+                  ~expect:num_alarms
+                  (Clock.timing_wheel_length clock);
               disallow_future_use o)
         ;;
 
@@ -3427,12 +3503,13 @@ struct
 
         let%test_unit _ =
           (* calling [advance_clock] in an on-update handler *)
-          let i = after (sec 1.) in
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let i = Clock.after clock (sec 1.) in
           let o = observe i in
           let num_fires = ref 0 in
           on_update i ~f:(fun _ ->
             incr num_fires;
-            advance_clock_by (sec 2.));
+            Clock.advance_clock_by clock (sec 2.));
           assert (!num_fires = 0);
           stabilize_ [%here];
           assert (!num_fires = 1);
@@ -4344,9 +4421,12 @@ struct
         (* snapshot cycle *)
         let module I = Make () in
         let open I in
+        let clock = Clock.create ~start:Time_ns.epoch () in
         let x = Var.create (const 14) in
-        let s = ok_exn (snapshot (join (watch x)) ~at:(now ()) ~before:13) in
-        advance_clock_by (sec 1.);
+        let s =
+          ok_exn (Clock.snapshot clock (join (watch x)) ~at:(Clock.now clock) ~before:13)
+        in
+        Clock.advance_clock_by clock (sec 1.);
         Var.set x s;
         assert (does_raise stabilize)
       ;;
@@ -4355,10 +4435,16 @@ struct
         (* snapshot cycle in the future *)
         let module I = Make () in
         let open I in
+        let clock = Clock.create ~start:Time_ns.epoch () in
         let r = ref None in
         let value_at = bind (const ()) ~f:(fun () -> Option.value_exn !r) in
         let s =
-          ok_exn (snapshot value_at ~at:(Time_ns.add (now ()) (sec 1.)) ~before:13)
+          ok_exn
+            (Clock.snapshot
+               clock
+               value_at
+               ~at:(Time_ns.add (Clock.now clock) (sec 1.))
+               ~before:13)
         in
         r := Some s;
         let o1 = observe value_at in
@@ -4366,7 +4452,9 @@ struct
         stabilize_ [%here];
         (* [advance_clock] should raise because the snapshot's [value_at] depends on
            the snapshot itself. *)
-        assert (does_raise (fun () -> advance_clock ~to_:(Time_ns.add (now ()) (sec 2.))));
+        assert (
+          does_raise (fun () ->
+            Clock.advance_clock clock ~to_:(Time_ns.add (Clock.now clock) (sec 2.))));
         Gc.keep_alive (o1, o2)
       ;;
 
@@ -4513,7 +4601,9 @@ struct
         (* Here, we advance to a time that has the bad property mentioned above.  A
            previously buggy implementation of Incremental raised at this point because
            it tried to add the next alarm for the [at_intervals] in the past. *)
-        advance_clock ~to_:(Time_ns.of_string "2014-01-09 09:35:05.040000-05:00");
+        Clock.advance_clock
+          clock
+          ~to_:(Time_ns.of_string "2014-01-09 09:35:05.040000-05:00");
         stabilize ();
         Observer.disallow_future_use o
       ;;

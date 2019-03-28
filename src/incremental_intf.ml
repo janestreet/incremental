@@ -1240,6 +1240,9 @@ module type S = sig
         cycle in the incremental graph. *)
     val advance_clock : t -> to_:Time_ns.t -> unit
 
+    (** [advance_clock_by t span = advance_clock t ~to_:(Time_ns.add (now t) span)] *)
+    val advance_clock_by : t -> Time_ns.Span.t -> unit
+
     (** [at time] returns an incremental that is [Before] when [now () <= time] and
         [After] when [now () >= time + alarm_precision].  When [now ()] is between [time]
         and [time + alarm_precision], [at time] might be [Before] or [After], due to the
