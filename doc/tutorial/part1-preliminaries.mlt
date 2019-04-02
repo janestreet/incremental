@@ -36,7 +36,7 @@ Incremental operates a lot like a build system: it lets you organize
 your computation as a graph with explicit dependencies, and it caches
 previous computations in the nodes of the graph. That way, when one of
 the inputs to your computation is updated, only the part of the graph
-that depends on that input needs to be re-evalauted.
+that depends on that input needs to be re-evaluated.
 
 There are three basic parts to an incremental graph: /variables/,
 which constitute the inputs to the computation, /incrementals/ which
