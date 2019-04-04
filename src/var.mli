@@ -1,7 +1,6 @@
 (** A module internal to Incremental.  Users should see {!Incremental_intf}.
 
-    A [Var.t] is a leaf in the incremental DAG.
-*)
+    A [Var.t] is a leaf in the incremental DAG. *)
 
 open! Core_kernel
 open! Import

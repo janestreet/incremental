@@ -79,7 +79,6 @@ let full_compute { init; f; children; _ } =
 ;;
 
 let compute t =
-  if verbose then Debug.ams [%here] "Unordered_array_fold.compute" t [%sexp_of: (_, _) t];
   if t.num_changes_since_last_full_compute = t.full_compute_every_n_changes
   then (
     t.num_changes_since_last_full_compute <- 0;

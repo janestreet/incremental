@@ -51,82 +51,72 @@ end
 
 type t =
   { mutable status : status
-  ; bind_lhs_change_should_invalidate_rhs :
-      bool
-  (* [stabilization_num] starts at zero, and is incremented at the end of each
-     stabilization. *)
-  ; mutable stabilization_num : Stabilization_num.t
+  ; bind_lhs_change_should_invalidate_rhs : bool
+  ; (* [stabilization_num] starts at zero, and is incremented at the end of each
+       stabilization. *)
+    mutable stabilization_num : Stabilization_num.t
   ; mutable current_scope : Scope.t
   ; recompute_heap : Recompute_heap.t
-  ; adjust_heights_heap :
-      Adjust_heights_heap.t
-  (* [propagate_invalidity] holds nodes that have invalid children that should be
-     considered for invalidation.  It is only used during graph restructuring:
-     [invalidate_node] and [add_parent].  Once an element is added to the stack, we then
-     iterate until invalidity has propagated to all ancestors as necessary, according to
-     [Node.should_be_invalidated]. *)
-  ; propagate_invalidity :
-      Node.Packed.t Stack.t
-  (* [num_active_observers] is the number of observers whose state is [Created] or
-     [In_use]. *)
-  ; mutable num_active_observers :
-      int
-  (* [all_observers] is the doubly-linked list of all observers in effect, or that have
-     been disallowed since the most recent start of a stabilization -- these have [state]
-     as [In_use] or [Disallowed]. *)
-  ; mutable all_observers :
-      Internal_observer.Packed.t Uopt.t
-  (* We enqueue finalized observers in a thread-safe queue, for handling during
-     stabilization.  We use a thread-safe queue because OCaml finalizers can run in any
-     thread. *)
-  ; finalized_observers :
-      Internal_observer.Packed.t Thread_safe_queue.t
-  (* [new_observers] holds observers created since the most recent start of a
-     stabilization -- these have [state] as [Created] or [Unlinked].  At the start of
-     stabilization, we link into [all_observers] all observers in [new_observers] whose
-     state is [Created] and add them to the [observers] of the node they are observing.
-     We structure things this way to allow observers to be created during stabilization
-     while running user code ([map], [bind], etc), but to not have to deal with nodes
-     becoming necessary and the the graph changing during such code. *)
-  ; new_observers :
-      Internal_observer.Packed.t Stack.t
-  (* [disallowed_observers] holds all observers that have been disallowed since the most
-     recent start of a stabilization -- these have [state = Disallowed].  At the start of
-     stabilization, these are unlinked from [all_observers] and their state is changed to
-     [Unlinked].  We structure things this way to allow user code running during
-     stabilization to call [disallow_future_use], but to not have to deal with nodes
-     becoming unnecessary and the graph changing during such code. *)
-  ; disallowed_observers :
-      Internal_observer.Packed.t Stack.t
-  (* We delay all [Var.set] calls that happen during stabilization so that they take
-     effect after stabilization.  All variables set during stabilization are pushed on
-     [set_during_stabilization] rather than setting them.  Then, after the graph has
-     stabilized, we do all the sets, so that they take effect at the start of the next
-     stabilization. *)
-  ; set_during_stabilization :
-      Var.Packed.t Stack.t
-  (* [handle_after_stabilization] has all nodes with handlers to consider running at the
-     end of the next stabilization.  At the end of stabilization, we consider each node in
-     [handle_after_stabilization], and if we decide to run its on-update handlers, push it
-     on [run_on_update_handlers].  Then, once we've considered all nodes in
-     [handle_after_stabilization], we iterate through [run_on_update_handlers] and
-     actually run the handlers.
+  ; adjust_heights_heap : Adjust_heights_heap.t
+  ; (* [propagate_invalidity] holds nodes that have invalid children that should be
+       considered for invalidation.  It is only used during graph restructuring:
+       [invalidate_node] and [add_parent].  Once an element is added to the stack, we then
+       iterate until invalidity has propagated to all ancestors as necessary, according to
+       [Node.should_be_invalidated]. *)
+    propagate_invalidity : Node.Packed.t Stack.t
+  ; (* [num_active_observers] is the number of observers whose state is [Created] or
+       [In_use]. *)
+    mutable num_active_observers : int
+  ; (* [all_observers] is the doubly-linked list of all observers in effect, or that have
+       been disallowed since the most recent start of a stabilization -- these have
+       [state] as [In_use] or [Disallowed]. *)
+    mutable all_observers : Internal_observer.Packed.t Uopt.t
+  ; (* We enqueue finalized observers in a thread-safe queue, for handling during
+       stabilization.  We use a thread-safe queue because OCaml finalizers can run in any
+       thread. *)
+    finalized_observers : Internal_observer.Packed.t Thread_safe_queue.t
+  ; (* [new_observers] holds observers created since the most recent start of a
+       stabilization -- these have [state] as [Created] or [Unlinked].  At the start of
+       stabilization, we link into [all_observers] all observers in [new_observers] whose
+       state is [Created] and add them to the [observers] of the node they are observing.
+       We structure things this way to allow observers to be created during stabilization
+       while running user code ([map], [bind], etc), but to not have to deal with nodes
+       becoming necessary and the the graph changing during such code. *)
+    new_observers : Internal_observer.Packed.t Stack.t
+  ; (* [disallowed_observers] holds all observers that have been disallowed since the most
+       recent start of a stabilization -- these have [state = Disallowed].  At the start
+       of stabilization, these are unlinked from [all_observers] and their state is
+       changed to [Unlinked].  We structure things this way to allow user code running
+       during stabilization to call [disallow_future_use], but to not have to deal with
+       nodes becoming unnecessary and the graph changing during such code. *)
+    disallowed_observers : Internal_observer.Packed.t Stack.t
+  ; (* We delay all [Var.set] calls that happen during stabilization so that they take
+       effect after stabilization.  All variables set during stabilization are pushed on
+       [set_during_stabilization] rather than setting them.  Then, after the graph has
+       stabilized, we do all the sets, so that they take effect at the start of the next
+       stabilization. *)
+    set_during_stabilization : Var.Packed.t Stack.t
+  ; (* [handle_after_stabilization] has all nodes with handlers to consider running at the
+       end of the next stabilization.  At the end of stabilization, we consider each node
+       in [handle_after_stabilization], and if we decide to run its on-update handlers,
+       push it on [run_on_update_handlers].  Then, once we've considered all nodes in
+       [handle_after_stabilization], we iterate through [run_on_update_handlers] and
+       actually run the handlers.
 
-     These two passes are essential for correctness.  During the first pass, we haven't
-     run any user handlers, so we know that the state is exactly as it was when
-     stabilization finished.  In particular, we know that if a node is necessary, then it
-     has a stable value; once user handlers run, we don't know this.  During the second
-     pass, user handlers can make calls to any incremental function except for
-     [stabilize].  In particular, some functions push nodes on
-     [handle_after_stabilization].  But no functions (except for [stabilize]) modify
-     [run_on_update_handlers]. *)
-  ; handle_after_stabilization : Node.Packed.t Stack.t
+       These two passes are essential for correctness.  During the first pass, we haven't
+       run any user handlers, so we know that the state is exactly as it was when
+       stabilization finished.  In particular, we know that if a node is necessary, then
+       it has a stable value; once user handlers run, we don't know this.  During the
+       second pass, user handlers can make calls to any incremental function except for
+       [stabilize].  In particular, some functions push nodes on
+       [handle_after_stabilization].  But no functions (except for [stabilize]) modify
+       [run_on_update_handlers]. *)
+    handle_after_stabilization : Node.Packed.t Stack.t
   ; run_on_update_handlers : Run_on_update_handlers.t Stack.t
   ; mutable only_in_debug : Only_in_debug.t
-  ; weak_hashtbls :
-      Packed_weak_hashtbl.t Thread_safe_queue.t
-  (* Stats.  These are all incremented at the appropriate place, and never decremented. *)
-  ; mutable num_nodes_became_necessary : int
+  ; weak_hashtbls : Packed_weak_hashtbl.t Thread_safe_queue.t
+  ; (* Stats.  These are all incremented at the appropriate place, and never decremented. *)
+    mutable num_nodes_became_necessary : int
   ; mutable num_nodes_became_unnecessary : int
   ; mutable num_nodes_changed : int
   ; mutable num_nodes_created : int
@@ -175,9 +165,7 @@ let max_height_allowed t = Adjust_heights_heap.max_height_allowed t.adjust_heigh
 let max_height_seen t = Adjust_heights_heap.max_height_seen t.adjust_heights_heap
 
 let alarm_would_have_fired (clock : Clock.t) ~at =
-  Timing_wheel.Interval_num.( > )
-    (Timing_wheel.now_interval_num clock.timing_wheel)
-    (Timing_wheel.interval_num clock.timing_wheel at)
+  Time_ns.( <= ) at (Timing_wheel.now clock.timing_wheel)
 ;;
 
 let iter_observers t ~f =
@@ -369,8 +357,6 @@ let set_max_height_allowed t height =
 
 let handle_after_stabilization : type a. t -> a Node.t -> unit =
   fun t node ->
-    if verbose
-    then Debug.ams [%here] "handle_after_stabilization" node [%sexp_of: _ Node.t];
     if not node.is_in_handle_after_stabilization
     then (
       node.is_in_handle_after_stabilization <- true;
@@ -389,9 +375,7 @@ and remove_child : type a b.
     check_if_unnecessary t child
 
 and check_if_unnecessary : type a. t -> a Node.t -> unit =
-  fun t node ->
-    if verbose then Debug.ams [%here] "check_if_unnecessary" node [%sexp_of: _ Node.t];
-    if not (Node.is_necessary node) then became_unnecessary t node
+  fun t node -> if not (Node.is_necessary node) then became_unnecessary t node
 
 and became_unnecessary : type a. t -> a Node.t -> unit =
   fun t node ->
@@ -439,7 +423,6 @@ let remove_alarm (clock : Clock.t) alarm =
 
 let rec invalidate_node : type a. t -> a Node.t -> unit =
   fun t node ->
-    if verbose then Debug.ams [%here] "invalidate_node" node [%sexp_of: _ Node.t];
     if Node.is_valid node
     then (
       if node.num_on_update_handlers > 0 then handle_after_stabilization t node;
@@ -509,11 +492,8 @@ let rescope_nodes_created_on_rhs _t (first_node_on_rhs : Node.Packed.t Uopt.t) ~
 ;;
 
 let propagate_invalidity t =
-  if verbose then Debug.ams [%here] "propagate_invalidity" t [%sexp_of: t];
   while not (Stack.is_empty t.propagate_invalidity) do
     let (T node) = Stack.pop_exn t.propagate_invalidity in
-    if verbose
-    then Debug.ams [%here] "propagate_invalidity for node" node [%sexp_of: _ Node.t];
     if Node.is_valid node
     then
       if Node.should_be_invalidated node
@@ -561,13 +541,6 @@ let propagate_invalidity t =
 let rec add_parent_without_adjusting_heights : type a b.
   t -> child:a Node.t -> parent:b Node.t -> child_index:int -> unit =
   fun t ~child ~parent ~child_index ->
-    if verbose
-    then
-      Debug.ams
-        [%here]
-        "add_parent_without_adjusting_heights"
-        (`child child, `parent parent)
-        [%sexp_of: [`child of _ Node.t] * [`parent of _ Node.t]];
     if debug then assert (Node.is_necessary parent);
     let was_necessary = Node.is_necessary child in
     Node.add_parent ~child ~parent ~child_index;
@@ -579,7 +552,6 @@ let rec add_parent_without_adjusting_heights : type a b.
 
 and became_necessary : type a. t -> a Node.t -> unit =
   fun t node ->
-    if verbose then Debug.ams [%here] "became_necessary" node [%sexp_of: _ Node.t];
     (* [Scope.is_necessary node.created_in] is true (assuming the scope itself is valid)
        because [Node.iter_children] below first visits the lhs-change of bind nodes and
        then the rhs. *)
@@ -595,8 +567,7 @@ and became_necessary : type a. t -> a Node.t -> unit =
 
        - add parent pointers to [node] from its children.
        - set [node]'s height.
-       - add [node] to the recompute heap, if necessary.
-    *)
+       - add [node] to the recompute heap, if necessary. *)
     set_height t node (Scope.height node.created_in + 1);
     Node.iteri_children node ~f:(fun child_index (T child) ->
       add_parent_without_adjusting_heights t ~child ~parent:node ~child_index;
@@ -646,7 +617,6 @@ let add_parent t ~child ~parent ~child_index =
 ;;
 
 let run_with_scope t scope ~f =
-  if verbose then Debug.ams [%here] "run_with_scope" t [%sexp_of: t];
   let saved = t.current_scope in
   t.current_scope <- scope;
   try
@@ -695,7 +665,6 @@ let change_child : type a b.
 
 let rec recompute : type a. t -> a Node.t -> unit =
   fun t (node : a Node.t) ->
-    if verbose then Debug.ams [%here] "recompute" node [%sexp_of: _ Node.t];
     if debug
     then (
       (t.only_in_debug).currently_running_node <- Some (T node);
@@ -904,7 +873,6 @@ and maybe_change_value : type a. t -> a Node.t -> a -> unit =
             ~old_value:(Uopt.unsafe_value old_value_opt)
             ~new_value)
     then (
-      if verbose then Debug.ams [%here] "node changed" node [%sexp_of: _ Node.t];
       node.value_opt <- Uopt.some new_value;
       node.changed_at <- t.stabilization_num;
       t.num_nodes_changed <- t.num_nodes_changed + 1;
@@ -997,8 +965,7 @@ and maybe_change_value : type a. t -> a Node.t -> a -> unit =
 
                {[
                  node.height > Scope.height parent.created_in
-               ]}
-            *)
+               ]} *)
             | Bind_main b -> node.height > b.lhs_change.height
             | If_then_else i -> node.height > i.test_change.height
             | Join_main j -> node.height > j.lhs_change.height
@@ -1008,12 +975,12 @@ and maybe_change_value : type a. t -> a Node.t -> a -> unit =
             t.num_nodes_recomputed_directly_because_one_child
             <- t.num_nodes_recomputed_directly_because_one_child + 1;
             recompute t parent)
-          else if (* If [parent.height] is [<=] the height of all nodes in the recompute heap
-                     (possibly because the recompute heap is empty), then we can recompute
-                     [parent] immediately and save adding it to and then removing it from the
-                     recompute heap. *)
-            parent.height <= Recompute_heap.min_height t.recompute_heap
+          else if parent.height <= Recompute_heap.min_height t.recompute_heap
           then (
+            (* If [parent.height] is [<=] the height of all nodes in the recompute heap
+               (possibly because the recompute heap is empty), then we can recompute
+               [parent] immediately and save adding it to and then removing it from the
+               recompute heap. *)
             t.num_nodes_recomputed_directly_because_min_height
             <- t.num_nodes_recomputed_directly_because_min_height + 1;
             recompute t parent)
@@ -1064,13 +1031,6 @@ let unlink_disallowed_observers t =
 ;;
 
 let disallow_future_use t (internal_observer : _ Internal_observer.t) =
-  if verbose
-  then
-    Debug.ams
-      [%here]
-      "disallow_future_use"
-      internal_observer
-      [%sexp_of: _ Internal_observer.t];
   match internal_observer.state with
   | Disallowed | Unlinked -> ()
   | Created ->
@@ -1096,18 +1056,10 @@ let disallow_finalized_observers t =
 let observer_finalizer t =
   stage (fun observer ->
     let internal_observer = !observer in
-    if verbose
-    then
-      Debug.ams
-        [%here]
-        "enqueueing finalizer"
-        internal_observer
-        [%sexp_of: _ Internal_observer.t];
     Thread_safe_queue.enqueue t.finalized_observers (T internal_observer))
 ;;
 
 let create_observer ?(should_finalize = true) t observing =
-  if verbose then Debug.ams [%here] "create_observer" observing [%sexp_of: _ Node.t];
   let internal_observer : _ Internal_observer.t =
     { state = Created
     ; observing
@@ -1194,8 +1146,6 @@ let observer_on_update_exn (type a) t (observer : a Observer.t) ~f =
 ;;
 
 let set_var_while_not_stabilizing t (var : _ Var.t) value =
-  if verbose
-  then Debug.ams [%here] "set_var_while_not_stabilizing" var [%sexp_of: _ Var.t];
   t.num_var_sets <- t.num_var_sets + 1;
   var.value <- value;
   if Stabilization_num.compare var.set_at t.stabilization_num < 0
@@ -1232,7 +1182,6 @@ let reclaim_space_in_weak_hashtbls t =
 ;;
 
 let stabilize t =
-  if verbose then Debug.ams [%here] "stabilize" t [%sexp_of: t];
   ensure_not_stabilizing t ~name:"stabilize" ~allow_in_update_handler:false;
   try
     t.status <- Stabilizing;
@@ -1241,8 +1190,6 @@ let stabilize t =
        potentially avoid switching the observability of some nodes back and forth. *)
     add_new_observers t;
     unlink_disallowed_observers t;
-    if verbose
-    then Debug.ams [%here] "making valid everything that is necessary" t [%sexp_of: t];
     if debug then invariant t;
     recompute_everything_that_is_necessary t;
     (* We increment [t.stabilization_num] before handling variables set during
@@ -1250,15 +1197,12 @@ let stabilize t =
        Also, we increment before running on-update handlers, to avoid running on update
        handlers created during on update handlers. *)
     t.stabilization_num <- Stabilization_num.add1 t.stabilization_num;
-    if verbose then Debug.ams [%here] "handling set_during_stabilization" t [%sexp_of: t];
     while not (Stack.is_empty t.set_during_stabilization) do
       let (T var) = Stack.pop_exn t.set_during_stabilization in
       let value = Uopt.value_exn var.value_set_during_stabilization in
       var.value_set_during_stabilization <- Uopt.none;
       set_var_while_not_stabilizing t var value
     done;
-    if verbose
-    then Debug.ams [%here] "handling nodes after stabilization" t [%sexp_of: t];
     while not (Stack.is_empty t.handle_after_stabilization) do
       let (T node) = Stack.pop_exn t.handle_after_stabilization in
       node.is_in_handle_after_stabilization <- false;
@@ -1286,12 +1230,10 @@ let stabilize t =
       Node.run_on_update_handlers node node_update ~now
     done;
     t.status <- Not_stabilizing;
-    reclaim_space_in_weak_hashtbls t;
-    if verbose then Debug.ams [%here] "stabilize done" t [%sexp_of: t]
+    reclaim_space_in_weak_hashtbls t
   with
   | exn ->
     t.status <- Stabilize_previously_raised (Raised_exn.create exn);
-    if verbose then Debug.ams [%here] "stabilize done" t [%sexp_of: t];
     raise exn
 ;;
 
@@ -1366,7 +1308,6 @@ let necessary_if_alive t input =
 ;;
 
 let bind t lhs ~f =
-  if verbose then Debug.ams [%here] "bind" lhs [%sexp_of: _ Node.t];
   let lhs_change = create_node t Uninitialized in
   let main = create_node t Uninitialized in
   let bind =
@@ -1476,7 +1417,6 @@ let memoize_fun_by_key
 ;;
 
 let array_fold t children ~init ~f =
-  if verbose then Debug.ams [%here] "array_fold" children [%sexp_of: _ Node.t array];
   if Array.length children = 0
   then const t init
   else create_node t (Array_fold { init; f; children })
@@ -1492,8 +1432,6 @@ let unordered_array_fold
       ~f
       ~f_inverse
   =
-  if verbose
-  then Debug.ams [%here] "unordered_array_fold" children [%sexp_of: _ Node.t array];
   if Array.length children = 0
   then const t init
   else if full_compute_every_n_changes <= 0
@@ -1589,13 +1527,6 @@ let sum_float t nodes =
 ;;
 
 let set_freeze t (node : _ Node.t) ~child ~only_freeze_when =
-  if verbose
-  then
-    Debug.ams
-      [%here]
-      "set_freeze"
-      (node, `child child)
-      [%sexp_of: _ Node.t * [`child of _ Node.t]];
   if debug then assert (Scope.is_top node.created_in);
   (* By making [node.kind] be [Freeze], we are making [Node.is_necessary node]. *)
   let was_necessary = Node.is_necessary node in
@@ -1629,19 +1560,10 @@ let at t clock time =
 
 let after t clock span = at t clock (Time_ns.add (now clock) span)
 
-(* Alarms for [at_interval] are scheduled at the earliest time of the form [time = base +
-   k * interval] such that an alarm at [time] would have not yet gone off. *)
-let next_interval_alarm (clock : Clock.t) ~base ~interval =
-  let after =
-    Timing_wheel.interval_num_start
-      clock.timing_wheel
-      (Timing_wheel.now_interval_num clock.timing_wheel)
+let next_interval_alarm_strict (clock : Clock.t) ~base ~interval =
+  let at =
+    Time_ns.next_multiple ~base ~after:(now clock) ~interval ~can_equal_after:false ()
   in
-  (* Due to floating-point imprecision, we could have [after < now t], which would allow
-     [at < now t], which would cause us to return an [at] whose alarm would already have
-     fired.  So, we force [after >= now t]. *)
-  let after = Time_ns.max after (now clock) in
-  let at = Time_ns.next_multiple ~base ~after ~interval ~can_equal_after:true () in
   if debug then assert (not (alarm_would_have_fired clock ~at));
   at
 ;;
@@ -1660,14 +1582,17 @@ let at_intervals t (clock : Clock.t) interval =
   at_intervals.alarm
   <- add_alarm
        clock
-       ~at:(next_interval_alarm clock ~base ~interval)
+       ~at:(next_interval_alarm_strict clock ~base ~interval)
        (Alarm_value.create (At_intervals at_intervals));
   main
 ;;
 
 let snapshot t clock value_at ~at ~before =
-  if Time_ns.( < ) at (now clock)
-  then Or_error.error "cannot take snapshot in the past" at [%sexp_of: Time_ns.t]
+  if alarm_would_have_fired clock ~at
+  then
+    if Time_ns.( < ) at (now clock)
+    then Or_error.error "cannot take snapshot in the past" at [%sexp_of: Time_ns.t]
+    else Ok (freeze t value_at ~only_freeze_when:(Fn.const true))
   else (
     let main = create_node_top t Uninitialized in
     let snapshot = { Snapshot.main; at; before; value_at; clock } in
@@ -1708,47 +1633,50 @@ let step_function t clock ~init steps =
 ;;
 
 let change_leaf t (node : _ Node.t) =
-  if verbose then Debug.ams [%here] "change_leaf" node [%sexp_of: _ Node.t];
   node.recomputed_at <- Stabilization_num.none;
   (* force the node to be stale *)
   if Node.needs_to_be_computed node && not (Node.is_in_recompute_heap node)
   then Recompute_heap.add t.recompute_heap node
 ;;
 
-let advance_clock t (clock : Clock.t) ~to_ =
-  if verbose then Debug.ams [%here] "advance_clock" to_ [%sexp_of: Time_ns.t];
+let advance_clock ?(deprecated_allow_backwards = false) t (clock : Clock.t) ~to_ =
   ensure_not_stabilizing t ~name:"advance_clock" ~allow_in_update_handler:true;
   if debug then invariant t;
-  set_var_while_not_stabilizing t clock.now to_;
-  Timing_wheel.advance_clock clock.timing_wheel ~to_ ~handle_fired:clock.handle_fired;
-  while Uopt.is_some clock.fired_alarm_values do
-    let alarm_value = Uopt.unsafe_value clock.fired_alarm_values in
-    clock.fired_alarm_values <- alarm_value.next_fired;
-    alarm_value.next_fired <- Uopt.none;
-    if verbose then Debug.ams [%here] "fire" alarm_value [%sexp_of: Alarm_value.t];
-    match alarm_value.action with
-    | At { main; _ } ->
-      if Node.is_valid main
-      then (
-        Node.set_kind main (Const After);
-        change_leaf t main)
-    | At_intervals ({ main; base; interval; _ } as at_intervals) ->
-      if Node.is_valid main
-      then (
-        at_intervals.alarm
-        <- add_alarm clock ~at:(next_interval_alarm clock ~base ~interval) alarm_value;
-        change_leaf t main)
-    | Types.Alarm_value.Action.Snapshot { main; value_at; _ } ->
-      if debug then assert (Node.is_valid main);
-      set_freeze t main ~child:value_at ~only_freeze_when:(fun _ -> true);
-      change_leaf t main
-    | Types.Alarm_value.Action.Step_function ({ main; _ } as step_function) ->
-      if Node.is_valid main
-      then (
-        advance_step_function clock main step_function alarm_value;
-        change_leaf t main)
-  done;
-  if debug then invariant t
+  if Time_ns.( > ) to_ (now clock) || deprecated_allow_backwards
+  then (
+    set_var_while_not_stabilizing t clock.now to_;
+    Timing_wheel.advance_clock clock.timing_wheel ~to_ ~handle_fired:clock.handle_fired;
+    Timing_wheel.fire_past_alarms clock.timing_wheel ~handle_fired:clock.handle_fired;
+    while Uopt.is_some clock.fired_alarm_values do
+      let alarm_value = Uopt.unsafe_value clock.fired_alarm_values in
+      clock.fired_alarm_values <- alarm_value.next_fired;
+      alarm_value.next_fired <- Uopt.none;
+      match alarm_value.action with
+      | At { main; _ } ->
+        if Node.is_valid main
+        then (
+          Node.set_kind main (Const After);
+          change_leaf t main)
+      | At_intervals ({ main; base; interval; _ } as at_intervals) ->
+        if Node.is_valid main
+        then (
+          at_intervals.alarm
+          <- add_alarm
+               clock
+               ~at:(next_interval_alarm_strict clock ~base ~interval)
+               alarm_value;
+          change_leaf t main)
+      | Snapshot { main; value_at; _ } ->
+        if debug then assert (Node.is_valid main);
+        set_freeze t main ~child:value_at ~only_freeze_when:(fun _ -> true);
+        change_leaf t main
+      | Step_function ({ main; _ } as step_function) ->
+        if Node.is_valid main
+        then (
+          advance_step_function clock main step_function alarm_value;
+          change_leaf t main)
+    done;
+    if debug then invariant t)
 ;;
 
 let now_dummy =
@@ -1769,8 +1697,6 @@ let create_clock t ~timing_wheel_config ~start =
     }
   and handle_fired alarm =
     let alarm_value = Timing_wheel.Alarm.value clock.timing_wheel alarm in
-    if verbose
-    then Debug.ams [%here] "handle_fired" alarm_value [%sexp_of: Alarm_value.t];
     alarm_value.next_fired <- clock.fired_alarm_values;
     clock.fired_alarm_values <- Uopt.some alarm_value
   in

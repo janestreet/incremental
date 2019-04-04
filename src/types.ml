@@ -250,9 +250,9 @@ and Node : sig
     ; mutable cutoff : 'a Cutoff.t
     ; mutable changed_at : Stabilization_num.t
     ; mutable num_on_update_handlers : int
-    ; mutable num_parents :
-        int
-    ; mutable parent1_and_beyond : Node.Packed.t Uopt.t array
+    ; mutable num_parents : int
+    ;
+      mutable parent1_and_beyond : Node.Packed.t Uopt.t array
     ; mutable parent0 : Node.Packed.t Uopt.t
     ; mutable created_in : Scope.t
     ; mutable next_node_in_same_scope : Node.Packed.t Uopt.t

@@ -18,11 +18,10 @@ module Action = struct
 end
 
 type t = Types.Alarm_value.t =
-  { action :
-      Action.t
-  (* [next_fired] singly links all alarm values that fire during a single call to
-     [advance_clock]. *)
-  ; mutable next_fired : (t Uopt.t[@sexp.opaque])
+  { action : Action.t
+  ; (* [next_fired] singly links all alarm values that fire during a single call to
+       [advance_clock]. *)
+    mutable next_fired : (t Uopt.t[@sexp.opaque])
   }
 [@@deriving fields, sexp_of]
 

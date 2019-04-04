@@ -1,7 +1,6 @@
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
-    A [Reduce_balanced.t] is a kind of DAG node. ['a] is the type of value being folded.
-*)
+    A [Reduce_balanced.t] is a kind of DAG node. ['a] is the type of value being folded. *)
 
 open! Core_kernel
 open! Import

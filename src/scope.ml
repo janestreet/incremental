@@ -35,7 +35,6 @@ let is_necessary = function
 
 let add_node t (node : _ Node.t) =
   assert (phys_equal node.created_in t);
-  if verbose then Debug.ams [%here] "Scope.add_node" (node, t) [%sexp_of: _ Node.t * t];
   match t with
   | Top -> ()
   | Bind bind ->

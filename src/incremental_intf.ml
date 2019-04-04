@@ -338,11 +338,11 @@
 
     {1 Debugging}
 
-    For performance reasons, [Incremental_lib] is built with debugging asserts disabled.
-    [Incremental_debug] is a library that uses the same code as [Incremental_lib], but has
+    For performance reasons, [Incremental] is built with debugging asserts disabled.
+    [Incremental_debug] is a library that uses the same code as [Incremental], but has
     debugging asserts enabled (via an [IFDEF]).  [Incremental_debug] is significantly
-    slower than [Incremental_lib], but may detect a bug in the Incremental library that
-    would otherwise remain undetected by [Incremental_lib].
+    slower than [Incremental], but may detect a bug in the Incremental library that would
+    otherwise remain undetected by [Incremental].
 
     {1 Reading guide}
 
@@ -1232,37 +1232,37 @@ module type S = sig
     val watch_now : t -> Time_ns.t incremental
 
     (** [advance_clock t ~to_] moves incremental's clock forward to [to_].
-        [advance_clock] raises if [to_ < now t].  As with [Var.set], the effect of
+        [advance_clock] is a no-op if [to_ < now t].  As with [Var.set], the effect of
         [advance_clock] is not seen on incremental values until the next stabilization.
         Unlike [Var.set], calling [advance_clock] during stabilization raises.
 
         In certain pathological cases, [advance_clock] can raise due to it detecting a
         cycle in the incremental graph. *)
-    val advance_clock : t -> to_:Time_ns.t -> unit
+    val advance_clock
+      :  ?deprecated_allow_backwards:bool
+      -> t
+      -> to_:Time_ns.t
+      -> unit
 
     (** [advance_clock_by t span = advance_clock t ~to_:(Time_ns.add (now t) span)] *)
     val advance_clock_by : t -> Time_ns.Span.t -> unit
 
-    (** [at time] returns an incremental that is [Before] when [now () <= time] and
-        [After] when [now () >= time + alarm_precision].  When [now ()] is between [time]
-        and [time + alarm_precision], [at time] might be [Before] or [After], due to the
-        fundamental imprecision of the timing wheel.  One is guaranteed that an [at] never
-        becomes [After] too early, but it may become [After] up to [alarm_precision] late.
-
-        [after span] is [at (Time_ns.add (now ()) span)]. *)
+    (** [at t time] returns an incremental that is [Before] when [now t < time] and
+        [After] when [now t >= time]. *)
     val at : t -> Time_ns.t -> Before_or_after.t incremental
 
+    (** [after t span] is [at t (Time_ns.add (now t) span)]. *)
     val after : t -> Time_ns.Span.t -> Before_or_after.t incremental
 
-    (** [at_intervals interval] returns an incremental whose value changes at time
+    (** [at_intervals t interval] returns an incremental whose value changes at time
         intervals of the form:
 
         {[
           Time_ns.next_multiple ~base ~after ~interval
         ]}
 
-        where [base] is [now ()] when [at_intervals] was called and [after] is the current
-        [now ()].  As with [at], [at_intervals] might fire up to [alarm_precision] late.
+        where [base] is [now t] when [at_intervals] was called and [after] is the current
+        [now t].
 
         [at_intervals] raises if [interval < alarm_precision].  The [unit t] that
         [at_intervals] returns has its cutoff set to [Cutoff.never], so that although its
@@ -1271,10 +1271,9 @@ module type S = sig
         left-hand side of its defining bind changes, at which point it becomes invalid. *)
     val at_intervals : t -> Time_ns.Span.t -> unit incremental
 
-    (** [step_function ~init [(t1, v1); ...; (tn, vn)]] returns an incremental whose
+    (** [step_function t ~init [(t1, v1); ...; (tn, vn)]] returns an incremental whose
         initial value is [init] and takes on the values [v1], ..., [vn] in sequence taking
-        on the value [vi] when the clock's time passes [ti].  As with [at], the steps
-        might take effect up to [alarm_precision] late.
+        on the value [vi] when [now t >= ti].
 
         It is possible for [vi] to be skipped if time advances from [t(i-1)] to some time
         greater than [t(i+1)].
@@ -1283,16 +1282,15 @@ module type S = sig
         [i < j], [ti > tj]. *)
     val step_function : t -> init:'a -> (Time_ns.t * 'a) list -> 'a incremental
 
-    (** [snapshot value_at ~at ~before] returns an incremental whose value is [before]
+    (** [snapshot t value_at ~at ~before] returns an incremental whose value is [before]
         before [at] and whose value is frozen to the value of [value_at] during the first
-        stabilization after which the time passes [at].  [snapshot] causes [value_at] to
-        be necessary during the first stabilization after which time passes [at] even if
-        the [snapshot] node itself is not necessary, but not thereafter (although of
-        course [value_at] could remain necessary for other reaspons).  The result of
-        [snapshot] will only be invalidated if [value_at] is invalid at the moment of the
-        snapshot.
+        stabilization in which the time passes [at].  [snapshot] causes [value_at] to be
+        necessary during that stabilization even if the [snapshot] node itself is not
+        necessary, but not thereafter (although of course [value_at] could remain
+        necessary for other reaspons).  The result of [snapshot] will only be invalidated
+        if [value_at] is invalid at the moment of the snapshot.
 
-        [snapshot] returns [Error] if [at < now ()], because it is impossible to take the
+        [snapshot] returns [Error] if [at < now t], because it is impossible to take the
         snapshot because the time has already passed. *)
     val snapshot
       :  t
@@ -1337,7 +1335,6 @@ module type Incremental = sig
     https://opensource.janestreet.com/standards/#private-submodules *)
   module Private : sig
     val debug : bool
-    val verbose : bool
   end
 end
 

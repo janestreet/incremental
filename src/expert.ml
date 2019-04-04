@@ -4,14 +4,12 @@ module Node = Types.Node
 
 type 'a edge = 'a Types.Expert.edge =
   { child : 'a Node.t
-  ; on_change :
-      'a
-      -> unit
-  (* [index] is defined whenever the [edge] is in the [children] of some [t]. Then it is
-     the index of this [edge] in that [children] array. It might seem redundant with all
-     the other indexes we have, but it is necessary to remove children.  The index may
-     change as sibling children are removed. *)
-  ; mutable index : int Uopt.t
+  ; on_change : 'a -> unit
+  ; (* [index] is defined whenever the [edge] is in the [children] of some [t]. Then it is
+       the index of this [edge] in that [children] array. It might seem redundant with all
+       the other indexes we have, but it is necessary to remove children.  The index may
+       change as sibling children are removed. *)
+    mutable index : int Uopt.t
   }
 [@@deriving sexp_of]
 
@@ -22,25 +20,22 @@ type 'a t = 'a Types.Expert.t =
   { f : unit -> 'a
   ; on_observability_change : is_now_observable:bool -> unit
   ; mutable children : packed_edge Uopt.t Array.t
-  ; mutable num_children :
-      int
-  (* When set, makes the node of [t] stale.  It is set when the set of children changes.
-     Otherwise the normal check of staleness (comparing the [changed_at] field of
-     children and the [recomputed_at] field for the node of [t]) would not be enough.
-     This plays a role similar to the cutoff of [Never] for the lhs-change of binds, but
-     we don't have a special child. *)
-  ; mutable force_stale :
-      bool
-  (* The number of invalid children that point to us.  Used to determine whether the node
-     of [t] needs to invalidated, without iterating over all the children.  This is not
-     needed for other nodes, because there are no other nodes that have a potentially
-     large and dynamic set of children. *)
-  ; mutable num_invalid_children :
-      int
-  (* Whether we will fire the [on_change] callbacks for all children when the node of [t]
-     itself runs.  Used to make sure we rerun everything after [t] switches from
-     unobservable and back to observable. *)
-  ; mutable will_fire_all_callbacks : bool
+  ; mutable num_children : int
+  ; (* When set, makes the node of [t] stale.  It is set when the set of children changes.
+       Otherwise the normal check of staleness (comparing the [changed_at] field of
+       children and the [recomputed_at] field for the node of [t]) would not be enough.
+       This plays a role similar to the cutoff of [Never] for the lhs-change of binds, but
+       we don't have a special child. *)
+    mutable force_stale : bool
+  ; (* The number of invalid children that point to us.  Used to determine whether the node
+       of [t] needs to invalidated, without iterating over all the children.  This is not
+       needed for other nodes, because there are no other nodes that have a potentially
+       large and dynamic set of children. *)
+    mutable num_invalid_children : int
+  ; (* Whether we will fire the [on_change] callbacks for all children when the node of [t]
+       itself runs.  Used to make sure we rerun everything after [t] switches from
+       unobservable and back to observable. *)
+    mutable will_fire_all_callbacks : bool
   }
 [@@deriving sexp_of]
 

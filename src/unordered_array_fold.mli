@@ -1,8 +1,7 @@
 (** A module internal to Incremental.  Users should see {!Incremental_intf}.
 
     An [('a, 'acc) Unordered_array_fold.t] is a kind of DAG node, where ['a] is the type
-    of value being folded and ['acc] is the type of the accumulator.
-*)
+    of value being folded and ['acc] is the type of the accumulator. *)
 
 open! Core_kernel
 open! Import

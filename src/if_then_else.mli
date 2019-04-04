@@ -1,7 +1,6 @@
 (** A module internal to Incremental.  Users should see {!Incremental_intf}.
 
-    An ['a If_then_else.t] is a kind of DAG node.
-*)
+    An ['a If_then_else.t] is a kind of DAG node. *)
 
 open! Core_kernel
 open! Import

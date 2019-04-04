@@ -10,8 +10,7 @@
 
     Outside of stabilization, when the recompute heap is empty, the invariant implies that
     if [is_necessary t], then [t.recomputed_at >= c.changed_at] for all children [c] of
-    [t].  I.e. it implies that all necessary nodes aren't stale.
-*)
+    [t].  I.e. it implies that all necessary nodes aren't stale. *)
 
 open! Core_kernel
 open! Import
@@ -74,8 +73,7 @@ val same : _ t -> _ t -> bool
 val iteri_children : _ t -> f:(int -> Packed.t -> unit) -> unit
 (*_
   (** [iteri_parents  t ~f] applies [f] to all necessary parents of [t]. *)
-  val iteri_parents  : _ t -> f:(int -> Packed.t -> unit) -> unit
-*)
+  val iteri_parents  : _ t -> f:(int -> Packed.t -> unit) -> unit *)
 
 (** [get_parent t ~index] raises unless [0 <= index < t.num_parents]. *)
 val get_parent : _ t -> index:int -> Packed.t

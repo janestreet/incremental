@@ -22,8 +22,7 @@
     The graph manipulation done when [t.lhs_change] fires can't be done when [t.lhs]
     fires, because [t.main] could be itself created inside a bind, and this bind's lhs is
     not guaranteed to be stable when [t.lhs] fires (but it is guaranteed to be stable when
-    [t.lhs_change] fires).
-*)
+    [t.lhs_change] fires). *)
 
 open! Core_kernel
 open! Import

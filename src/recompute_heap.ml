@@ -56,13 +56,6 @@ let create_nodes_by_height ~max_height_allowed =
 ;;
 
 let set_max_height_allowed t max_height_allowed =
-  if verbose
-  then
-    Debug.ams
-      [%here]
-      "set_max_height_allowed"
-      (max_height_allowed, t)
-      [%sexp_of: int * t];
   if debug
   then
     for i = max_height_allowed + 1 to Array.length t.nodes_by_height - 1 do
@@ -124,7 +117,6 @@ let unlink (type a) t (node : a Node.t) =
 (* We don't set [node.next_in_recompute_heap] here, but rather after calling [unlink]. *)
 
 let add (type a) t (node : a Node.t) =
-  if verbose then Debug.ams [%here] "Recompute_heap.add" node [%sexp_of: _ Node.t];
   if debug && (Node.is_in_recompute_heap node || not (Node.needs_to_be_computed node))
   then
     failwiths "incorrect attempt to add node to recompute heap" node [%sexp_of: _ Node.t];
@@ -136,8 +128,6 @@ let add (type a) t (node : a Node.t) =
 ;;
 
 let remove (type a) t (node : a Node.t) =
-  if verbose
-  then Debug.ams [%here] "Recompute_heap.remove" (node, t) [%sexp_of: _ Node.t * t];
   if debug && (not (Node.is_in_recompute_heap node) || Node.needs_to_be_computed node)
   then
     failwiths "incorrect [remove] of node from recompute heap" node [%sexp_of: _ Node.t];
@@ -148,8 +138,6 @@ let remove (type a) t (node : a Node.t) =
 ;;
 
 let increase_height (type a) t (node : a Node.t) =
-  if verbose
-  then Debug.ams [%here] "Recompute_heap.increase_height" node [%sexp_of: _ Node.t];
   if debug
   then (
     assert (node.height > node.height_in_recompute_heap);

@@ -1,8 +1,7 @@
 (** A module internal to Incremental.  Users should see {!Incremental_intf}.
 
     An observer is a root of the incremental DAG -- all descendants of an observer are
-    "necessary", so that stabilization ensures their values are up to date.
-*)
+    "necessary", so that stabilization ensures their values are up to date. *)
 
 open! Core_kernel
 open! Import

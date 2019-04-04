@@ -4,8 +4,7 @@
     handle exists so the implementation can hold on to the internal observer and use a
     finalizer to detect when the user is done with the observer.  The finalizer disallows
     future use of the observer if it has no on-update handlers, so even if user code uses
-    a finalizer to resurrect the observer, it will still have [not (use_is_allowed t)].
-*)
+    a finalizer to resurrect the observer, it will still have [not (use_is_allowed t)]. *)
 
 open! Core_kernel
 open! Import

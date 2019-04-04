@@ -31,18 +31,15 @@ type 'a t = 'a Types.Internal_observer.t =
          Created --> In_use --> Disallowed --> Unlinked
            |                                     ^
            \-------------------------------------/
-       v}
-    *)
+       v} *)
     mutable state : State.t
   ; observing : 'a Node.t
-  ; mutable on_update_handlers :
-      'a On_update_handler.t list
-  (* [{prev,next}_in_all] doubly link all observers in [state.all_observers]. *)
-  ; mutable prev_in_all : Packed_.t Uopt.t
-  ; mutable next_in_all :
-      Packed_.t Uopt.t
-  (* [{prev,next}_in_observing] doubly link all observers of [observing]. *)
-  ; mutable prev_in_observing : ('a t[@sexp.opaque]) Uopt.t
+  ; mutable on_update_handlers : 'a On_update_handler.t list
+  ; (* [{prev,next}_in_all] doubly link all observers in [state.all_observers]. *)
+    mutable prev_in_all : Packed_.t Uopt.t
+  ; mutable next_in_all : Packed_.t Uopt.t
+  ; (* [{prev,next}_in_observing] doubly link all observers of [observing]. *)
+    mutable prev_in_observing : ('a t[@sexp.opaque]) Uopt.t
   ; mutable next_in_observing : ('a t[@sexp.opaque]) Uopt.t
   }
 [@@deriving fields, sexp_of]

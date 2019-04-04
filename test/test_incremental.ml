@@ -7,7 +7,6 @@ open Incremental.Private
 module Alarm_precision = Timing_wheel.Alarm_precision
 
 let does_raise = Exn.does_raise
-let verbose = verbose
 
 module Test (M : sig
     val bind_lhs_change_should_invalidate_rhs : bool
@@ -43,8 +42,7 @@ struct
       t
     ;;
 
-    let stabilize_ where =
-      if verbose then Debug.am where;
+    let stabilize_ _where =
       State.invariant State.t;
       stabilize ();
       State.invariant State.t;
@@ -343,8 +341,7 @@ struct
 
           type nonrec 'a t = 'a t [@@deriving sexp_of]
 
-          let create_ ?use_current_scope where value =
-            if verbose then Debug.am where;
+          let create_ ?use_current_scope _where value =
             create ?use_current_scope value
           ;;
 
@@ -2132,6 +2129,32 @@ struct
           assert (Time_ns.equal (value w) to_)
         ;;
 
+        let%expect_test "[advance_clock] backwards" =
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let o = observe (Clock.watch_now clock) in
+          let show_now () =
+            stabilize_ [%here];
+            print_s [%sexp (Clock.now clock : Time_ns.t), (value o : Time_ns.t)]
+          in
+          show_now ();
+          [%expect
+            {|
+            ((1969-12-31 19:00:00.000000000-05:00)
+             (1969-12-31 19:00:00.000000000-05:00)) |}];
+          Clock.advance_clock clock ~to_:(Time_ns.add Time_ns.epoch (sec 1.));
+          show_now ();
+          [%expect
+            {|
+            ((1969-12-31 19:00:01.000000000-05:00)
+             (1969-12-31 19:00:01.000000000-05:00)) |}];
+          Clock.advance_clock clock ~to_:Time_ns.epoch;
+          show_now ();
+          [%expect
+            {|
+            ((1969-12-31 19:00:01.000000000-05:00)
+             (1969-12-31 19:00:01.000000000-05:00)) |}]
+        ;;
+
         let is observer v = Poly.equal (value observer) v
 
         let%expect_test _ =
@@ -2147,7 +2170,7 @@ struct
           Clock.advance_clock_by clock (sec 1.);
           show ();
           [%expect {|
-            Before |}];
+            After |}];
           Clock.advance_clock_by clock (Clock.alarm_precision clock);
           show ();
           [%expect {|
@@ -2272,36 +2295,36 @@ struct
           Clock.advance_clock_by clock (sec 0.5);
           stabilize_ [%here];
           show_r ();
+          [%expect {| 0 |}];
+          Clock.advance_clock_by clock (sec 1.);
+          stabilize_ [%here];
+          show_r ();
           [%expect {| 1 |}];
           Clock.advance_clock_by clock (sec 1.);
+          show_r ();
+          [%expect {| 1 |}];
+          Clock.advance_clock_by clock (sec 1.);
+          show_r ();
+          [%expect {| 1 |}];
+          Clock.advance_clock_by clock (sec 1.);
+          show_r ();
+          [%expect {| 1 |}];
           stabilize_ [%here];
           show_r ();
           [%expect {| 2 |}];
-          Clock.advance_clock_by clock (sec 1.);
-          show_r ();
-          [%expect {| 2 |}];
-          Clock.advance_clock_by clock (sec 1.);
-          show_r ();
-          [%expect {| 2 |}];
-          Clock.advance_clock_by clock (sec 1.);
-          show_r ();
-          [%expect {| 2 |}];
-          stabilize_ [%here];
-          show_r ();
-          [%expect {| 3 |}];
           Clock.advance_clock_by clock (sec 10.);
           stabilize_ [%here];
           show_r ();
-          [%expect {| 4 |}];
+          [%expect {| 3 |}];
           disallow_future_use o;
           Clock.advance_clock_by clock (sec 2.);
           stabilize_ [%here];
           show_r ();
-          [%expect {| 4 |}];
+          [%expect {| 3 |}];
           let o = observe i in
           stabilize_ [%here];
           show_r ();
-          [%expect {| 5 |}];
+          [%expect {| 4 |}];
           disallow_future_use o
         ;;
 
@@ -2580,7 +2603,6 @@ struct
             print_s [%sexp (value o : int)]);
           [%expect
             {|
-            0
             1
             2
             3
@@ -2599,7 +2621,8 @@ struct
             16
             17
             18
-            19 |}];
+            19
+            20 |}];
           disallow_future_use o
         ;;
 
@@ -2882,8 +2905,6 @@ struct
               List.iter observers ~f:Observer.disallow_future_use;
               stabilize ();
               let consumed = Time_ns.Span.( - ) (cpu_used ()) before in
-              if verbose
-              then Debug.ams [%here] "consumed" consumed [%sexp_of: Time_ns.Span.t];
               assert (Time_ns.Span.( < ) consumed (sec 1.)))
           ;;
 
@@ -3860,13 +3881,6 @@ struct
               List.iter observers ~f:disallow_future_use;
               stabilize ();
               let consumed = Time_ns.Span.( - ) (cpu_used ()) before in
-              if verbose
-              then
-                Debug.ams
-                  [%here]
-                  "consumed"
-                  (num_observers, consumed)
-                  [%sexp_of: int * Time_ns.Span.t];
               assert (Time_ns.Span.( < ) consumed (sec 1.))
             done
         ;;

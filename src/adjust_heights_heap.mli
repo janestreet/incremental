@@ -5,8 +5,7 @@
     height, then [Adjust_heights_heap.adjust_heights] increases the height of the parent
     and its ancestors as necessary in order to restore the height invariant.  This is done
     by visiting ancestors in topological order, using the adjust-heights heap to visit
-    them in increasing order of pre-adjusted height.
-*)
+    them in increasing order of pre-adjusted height. *)
 
 open! Core_kernel
 open! Import
@@ -68,6 +67,5 @@ val set_height : t -> _ Node.t -> int -> unit
     then there is a cycle in the graph and [adjust_heights] raises.
 
     [adjust_heights] raises if a node's height needs to be increased beyond
-    [max_height_allowed t].
-*)
+    [max_height_allowed t]. *)
 val adjust_heights : t -> Recompute_heap.t -> child:_ Node.t -> parent:_ Node.t -> unit

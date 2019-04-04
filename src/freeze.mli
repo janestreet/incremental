@@ -1,8 +1,7 @@
 (** A module internal to Incremental.  Users should see {!Incremental_intf}.
 
     An ['a Freeze.t] is a kind of DAG node that takes on the value of another node
-    and doesn't change thereafter.
-*)
+    and doesn't change thereafter. *)
 
 open! Core_kernel
 open! Import

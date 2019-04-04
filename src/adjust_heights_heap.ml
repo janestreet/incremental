@@ -156,13 +156,6 @@ let adjust_heights
       ~child:(original_child : a Node.t)
       ~parent:(original_parent : b Node.t)
   =
-  if verbose
-  then
-    Debug.ams
-      [%here]
-      "adjust_heights"
-      (`child original_child, `parent original_parent)
-      [%sexp_of: [`child of _ Node.t] * [`parent of _ Node.t]];
   if debug then assert (is_empty t);
   if debug then assert (original_child.height >= original_parent.height);
   t.height_lower_bound <- original_parent.height;

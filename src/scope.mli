@@ -1,8 +1,8 @@
 (** A module internal to Incremental.  Users should see {!Incremental_intf}.
 
     A scope is a bind in which nodes are created.  It is either [top], for nodes not in a
-    bind, or [Uopt.some packed_bind] for nodes created on the right-hand side of a bind.
-*)
+    bind, or [Uopt.some packed_bind] for nodes created on the right-hand side of a
+    bind. *)
 
 open! Core_kernel
 open! Import
