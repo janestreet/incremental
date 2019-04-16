@@ -10,7 +10,7 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "4.07.0"}
+  "ocaml" {>= "4.07.0" & < "4.08.0"}
   "core_kernel"
   "ppx_jane"
   "dune"        {build & >= "1.5.1"}
