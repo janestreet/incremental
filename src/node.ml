@@ -119,49 +119,49 @@ let is_stale_with_respect_to_a_child t =
 
 let is_stale : type a. a t -> bool =
   fun (t : a t) ->
-    match t.kind with
-    | Uninitialized -> assert false
-    (* A const node is stale only at initialization. *)
-    | Const _ -> Stabilization_num.is_none t.recomputed_at
-    (* Time-based nodes are considered stale when [t.recomputed_at] is none, which happens
-       at initialization and when the alarm mechanism makes a node stale (it sets the
-       [t.recomputed_at] to [Stabilization_num.none]). *)
-    | At _ -> Stabilization_num.is_none t.recomputed_at
-    | At_intervals _ -> Stabilization_num.is_none t.recomputed_at
-    | Snapshot _ -> Stabilization_num.is_none t.recomputed_at
-    | Step_function _ -> Stabilization_num.is_none t.recomputed_at
-    (* We never consider an invalidated node to be stale -- when we invalidate a node, we
-       immediately propagate invalidity to its ancestors. *)
-    | Invalid -> false
-    (* A [Var] node is stale if it was set since it was recomputed. *)
-    | Var { set_at; _ } -> Stabilization_num.compare set_at t.recomputed_at > 0
-    (* Nodes that have children. *)
-    | Bind_lhs_change _ ->
-      Stabilization_num.is_none t.recomputed_at || is_stale_with_respect_to_a_child t
-    | If_test_change _ ->
-      Stabilization_num.is_none t.recomputed_at || is_stale_with_respect_to_a_child t
-    | Join_lhs_change _ ->
-      Stabilization_num.is_none t.recomputed_at || is_stale_with_respect_to_a_child t
-    | Array_fold _
-    | Bind_main _
-    | Freeze _
-    | If_then_else _
-    | Join_main _
-    | Map _
-    | Map2 _
-    | Map3 _
-    | Map4 _
-    | Map5 _
-    | Map6 _
-    | Map7 _
-    | Map8 _
-    | Map9 _
-    | Unordered_array_fold _ ->
-      Stabilization_num.is_none t.recomputed_at || is_stale_with_respect_to_a_child t
-    | Expert { force_stale; _ } ->
-      force_stale
-      || Stabilization_num.is_none t.recomputed_at
-      || is_stale_with_respect_to_a_child t
+  match t.kind with
+  | Uninitialized -> assert false
+  (* A const node is stale only at initialization. *)
+  | Const _ -> Stabilization_num.is_none t.recomputed_at
+  (* Time-based nodes are considered stale when [t.recomputed_at] is none, which happens
+     at initialization and when the alarm mechanism makes a node stale (it sets the
+     [t.recomputed_at] to [Stabilization_num.none]). *)
+  | At _ -> Stabilization_num.is_none t.recomputed_at
+  | At_intervals _ -> Stabilization_num.is_none t.recomputed_at
+  | Snapshot _ -> Stabilization_num.is_none t.recomputed_at
+  | Step_function _ -> Stabilization_num.is_none t.recomputed_at
+  (* We never consider an invalidated node to be stale -- when we invalidate a node, we
+     immediately propagate invalidity to its ancestors. *)
+  | Invalid -> false
+  (* A [Var] node is stale if it was set since it was recomputed. *)
+  | Var { set_at; _ } -> Stabilization_num.compare set_at t.recomputed_at > 0
+  (* Nodes that have children. *)
+  | Bind_lhs_change _ ->
+    Stabilization_num.is_none t.recomputed_at || is_stale_with_respect_to_a_child t
+  | If_test_change _ ->
+    Stabilization_num.is_none t.recomputed_at || is_stale_with_respect_to_a_child t
+  | Join_lhs_change _ ->
+    Stabilization_num.is_none t.recomputed_at || is_stale_with_respect_to_a_child t
+  | Array_fold _
+  | Bind_main _
+  | Freeze _
+  | If_then_else _
+  | Join_main _
+  | Map _
+  | Map2 _
+  | Map3 _
+  | Map4 _
+  | Map5 _
+  | Map6 _
+  | Map7 _
+  | Map8 _
+  | Map9 _
+  | Unordered_array_fold _ ->
+    Stabilization_num.is_none t.recomputed_at || is_stale_with_respect_to_a_child t
+  | Expert { force_stale; _ } ->
+    force_stale
+    || Stabilization_num.is_none t.recomputed_at
+    || is_stale_with_respect_to_a_child t
 ;;
 
 let needs_to_be_computed t = is_necessary t && is_stale t
@@ -201,42 +201,42 @@ let has_parent (t : _ t) ~parent =
 
 let should_be_invalidated : type a. a t -> bool =
   fun t ->
-    match t.kind with
-    (* nodes with no children *)
-    | Uninitialized -> assert false
-    | At _ -> false
-    | At_intervals _ -> false
-    | Const _ | Snapshot _ | Step_function _ | Var _ -> false
-    | Invalid -> false
-    (* Nodes with a fixed set of children are invalid if any child is invalid. *)
-    | Array_fold _
-    | Freeze _
-    | Map _
-    | Map2 _
-    | Map3 _
-    | Map4 _
-    | Map5 _
-    | Map6 _
-    | Map7 _
-    | Map8 _
-    | Map9 _
-    | Unordered_array_fold _ -> has_invalid_child t
-    (* A *_change node is invalid if the node it is watching for changes is invalid (same
-       reason as above).  This is equivalent to [has_invalid_child t]. *)
-    | Bind_lhs_change { lhs; _ } -> not (is_valid lhs)
-    | If_test_change { test; _ } -> not (is_valid test)
-    | Join_lhs_change { lhs; _ } -> not (is_valid lhs)
-    (* [Bind_main], [If_then_else], and [Join_main] are invalid if their *_change child is,
-       but not necessarily if their other children are -- the graph may be restructured to
-       avoid the invalidity of those. *)
-    | Bind_main { lhs_change; _ } -> not (is_valid lhs_change)
-    | If_then_else { test_change; _ } -> not (is_valid test_change)
-    | Join_main { lhs_change; _ } -> not (is_valid lhs_change)
-    | Expert _ ->
-      (* This is similar to what we do for bind above, except that any invalid child can be
-         removed, so we can only tell if an expert node becomes invalid when all its
-         dependencies have fired (which in practice means when we are about to run it). *)
-      false
+  match t.kind with
+  (* nodes with no children *)
+  | Uninitialized -> assert false
+  | At _ -> false
+  | At_intervals _ -> false
+  | Const _ | Snapshot _ | Step_function _ | Var _ -> false
+  | Invalid -> false
+  (* Nodes with a fixed set of children are invalid if any child is invalid. *)
+  | Array_fold _
+  | Freeze _
+  | Map _
+  | Map2 _
+  | Map3 _
+  | Map4 _
+  | Map5 _
+  | Map6 _
+  | Map7 _
+  | Map8 _
+  | Map9 _
+  | Unordered_array_fold _ -> has_invalid_child t
+  (* A *_change node is invalid if the node it is watching for changes is invalid (same
+     reason as above).  This is equivalent to [has_invalid_child t]. *)
+  | Bind_lhs_change { lhs; _ } -> not (is_valid lhs)
+  | If_test_change { test; _ } -> not (is_valid test)
+  | Join_lhs_change { lhs; _ } -> not (is_valid lhs)
+  (* [Bind_main], [If_then_else], and [Join_main] are invalid if their *_change child is,
+     but not necessarily if their other children are -- the graph may be restructured to
+     avoid the invalidity of those. *)
+  | Bind_main { lhs_change; _ } -> not (is_valid lhs_change)
+  | If_then_else { test_change; _ } -> not (is_valid test_change)
+  | Join_main { lhs_change; _ } -> not (is_valid lhs_change)
+  | Expert _ ->
+    (* This is similar to what we do for bind above, except that any invalid child can be
+       removed, so we can only tell if an expert node becomes invalid when all its
+       dependencies have fired (which in practice means when we are about to run it). *)
+    false
 ;;
 
 let fold_observers (t : _ t) ~init ~f =
@@ -526,53 +526,53 @@ let make_space_for_child_if_necessary t ~child_index =
 let set_parent : type a. child:a t -> parent:Packed.t Uopt.t -> parent_index:int -> unit
   =
   fun ~child ~parent ~parent_index ->
-    if parent_index = 0
-    then child.parent0 <- parent
-    else child.parent1_and_beyond.(parent_index - 1) <- parent
+  if parent_index = 0
+  then child.parent0 <- parent
+  else child.parent1_and_beyond.(parent_index - 1) <- parent
 ;;
 
 let link : type a b.
   child:a t -> child_index:int -> parent:b t -> parent_index:int -> unit =
   fun ~child ~child_index ~parent ~parent_index ->
-    set_parent ~child ~parent:(Uopt.some (Packed.T parent)) ~parent_index;
-    child.my_child_index_in_parent_at_index.(parent_index) <- child_index;
-    parent.my_parent_index_in_child_at_index.(child_index) <- parent_index
+  set_parent ~child ~parent:(Uopt.some (Packed.T parent)) ~parent_index;
+  child.my_child_index_in_parent_at_index.(parent_index) <- child_index;
+  parent.my_parent_index_in_child_at_index.(child_index) <- parent_index
 ;;
 
 let unlink : type a b.
   child:a t -> child_index:int -> parent:b t -> parent_index:int -> unit =
   fun ~child ~child_index ~parent ~parent_index ->
-    set_parent ~child ~parent:Uopt.none ~parent_index;
-    if debug
-    then (
-      child.my_child_index_in_parent_at_index.(parent_index) <- -1;
-      parent.my_parent_index_in_child_at_index.(child_index) <- -1)
+  set_parent ~child ~parent:Uopt.none ~parent_index;
+  if debug
+  then (
+    child.my_child_index_in_parent_at_index.(parent_index) <- -1;
+    parent.my_parent_index_in_child_at_index.(child_index) <- -1)
 ;;
 
 let add_parent : type a b. child:a t -> parent:b t -> child_index:int -> unit =
   fun ~child ~parent ~child_index ->
-    make_space_for_parent_if_necessary child;
-    make_space_for_child_if_necessary parent ~child_index;
-    link ~child ~child_index ~parent ~parent_index:child.num_parents;
-    child.num_parents <- child.num_parents + 1
+  make_space_for_parent_if_necessary child;
+  make_space_for_child_if_necessary parent ~child_index;
+  link ~child ~child_index ~parent ~parent_index:child.num_parents;
+  child.num_parents <- child.num_parents + 1
 ;;
 
 let remove_parent : type a b. child:a t -> parent:b t -> child_index:int -> unit =
   fun ~child ~parent ~child_index ->
-    if debug then assert (child.num_parents >= 1);
-    let parent_index = parent.my_parent_index_in_child_at_index.(child_index) in
-    if debug then assert (packed_same (T parent) (get_parent child ~index:parent_index));
-    let last_parent_index = child.num_parents - 1 in
-    if parent_index < last_parent_index
-    then (
-      let (T parent) = Uopt.value_exn child.parent1_and_beyond.(last_parent_index - 1) in
-      link
-        ~child
-        ~child_index:child.my_child_index_in_parent_at_index.(last_parent_index)
-        ~parent
-        ~parent_index);
-    unlink ~child ~child_index ~parent ~parent_index:last_parent_index;
-    child.num_parents <- child.num_parents - 1
+  if debug then assert (child.num_parents >= 1);
+  let parent_index = parent.my_parent_index_in_child_at_index.(child_index) in
+  if debug then assert (packed_same (T parent) (get_parent child ~index:parent_index));
+  let last_parent_index = child.num_parents - 1 in
+  if parent_index < last_parent_index
+  then (
+    let (T parent) = Uopt.value_exn child.parent1_and_beyond.(last_parent_index - 1) in
+    link
+      ~child
+      ~child_index:child.my_child_index_in_parent_at_index.(last_parent_index)
+      ~parent
+      ~parent_index);
+  unlink ~child ~child_index ~parent ~parent_index:last_parent_index;
+  child.num_parents <- child.num_parents - 1
 ;;
 
 let swap_children_except_in_kind parent ~child1 ~child_index1 ~child2 ~child_index2 =

@@ -187,7 +187,7 @@ and Kind : sig
         * 'a2 Node.t
         * 'a3 Node.t
         * 'a4 Node.t
-      -> 'a t
+        -> 'a t
     | Map5 :
         ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a)
         * 'a1 Node.t
@@ -195,7 +195,7 @@ and Kind : sig
         * 'a3 Node.t
         * 'a4 Node.t
         * 'a5 Node.t
-      -> 'a t
+        -> 'a t
     | Map6 :
         ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a)
         * 'a1 Node.t
@@ -204,7 +204,7 @@ and Kind : sig
         * 'a4 Node.t
         * 'a5 Node.t
         * 'a6 Node.t
-      -> 'a t
+        -> 'a t
     | Map7 :
         ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a)
         * 'a1 Node.t
@@ -214,7 +214,7 @@ and Kind : sig
         * 'a5 Node.t
         * 'a6 Node.t
         * 'a7 Node.t
-      -> 'a t
+        -> 'a t
     | Map8 :
         ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a)
         * 'a1 Node.t
@@ -225,7 +225,7 @@ and Kind : sig
         * 'a6 Node.t
         * 'a7 Node.t
         * 'a8 Node.t
-      -> 'a t
+        -> 'a t
     | Map9 :
         ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a)
         * 'a1 Node.t
@@ -237,7 +237,7 @@ and Kind : sig
         * 'a7 Node.t
         * 'a8 Node.t
         * 'a9 Node.t
-      -> 'a t
+        -> 'a t
 end =
   Kind
 

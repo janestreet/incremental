@@ -318,7 +318,7 @@ type z =
   ; b: (int * int)
   }
 [@@deriving fields]
-#verbose true;;
+  #verbose true;;
 
 [%%org {|
 Now, we're going to write a function that multiplies together the

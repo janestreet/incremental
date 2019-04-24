@@ -30,7 +30,7 @@ type 'a t = 'a Types.Kind.t =
       * 'a2 Node.t
       * 'a3 Node.t
       * 'a4 Node.t
-    -> 'a t
+      -> 'a t
   | Map5 :
       ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a)
       * 'a1 Node.t
@@ -38,7 +38,7 @@ type 'a t = 'a Types.Kind.t =
       * 'a3 Node.t
       * 'a4 Node.t
       * 'a5 Node.t
-    -> 'a t
+      -> 'a t
   | Map6 :
       ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a)
       * 'a1 Node.t
@@ -47,7 +47,7 @@ type 'a t = 'a Types.Kind.t =
       * 'a4 Node.t
       * 'a5 Node.t
       * 'a6 Node.t
-    -> 'a t
+      -> 'a t
   | Map7 :
       ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a)
       * 'a1 Node.t
@@ -57,7 +57,7 @@ type 'a t = 'a Types.Kind.t =
       * 'a5 Node.t
       * 'a6 Node.t
       * 'a7 Node.t
-    -> 'a t
+      -> 'a t
   | Map8 :
       ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a)
       * 'a1 Node.t
@@ -68,7 +68,7 @@ type 'a t = 'a Types.Kind.t =
       * 'a6 Node.t
       * 'a7 Node.t
       * 'a8 Node.t
-    -> 'a t
+      -> 'a t
   | Map9 :
       ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a)
       * 'a1 Node.t
@@ -80,7 +80,7 @@ type 'a t = 'a Types.Kind.t =
       * 'a7 Node.t
       * 'a8 Node.t
       * 'a9 Node.t
-    -> 'a t
+      -> 'a t
 [@@deriving sexp_of]
 
 let name : type a. a t -> string = function
@@ -115,35 +115,35 @@ let name : type a. a t -> string = function
 
 let invariant : type a. a Invariant.t -> a t Invariant.t =
   fun invariant_a t ->
-    match t with
-    | Array_fold array_fold -> Array_fold.invariant ignore invariant_a array_fold
-    | At at -> At.invariant at
-    | At_intervals at_intervals -> At_intervals.invariant at_intervals
-    | Bind_lhs_change bind -> Bind.invariant ignore ignore bind
-    | Bind_main bind -> Bind.invariant ignore invariant_a bind
-    | Const a -> invariant_a a
-    | Expert e -> Expert.invariant invariant_a e
-    | Freeze freeze -> Freeze.invariant invariant_a freeze
-    | If_test_change if_then_else -> If_then_else.invariant ignore if_then_else
-    | If_then_else if_then_else -> If_then_else.invariant invariant_a if_then_else
-    | Invalid -> ()
-    | Join_lhs_change join -> Join.invariant ignore join
-    | Join_main join -> Join.invariant invariant_a join
-    | Map _ -> ()
-    | Map2 _ -> ()
-    | Map3 _ -> ()
-    | Map4 _ -> ()
-    | Map5 _ -> ()
-    | Map6 _ -> ()
-    | Map7 _ -> ()
-    | Map8 _ -> ()
-    | Map9 _ -> ()
-    | Snapshot snapshot -> Snapshot.invariant invariant_a snapshot
-    | Step_function step_function -> Step_function.invariant invariant_a step_function
-    | Uninitialized -> ()
-    | Unordered_array_fold unordered_array_fold ->
-      Unordered_array_fold.invariant ignore invariant_a unordered_array_fold
-    | Var var -> Var.invariant ignore var
+  match t with
+  | Array_fold array_fold -> Array_fold.invariant ignore invariant_a array_fold
+  | At at -> At.invariant at
+  | At_intervals at_intervals -> At_intervals.invariant at_intervals
+  | Bind_lhs_change bind -> Bind.invariant ignore ignore bind
+  | Bind_main bind -> Bind.invariant ignore invariant_a bind
+  | Const a -> invariant_a a
+  | Expert e -> Expert.invariant invariant_a e
+  | Freeze freeze -> Freeze.invariant invariant_a freeze
+  | If_test_change if_then_else -> If_then_else.invariant ignore if_then_else
+  | If_then_else if_then_else -> If_then_else.invariant invariant_a if_then_else
+  | Invalid -> ()
+  | Join_lhs_change join -> Join.invariant ignore join
+  | Join_main join -> Join.invariant invariant_a join
+  | Map _ -> ()
+  | Map2 _ -> ()
+  | Map3 _ -> ()
+  | Map4 _ -> ()
+  | Map5 _ -> ()
+  | Map6 _ -> ()
+  | Map7 _ -> ()
+  | Map8 _ -> ()
+  | Map9 _ -> ()
+  | Snapshot snapshot -> Snapshot.invariant invariant_a snapshot
+  | Step_function step_function -> Step_function.invariant invariant_a step_function
+  | Uninitialized -> ()
+  | Unordered_array_fold unordered_array_fold ->
+    Unordered_array_fold.invariant ignore invariant_a unordered_array_fold
+  | Var var -> Var.invariant ignore var
 ;;
 
 let initial_num_children (type a) (t : a t) =
@@ -286,17 +286,17 @@ let iteri_children (type a) (t : a t) ~(f : int -> Node.Packed.t -> unit) : unit
    48dbfd03c9c5. *)
 let slow_get_child : type a. a t -> index:_ -> Node.Packed.t =
   fun t ~index ->
-    match t with
-    | Array_fold { children; _ } -> T children.(index)
-    | Unordered_array_fold { children; _ } -> T children.(index)
-    | Expert { children; _ } ->
-      let (Expert.E edge) = Uopt.value_exn children.(index) in
-      T edge.child
-    | _ ->
-      with_return (fun r ->
-        iteri_children t ~f:(fun i child -> if i = index then r.return child);
-        failwiths
-          "Kind.slow_get_child got invalid index"
-          (index, t)
-          [%sexp_of: int * _ t])
+  match t with
+  | Array_fold { children; _ } -> T children.(index)
+  | Unordered_array_fold { children; _ } -> T children.(index)
+  | Expert { children; _ } ->
+    let (Expert.E edge) = Uopt.value_exn children.(index) in
+    T edge.child
+  | _ ->
+    with_return (fun r ->
+      iteri_children t ~f:(fun i child -> if i = index then r.return child);
+      failwiths
+        "Kind.slow_get_child got invalid index"
+        (index, t)
+        [%sexp_of: int * _ t])
 ;;

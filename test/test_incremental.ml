@@ -2722,16 +2722,20 @@ struct
 
           type nonrec 'a t = 'a t [@@deriving sexp_of]
 
-          let%test _ =
-            let string =
-              observe (watch (Var.create 13))
-              |> [%sexp_of: int t]
-              |> Sexp.to_string_hum
-            in
-            is_some
-              (String.substr_index
-                 string
-                 ~pattern:"Observer.value_exn called without stabilizing")
+          let%expect_test "[sexp_of_t]" =
+            let t = observe (watch (Var.create 13)) in
+            let show_t () = print_s [%sexp (t : int t)] in
+            show_t ();
+            [%expect {|
+              <unstabilized> |}];
+            stabilize_ [%here];
+            show_t ();
+            [%expect {|
+              13 |}];
+            disallow_future_use t;
+            show_t ();
+            [%expect {|
+              <disallowed> |}]
           ;;
 
           let invariant = invariant

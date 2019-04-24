@@ -146,7 +146,16 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
 
     (* We override [sexp_of_t] to just show the value, rather than the internal
        representation. *)
-    let sexp_of_t sexp_of_a t = value t |> [%sexp_of: a Or_error.t]
+    let sexp_of_t sexp_of_a (t : _ t) =
+      match !t.state with
+      | Created -> [%message "<unstabilized>"]
+      | Disallowed | Unlinked -> [%message "<disallowed>"]
+      | In_use ->
+        let uopt = !t.observing.value_opt in
+        if Uopt.is_none uopt
+        then [%message "<invalid>"]
+        else [%sexp (Uopt.unsafe_value uopt : a)]
+    ;;
   end
 
   module Before_or_after = Before_or_after

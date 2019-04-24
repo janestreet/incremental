@@ -18,7 +18,7 @@ type z =
   ; b: (int * int)
   }
 [@@deriving fields]
-#verbose true;;
+  #verbose true;;
 
 let sumproduct z =
   let a_prod =

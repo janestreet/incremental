@@ -54,9 +54,9 @@ module Packed : sig
 end
 
 include
-module type of struct
-  include Types.Node
-end
+  module type of struct
+    include Types.Node
+  end
   with module Packed := Types.Node.Packed
 
 include Invariant.S1 with type 'a t := 'a t

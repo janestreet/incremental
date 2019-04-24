@@ -357,38 +357,38 @@ let set_max_height_allowed t height =
 
 let handle_after_stabilization : type a. t -> a Node.t -> unit =
   fun t node ->
-    if not node.is_in_handle_after_stabilization
-    then (
-      node.is_in_handle_after_stabilization <- true;
-      Stack.push t.handle_after_stabilization (T node))
+  if not node.is_in_handle_after_stabilization
+  then (
+    node.is_in_handle_after_stabilization <- true;
+    Stack.push t.handle_after_stabilization (T node))
 ;;
 
 let rec remove_children : type a. t -> a Node.t -> unit =
   fun t parent ->
-    Node.iteri_children parent ~f:(fun child_index (T child) ->
-      remove_child t ~child ~parent ~child_index)
+  Node.iteri_children parent ~f:(fun child_index (T child) ->
+    remove_child t ~child ~parent ~child_index)
 
 and remove_child : type a b.
   t -> child:b Node.t -> parent:a Node.t -> child_index:int -> unit =
   fun t ~child ~parent ~child_index ->
-    Node.remove_parent ~child ~parent ~child_index;
-    check_if_unnecessary t child
+  Node.remove_parent ~child ~parent ~child_index;
+  check_if_unnecessary t child
 
 and check_if_unnecessary : type a. t -> a Node.t -> unit =
   fun t node -> if not (Node.is_necessary node) then became_unnecessary t node
 
 and became_unnecessary : type a. t -> a Node.t -> unit =
   fun t node ->
-    t.num_nodes_became_unnecessary <- t.num_nodes_became_unnecessary + 1;
-    if node.num_on_update_handlers > 0 then handle_after_stabilization t node;
-    node.height <- -1;
-    remove_children t node;
-    (match node.kind with
-     | Unordered_array_fold u -> Unordered_array_fold.force_full_compute u
-     | Expert p -> Expert.observability_change p ~is_now_observable:false
-     | _ -> ());
-    if debug then assert (not (Node.needs_to_be_computed node));
-    if Node.is_in_recompute_heap node then Recompute_heap.remove t.recompute_heap node
+  t.num_nodes_became_unnecessary <- t.num_nodes_became_unnecessary + 1;
+  if node.num_on_update_handlers > 0 then handle_after_stabilization t node;
+  node.height <- -1;
+  remove_children t node;
+  (match node.kind with
+   | Unordered_array_fold u -> Unordered_array_fold.force_full_compute u
+   | Expert p -> Expert.observability_change p ~is_now_observable:false
+   | _ -> ());
+  if debug then assert (not (Node.needs_to_be_computed node));
+  if Node.is_in_recompute_heap node then Recompute_heap.remove t.recompute_heap node
 ;;
 
 let remove_alarm (clock : Clock.t) alarm =
@@ -423,45 +423,45 @@ let remove_alarm (clock : Clock.t) alarm =
 
 let rec invalidate_node : type a. t -> a Node.t -> unit =
   fun t node ->
-    if Node.is_valid node
+  if Node.is_valid node
+  then (
+    if node.num_on_update_handlers > 0 then handle_after_stabilization t node;
+    node.value_opt <- Uopt.none;
+    if debug then assert (Uopt.is_none node.old_value_opt);
+    node.changed_at <- t.stabilization_num;
+    node.recomputed_at <- t.stabilization_num;
+    t.num_nodes_invalidated <- t.num_nodes_invalidated + 1;
+    if Node.is_necessary node
     then (
-      if node.num_on_update_handlers > 0 then handle_after_stabilization t node;
-      node.value_opt <- Uopt.none;
-      if debug then assert (Uopt.is_none node.old_value_opt);
-      node.changed_at <- t.stabilization_num;
-      node.recomputed_at <- t.stabilization_num;
-      t.num_nodes_invalidated <- t.num_nodes_invalidated + 1;
-      if Node.is_necessary node
-      then (
-        remove_children t node;
-        (* The node doesn't have children anymore, so we can lower its height as much as
-           possible, to one greater than the scope it was created in.  Also, because we
-           are lowering the height, we don't need to adjust any of its ancestors' heights.
-           We could leave the height alone, but we may as well lower it as much as
-           possible to avoid making the heights of any future ancestors unnecessarily
-           large. *)
-        node.height <- Scope.height node.created_in + 1);
-      (* We don't set [node.created_in] or [node.next_node_in_same_scope]; we leave [node]
-         in the scope it was created in.  If that scope is ever invalidated, then that
-         will clear [node.next_node_in_same_scope] *)
-      (match node.kind with
-       | At at -> remove_alarm at.clock at.alarm
-       | At_intervals at_intervals -> remove_alarm at_intervals.clock at_intervals.alarm
-       | Bind_main bind -> invalidate_nodes_created_on_rhs t bind.all_nodes_created_on_rhs
-       | Step_function step_function -> remove_alarm step_function.clock step_function.alarm
-       | _ -> ());
-      Node.set_kind node Invalid;
-      (* If we called [propagate_invalidity] right away on the parents, we would get into
-         trouble.  The parent would disconnect itself from the current node, thus
-         modifying the list of parents we iterate on.  Even if we made a special case, it
-         still wouldn't be enough to handle other cases where the list of parents is
-         modified (e.g. when [lhs] is invalidated in the example in the comment about
-         [can_recompute_now] far below). *)
-      for index = 0 to node.num_parents - 1 do
-        Stack.push t.propagate_invalidity (Node.get_parent node ~index)
-      done;
-      if debug then assert (not (Node.needs_to_be_computed node));
-      if Node.is_in_recompute_heap node then Recompute_heap.remove t.recompute_heap node)
+      remove_children t node;
+      (* The node doesn't have children anymore, so we can lower its height as much as
+         possible, to one greater than the scope it was created in.  Also, because we
+         are lowering the height, we don't need to adjust any of its ancestors' heights.
+         We could leave the height alone, but we may as well lower it as much as
+         possible to avoid making the heights of any future ancestors unnecessarily
+         large. *)
+      node.height <- Scope.height node.created_in + 1);
+    (* We don't set [node.created_in] or [node.next_node_in_same_scope]; we leave [node]
+       in the scope it was created in.  If that scope is ever invalidated, then that
+       will clear [node.next_node_in_same_scope] *)
+    (match node.kind with
+     | At at -> remove_alarm at.clock at.alarm
+     | At_intervals at_intervals -> remove_alarm at_intervals.clock at_intervals.alarm
+     | Bind_main bind -> invalidate_nodes_created_on_rhs t bind.all_nodes_created_on_rhs
+     | Step_function step_function -> remove_alarm step_function.clock step_function.alarm
+     | _ -> ());
+    Node.set_kind node Invalid;
+    (* If we called [propagate_invalidity] right away on the parents, we would get into
+       trouble.  The parent would disconnect itself from the current node, thus
+       modifying the list of parents we iterate on.  Even if we made a special case, it
+       still wouldn't be enough to handle other cases where the list of parents is
+       modified (e.g. when [lhs] is invalidated in the example in the comment about
+       [can_recompute_now] far below). *)
+    for index = 0 to node.num_parents - 1 do
+      Stack.push t.propagate_invalidity (Node.get_parent node ~index)
+    done;
+    if debug then assert (not (Node.needs_to_be_computed node));
+    if Node.is_in_recompute_heap node then Recompute_heap.remove t.recompute_heap node)
 
 and invalidate_nodes_created_on_rhs t node =
   let r = ref node in
@@ -541,48 +541,48 @@ let propagate_invalidity t =
 let rec add_parent_without_adjusting_heights : type a b.
   t -> child:a Node.t -> parent:b Node.t -> child_index:int -> unit =
   fun t ~child ~parent ~child_index ->
-    if debug then assert (Node.is_necessary parent);
-    let was_necessary = Node.is_necessary child in
-    Node.add_parent ~child ~parent ~child_index;
-    if not (Node.is_valid child) then Stack.push t.propagate_invalidity (T parent);
-    if not was_necessary then became_necessary t child;
-    match parent.kind with
-    | Expert e -> Expert.run_edge_callback e ~child_index
-    | _ -> ()
+  if debug then assert (Node.is_necessary parent);
+  let was_necessary = Node.is_necessary child in
+  Node.add_parent ~child ~parent ~child_index;
+  if not (Node.is_valid child) then Stack.push t.propagate_invalidity (T parent);
+  if not was_necessary then became_necessary t child;
+  match parent.kind with
+  | Expert e -> Expert.run_edge_callback e ~child_index
+  | _ -> ()
 
 and became_necessary : type a. t -> a Node.t -> unit =
   fun t node ->
-    (* [Scope.is_necessary node.created_in] is true (assuming the scope itself is valid)
-       because [Node.iter_children] below first visits the lhs-change of bind nodes and
-       then the rhs. *)
-    if Node.is_valid node && not (Scope.is_necessary node.created_in)
-    then
-      failwiths
-        "Trying to make a node necessary whose defining bind is not necessary"
-        node
-        [%sexp_of: _ Node.t];
-    t.num_nodes_became_necessary <- t.num_nodes_became_necessary + 1;
-    if node.num_on_update_handlers > 0 then handle_after_stabilization t node;
-    (* Since [node] became necessary, to restore the invariant, we need to:
+  (* [Scope.is_necessary node.created_in] is true (assuming the scope itself is valid)
+     because [Node.iter_children] below first visits the lhs-change of bind nodes and
+     then the rhs. *)
+  if Node.is_valid node && not (Scope.is_necessary node.created_in)
+  then
+    failwiths
+      "Trying to make a node necessary whose defining bind is not necessary"
+      node
+      [%sexp_of: _ Node.t];
+  t.num_nodes_became_necessary <- t.num_nodes_became_necessary + 1;
+  if node.num_on_update_handlers > 0 then handle_after_stabilization t node;
+  (* Since [node] became necessary, to restore the invariant, we need to:
 
-       - add parent pointers to [node] from its children.
-       - set [node]'s height.
-       - add [node] to the recompute heap, if necessary. *)
-    set_height t node (Scope.height node.created_in + 1);
-    Node.iteri_children node ~f:(fun child_index (T child) ->
-      add_parent_without_adjusting_heights t ~child ~parent:node ~child_index;
-      (* Now that child is necessary, it should have a valid height. *)
-      if debug then assert (child.height >= 0);
-      if child.height >= node.height then set_height t node (child.height + 1));
-    (* Now that the height is correct, maybe add [node] to the recompute heap.  [node]
-       just became necessary, so it can't have been in the recompute heap.  Since [node]
-       is necessary, we should add it to the recompute heap iff it is stale. *)
-    if debug then assert (not (Node.is_in_recompute_heap node));
-    if debug then assert (Node.is_necessary node);
-    if Node.is_stale node then Recompute_heap.add t.recompute_heap node;
-    match node.kind with
-    | Expert p -> Expert.observability_change p ~is_now_observable:true
-    | _ -> ()
+     - add parent pointers to [node] from its children.
+     - set [node]'s height.
+     - add [node] to the recompute heap, if necessary. *)
+  set_height t node (Scope.height node.created_in + 1);
+  Node.iteri_children node ~f:(fun child_index (T child) ->
+    add_parent_without_adjusting_heights t ~child ~parent:node ~child_index;
+    (* Now that child is necessary, it should have a valid height. *)
+    if debug then assert (child.height >= 0);
+    if child.height >= node.height then set_height t node (child.height + 1));
+  (* Now that the height is correct, maybe add [node] to the recompute heap.  [node]
+     just became necessary, so it can't have been in the recompute heap.  Since [node]
+     is necessary, we should add it to the recompute heap iff it is stale. *)
+  if debug then assert (not (Node.is_in_recompute_heap node));
+  if debug then assert (Node.is_necessary node);
+  if Node.is_stale node then Recompute_heap.add t.recompute_heap node;
+  match node.kind with
+  | Expert p -> Expert.observability_change p ~is_now_observable:true
+  | _ -> ()
 ;;
 
 let became_necessary t node =
@@ -643,352 +643,352 @@ let change_child : type a b.
   -> child_index:int
   -> unit =
   fun t ~parent ~old_child ~new_child ~child_index ->
-    if Uopt.is_none old_child
-    then add_parent t ~child:new_child ~parent ~child_index
-    else (
-      let old_child = Uopt.unsafe_value old_child in
-      if not (phys_equal old_child new_child)
-      then (
-        (* We remove [old_child] before adding [new_child], because they share the same
-           child index. *)
-        Node.remove_parent ~child:old_child ~parent ~child_index;
-        (* We force [old_child] to temporarily be necessary so that [add_parent] can't
-           mistakenly think it is unnecessary and transition it to necessary (which would
-           add duplicate edges and break things horribly). *)
-        old_child.force_necessary <- true;
-        add_parent t ~child:new_child ~parent ~child_index;
-        old_child.force_necessary <- false;
-        (* We [check_if_unnecessary] after [add_parent], so that we don't unnecessarily
-           transition nodes from necessary to unnecessary and then back again. *)
-        check_if_unnecessary t old_child))
+  if Uopt.is_none old_child
+  then add_parent t ~child:new_child ~parent ~child_index
+  else (
+    let old_child = Uopt.unsafe_value old_child in
+    if not (phys_equal old_child new_child)
+    then (
+      (* We remove [old_child] before adding [new_child], because they share the same
+         child index. *)
+      Node.remove_parent ~child:old_child ~parent ~child_index;
+      (* We force [old_child] to temporarily be necessary so that [add_parent] can't
+         mistakenly think it is unnecessary and transition it to necessary (which would
+         add duplicate edges and break things horribly). *)
+      old_child.force_necessary <- true;
+      add_parent t ~child:new_child ~parent ~child_index;
+      old_child.force_necessary <- false;
+      (* We [check_if_unnecessary] after [add_parent], so that we don't unnecessarily
+         transition nodes from necessary to unnecessary and then back again. *)
+      check_if_unnecessary t old_child))
 ;;
 
 let rec recompute : type a. t -> a Node.t -> unit =
   fun t (node : a Node.t) ->
-    if debug
+  if debug
+  then (
+    (t.only_in_debug).currently_running_node <- Some (T node);
+    (t.only_in_debug).expert_nodes_created_by_current_node <- []);
+  t.num_nodes_recomputed <- t.num_nodes_recomputed + 1;
+  node.recomputed_at <- t.stabilization_num;
+  match node.kind with
+  | Array_fold array_fold -> maybe_change_value t node (Array_fold.compute array_fold)
+  | At { at; clock; _ } ->
+    (* It is a bug if we try to compute an [At] node after [at].  [advance_clock] was
+       supposed to convert it to a [Const] at the appropriate time. *)
+    if debug then assert (not (alarm_would_have_fired clock ~at));
+    maybe_change_value t node Before
+  | At_intervals _ -> maybe_change_value t node ()
+  | Bind_lhs_change
+      ({ main
+       ; f
+       ; lhs
+       ; rhs_scope
+       ; rhs = old_rhs
+       ; all_nodes_created_on_rhs = old_all_nodes_created_on_rhs; _
+       } as bind) ->
+    (* We clear [all_nodes_created_on_rhs] so it will hold just the nodes created by
+       this call to [f]. *)
+    bind.all_nodes_created_on_rhs <- Uopt.none;
+    let rhs = run_with_scope t rhs_scope ~f:(fun () -> f (Node.value_exn lhs)) in
+    bind.rhs <- Uopt.some rhs;
+    (* Anticipate what [maybe_change_value] will do, to make sure Bind_main is stale
+       right away. This way, if the new child is invalid, we'll satisfy the invariant
+       saying that [needs_to_be_computed bind_main] in [propagate_invalidity] *)
+    node.changed_at <- t.stabilization_num;
+    change_child
+      t
+      ~parent:main
+      ~old_child:old_rhs
+      ~new_child:rhs
+      ~child_index:Kind.bind_rhs_child_index;
+    if Uopt.is_some old_rhs
     then (
-      (t.only_in_debug).currently_running_node <- Some (T node);
-      (t.only_in_debug).expert_nodes_created_by_current_node <- []);
-    t.num_nodes_recomputed <- t.num_nodes_recomputed + 1;
-    node.recomputed_at <- t.stabilization_num;
-    match node.kind with
-    | Array_fold array_fold -> maybe_change_value t node (Array_fold.compute array_fold)
-    | At { at; clock; _ } ->
-      (* It is a bug if we try to compute an [At] node after [at].  [advance_clock] was
-         supposed to convert it to a [Const] at the appropriate time. *)
-      if debug then assert (not (alarm_would_have_fired clock ~at));
-      maybe_change_value t node Before
-    | At_intervals _ -> maybe_change_value t node ()
-    | Bind_lhs_change
-        ({ main
-         ; f
-         ; lhs
-         ; rhs_scope
-         ; rhs = old_rhs
-         ; all_nodes_created_on_rhs = old_all_nodes_created_on_rhs; _
-         } as bind) ->
-      (* We clear [all_nodes_created_on_rhs] so it will hold just the nodes created by
-         this call to [f]. *)
-      bind.all_nodes_created_on_rhs <- Uopt.none;
-      let rhs = run_with_scope t rhs_scope ~f:(fun () -> f (Node.value_exn lhs)) in
-      bind.rhs <- Uopt.some rhs;
-      (* Anticipate what [maybe_change_value] will do, to make sure Bind_main is stale
-         right away. This way, if the new child is invalid, we'll satisfy the invariant
-         saying that [needs_to_be_computed bind_main] in [propagate_invalidity] *)
-      node.changed_at <- t.stabilization_num;
-      change_child
-        t
-        ~parent:main
-        ~old_child:old_rhs
-        ~new_child:rhs
-        ~child_index:Kind.bind_rhs_child_index;
-      if Uopt.is_some old_rhs
-      then (
-        (* We invalidate after [change_child], because invalidation changes the [kind] of
-           nodes to [Invalid], which means that we can no longer visit their children.
-           Also, the [old_rhs] nodes are typically made unnecessary by [change_child], and
-           so by invalidating afterwards, we will not waste time adding them to the
-           recompute heap and then removing them. *)
-        if t.bind_lhs_change_should_invalidate_rhs
-        then invalidate_nodes_created_on_rhs t old_all_nodes_created_on_rhs
-        else
-          rescope_nodes_created_on_rhs
-            t
-            old_all_nodes_created_on_rhs
-            ~new_scope:main.created_in;
-        propagate_invalidity t);
-      (* [node] was valid at the start of the [Bind_lhs_change] branch, and invalidation
-         only visits higher nodes, so [node] is still valid. *)
-      if debug then assert (Node.is_valid node);
-      maybe_change_value t node ()
-    | Bind_main { rhs; _ } -> copy_child t ~parent:node ~child:(Uopt.value_exn rhs)
-    | Const a -> maybe_change_value t node a
-    | Freeze { child; only_freeze_when; _ } ->
-      let value = Node.value_exn child in
-      if only_freeze_when value
-      then (
-        remove_children t node;
-        Node.set_kind node (Const value);
-        if Node.is_necessary node then set_height t node 0 else became_unnecessary t node);
-      maybe_change_value t node value
-    | If_test_change ({ main; current_branch; test; then_; else_; _ } as if_then_else) ->
-      let desired_branch = if Node.value_exn test then then_ else else_ in
-      if_then_else.current_branch <- Uopt.some desired_branch;
-      (* see the comment in Bind_lhs_change *)
-      node.changed_at <- t.stabilization_num;
-      change_child
-        t
-        ~parent:main
-        ~old_child:current_branch
-        ~new_child:desired_branch
-        ~child_index:Kind.if_branch_child_index;
-      maybe_change_value t node ()
-    | If_then_else { current_branch; _ } ->
-      copy_child t ~parent:node ~child:(Uopt.value_exn current_branch)
-    | Invalid ->
-      (* We never have invalid nodes in the recompute heap; they are never stale. *)
-      assert false
-    | Join_lhs_change ({ lhs; main; rhs = old_rhs; _ } as join) ->
-      let rhs = Node.value_exn lhs in
-      join.rhs <- Uopt.some rhs;
-      (* see the comment in Bind_lhs_change *)
-      node.changed_at <- t.stabilization_num;
-      change_child
-        t
-        ~parent:main
-        ~old_child:old_rhs
-        ~new_child:rhs
-        ~child_index:Kind.join_rhs_child_index;
-      maybe_change_value t node ()
-    | Join_main { rhs; _ } -> copy_child t ~parent:node ~child:(Uopt.value_exn rhs)
-    | Map (f, n1) -> maybe_change_value t node (f (Node.value_exn n1))
-    | Snapshot { at; before; clock; _ } ->
-      (* It is a bug if we try to compute a [Snapshot] and the alarm should have fired.
-         [advance_clock] was supposed to convert it to a [Freeze] at the appropriate
-         time. *)
-      if debug then assert (not (alarm_would_have_fired clock ~at));
-      maybe_change_value t node before
-    | Step_function { value; upcoming_steps; _ } ->
-      (* It is a bug if we try to compute a [Step_function] with no upcoming steps.
-         [advance_clock] was supposed to convert it to a [Const]. *)
-      if debug then assert (not (List.is_empty upcoming_steps));
-      maybe_change_value t node value
-    | Unordered_array_fold u -> maybe_change_value t node (Unordered_array_fold.compute u)
-    | Uninitialized -> assert false
-    | Var var -> maybe_change_value t node var.value
-    | Map2 (f, n1, n2) ->
-      maybe_change_value t node (f (Node.value_exn n1) (Node.value_exn n2))
-    | Map3 (f, n1, n2, n3) ->
-      maybe_change_value
-        t
-        node
-        (f (Node.value_exn n1) (Node.value_exn n2) (Node.value_exn n3))
-    | Map4 (f, n1, n2, n3, n4) ->
-      maybe_change_value
-        t
-        node
-        (f (Node.value_exn n1) (Node.value_exn n2) (Node.value_exn n3) (Node.value_exn n4))
-    | Map5 (f, n1, n2, n3, n4, n5) ->
-      maybe_change_value
-        t
-        node
-        (f
-           (Node.value_exn n1)
-           (Node.value_exn n2)
-           (Node.value_exn n3)
-           (Node.value_exn n4)
-           (Node.value_exn n5))
-    | Map6 (f, n1, n2, n3, n4, n5, n6) ->
-      maybe_change_value
-        t
-        node
-        (f
-           (Node.value_exn n1)
-           (Node.value_exn n2)
-           (Node.value_exn n3)
-           (Node.value_exn n4)
-           (Node.value_exn n5)
-           (Node.value_exn n6))
-    | Map7 (f, n1, n2, n3, n4, n5, n6, n7) ->
-      maybe_change_value
-        t
-        node
-        (f
-           (Node.value_exn n1)
-           (Node.value_exn n2)
-           (Node.value_exn n3)
-           (Node.value_exn n4)
-           (Node.value_exn n5)
-           (Node.value_exn n6)
-           (Node.value_exn n7))
-    | Map8 (f, n1, n2, n3, n4, n5, n6, n7, n8) ->
-      maybe_change_value
-        t
-        node
-        (f
-           (Node.value_exn n1)
-           (Node.value_exn n2)
-           (Node.value_exn n3)
-           (Node.value_exn n4)
-           (Node.value_exn n5)
-           (Node.value_exn n6)
-           (Node.value_exn n7)
-           (Node.value_exn n8))
-    | Map9 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9) ->
-      maybe_change_value
-        t
-        node
-        (f
-           (Node.value_exn n1)
-           (Node.value_exn n2)
-           (Node.value_exn n3)
-           (Node.value_exn n4)
-           (Node.value_exn n5)
-           (Node.value_exn n6)
-           (Node.value_exn n7)
-           (Node.value_exn n8)
-           (Node.value_exn n9))
-    | Expert expert ->
-      (match Expert.before_main_computation expert with
-       | `Invalid ->
-         invalidate_node t node;
-         propagate_invalidity t
-       | `Ok -> maybe_change_value t node (expert.f ()))
+      (* We invalidate after [change_child], because invalidation changes the [kind] of
+         nodes to [Invalid], which means that we can no longer visit their children.
+         Also, the [old_rhs] nodes are typically made unnecessary by [change_child], and
+         so by invalidating afterwards, we will not waste time adding them to the
+         recompute heap and then removing them. *)
+      if t.bind_lhs_change_should_invalidate_rhs
+      then invalidate_nodes_created_on_rhs t old_all_nodes_created_on_rhs
+      else
+        rescope_nodes_created_on_rhs
+          t
+          old_all_nodes_created_on_rhs
+          ~new_scope:main.created_in;
+      propagate_invalidity t);
+    (* [node] was valid at the start of the [Bind_lhs_change] branch, and invalidation
+       only visits higher nodes, so [node] is still valid. *)
+    if debug then assert (Node.is_valid node);
+    maybe_change_value t node ()
+  | Bind_main { rhs; _ } -> copy_child t ~parent:node ~child:(Uopt.value_exn rhs)
+  | Const a -> maybe_change_value t node a
+  | Freeze { child; only_freeze_when; _ } ->
+    let value = Node.value_exn child in
+    if only_freeze_when value
+    then (
+      remove_children t node;
+      Node.set_kind node (Const value);
+      if Node.is_necessary node then set_height t node 0 else became_unnecessary t node);
+    maybe_change_value t node value
+  | If_test_change ({ main; current_branch; test; then_; else_; _ } as if_then_else) ->
+    let desired_branch = if Node.value_exn test then then_ else else_ in
+    if_then_else.current_branch <- Uopt.some desired_branch;
+    (* see the comment in Bind_lhs_change *)
+    node.changed_at <- t.stabilization_num;
+    change_child
+      t
+      ~parent:main
+      ~old_child:current_branch
+      ~new_child:desired_branch
+      ~child_index:Kind.if_branch_child_index;
+    maybe_change_value t node ()
+  | If_then_else { current_branch; _ } ->
+    copy_child t ~parent:node ~child:(Uopt.value_exn current_branch)
+  | Invalid ->
+    (* We never have invalid nodes in the recompute heap; they are never stale. *)
+    assert false
+  | Join_lhs_change ({ lhs; main; rhs = old_rhs; _ } as join) ->
+    let rhs = Node.value_exn lhs in
+    join.rhs <- Uopt.some rhs;
+    (* see the comment in Bind_lhs_change *)
+    node.changed_at <- t.stabilization_num;
+    change_child
+      t
+      ~parent:main
+      ~old_child:old_rhs
+      ~new_child:rhs
+      ~child_index:Kind.join_rhs_child_index;
+    maybe_change_value t node ()
+  | Join_main { rhs; _ } -> copy_child t ~parent:node ~child:(Uopt.value_exn rhs)
+  | Map (f, n1) -> maybe_change_value t node (f (Node.value_exn n1))
+  | Snapshot { at; before; clock; _ } ->
+    (* It is a bug if we try to compute a [Snapshot] and the alarm should have fired.
+       [advance_clock] was supposed to convert it to a [Freeze] at the appropriate
+       time. *)
+    if debug then assert (not (alarm_would_have_fired clock ~at));
+    maybe_change_value t node before
+  | Step_function { value; upcoming_steps; _ } ->
+    (* It is a bug if we try to compute a [Step_function] with no upcoming steps.
+       [advance_clock] was supposed to convert it to a [Const]. *)
+    if debug then assert (not (List.is_empty upcoming_steps));
+    maybe_change_value t node value
+  | Unordered_array_fold u -> maybe_change_value t node (Unordered_array_fold.compute u)
+  | Uninitialized -> assert false
+  | Var var -> maybe_change_value t node var.value
+  | Map2 (f, n1, n2) ->
+    maybe_change_value t node (f (Node.value_exn n1) (Node.value_exn n2))
+  | Map3 (f, n1, n2, n3) ->
+    maybe_change_value
+      t
+      node
+      (f (Node.value_exn n1) (Node.value_exn n2) (Node.value_exn n3))
+  | Map4 (f, n1, n2, n3, n4) ->
+    maybe_change_value
+      t
+      node
+      (f (Node.value_exn n1) (Node.value_exn n2) (Node.value_exn n3) (Node.value_exn n4))
+  | Map5 (f, n1, n2, n3, n4, n5) ->
+    maybe_change_value
+      t
+      node
+      (f
+         (Node.value_exn n1)
+         (Node.value_exn n2)
+         (Node.value_exn n3)
+         (Node.value_exn n4)
+         (Node.value_exn n5))
+  | Map6 (f, n1, n2, n3, n4, n5, n6) ->
+    maybe_change_value
+      t
+      node
+      (f
+         (Node.value_exn n1)
+         (Node.value_exn n2)
+         (Node.value_exn n3)
+         (Node.value_exn n4)
+         (Node.value_exn n5)
+         (Node.value_exn n6))
+  | Map7 (f, n1, n2, n3, n4, n5, n6, n7) ->
+    maybe_change_value
+      t
+      node
+      (f
+         (Node.value_exn n1)
+         (Node.value_exn n2)
+         (Node.value_exn n3)
+         (Node.value_exn n4)
+         (Node.value_exn n5)
+         (Node.value_exn n6)
+         (Node.value_exn n7))
+  | Map8 (f, n1, n2, n3, n4, n5, n6, n7, n8) ->
+    maybe_change_value
+      t
+      node
+      (f
+         (Node.value_exn n1)
+         (Node.value_exn n2)
+         (Node.value_exn n3)
+         (Node.value_exn n4)
+         (Node.value_exn n5)
+         (Node.value_exn n6)
+         (Node.value_exn n7)
+         (Node.value_exn n8))
+  | Map9 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9) ->
+    maybe_change_value
+      t
+      node
+      (f
+         (Node.value_exn n1)
+         (Node.value_exn n2)
+         (Node.value_exn n3)
+         (Node.value_exn n4)
+         (Node.value_exn n5)
+         (Node.value_exn n6)
+         (Node.value_exn n7)
+         (Node.value_exn n8)
+         (Node.value_exn n9))
+  | Expert expert ->
+    (match Expert.before_main_computation expert with
+     | `Invalid ->
+       invalidate_node t node;
+       propagate_invalidity t
+     | `Ok -> maybe_change_value t node (expert.f ()))
 
 and copy_child : type a. t -> parent:a Node.t -> child:a Node.t -> unit =
   fun t ~parent ~child ->
-    if Node.is_valid child
-    then maybe_change_value t parent (Node.value_exn child)
-    else (
-      invalidate_node t parent;
-      propagate_invalidity t)
+  if Node.is_valid child
+  then maybe_change_value t parent (Node.value_exn child)
+  else (
+    invalidate_node t parent;
+    propagate_invalidity t)
 
 and maybe_change_value : type a. t -> a Node.t -> a -> unit =
   fun t (node : _ Node.t) new_value ->
-    let old_value_opt = node.value_opt in
-    if Uopt.is_none old_value_opt
-    || not
-         (Cutoff.should_cutoff
-            node.cutoff
-            ~old_value:(Uopt.unsafe_value old_value_opt)
-            ~new_value)
+  let old_value_opt = node.value_opt in
+  if Uopt.is_none old_value_opt
+  || not
+       (Cutoff.should_cutoff
+          node.cutoff
+          ~old_value:(Uopt.unsafe_value old_value_opt)
+          ~new_value)
+  then (
+    node.value_opt <- Uopt.some new_value;
+    node.changed_at <- t.stabilization_num;
+    t.num_nodes_changed <- t.num_nodes_changed + 1;
+    if node.num_on_update_handlers > 0
     then (
-      node.value_opt <- Uopt.some new_value;
-      node.changed_at <- t.stabilization_num;
-      t.num_nodes_changed <- t.num_nodes_changed + 1;
-      if node.num_on_update_handlers > 0
-      then (
-        node.old_value_opt <- old_value_opt;
-        handle_after_stabilization t node);
-      if node.num_parents >= 1
-      then (
-        for parent_index = 1 to node.num_parents - 1 do
-          let (T parent) = Uopt.value_exn node.parent1_and_beyond.(parent_index - 1) in
-          (match parent.kind with
-           | Expert expert ->
-             let child_index = node.my_child_index_in_parent_at_index.(parent_index) in
-             Expert.run_edge_callback ~child_index expert
-           | Unordered_array_fold u ->
-             Unordered_array_fold.child_changed
-               u
-               ~child:node
-               ~child_index:node.my_child_index_in_parent_at_index.(parent_index)
-               ~old_value_opt
-               ~new_value
-           | _ -> ());
-          if debug then assert (Node.needs_to_be_computed parent);
-          (* We don't do the [can_recompute_now] optimization.  Since most nodes only have
-             one parent, it is not probably not a big loss.  If we did it anyway, we'd
-             have to be careful, because while we iterate over the list of parents, we
-             would execute them, and in particular we can execute lhs-change nodes who can
-             change the structure of the list of parents we iterate on.  Think about:
-
-             {[
-               lhs >>= fun b -> if b then lhs >>| Fn.id else const b
-             ]}
-
-             If the optimization kicks in when we propagate change to the parents of [lhs]
-             (which changes from [true] to [false]), we could execute the [lhs-change]
-             first, which would make disconnect the [map] node from [lhs].  And then we
-             would execute the second child of the [lhs], which doesn't exist anymore and
-             incremental would segfault (there may be a less naive way of making this work
-             though). *)
-          if not (Node.is_in_recompute_heap parent)
-          then Recompute_heap.add t.recompute_heap parent
-        done;
-        let (T parent) = Uopt.value_exn node.parent0 in
+      node.old_value_opt <- old_value_opt;
+      handle_after_stabilization t node);
+    if node.num_parents >= 1
+    then (
+      for parent_index = 1 to node.num_parents - 1 do
+        let (T parent) = Uopt.value_exn node.parent1_and_beyond.(parent_index - 1) in
         (match parent.kind with
-         | Expert p ->
-           let child_index = node.my_child_index_in_parent_at_index.(0) in
-           Expert.run_edge_callback ~child_index p
+         | Expert expert ->
+           let child_index = node.my_child_index_in_parent_at_index.(parent_index) in
+           Expert.run_edge_callback ~child_index expert
          | Unordered_array_fold u ->
            Unordered_array_fold.child_changed
              u
              ~child:node
-             ~child_index:node.my_child_index_in_parent_at_index.(0)
+             ~child_index:node.my_child_index_in_parent_at_index.(parent_index)
              ~old_value_opt
              ~new_value
          | _ -> ());
         if debug then assert (Node.needs_to_be_computed parent);
-        if not (Node.is_in_recompute_heap parent)
-        then (
-          let can_recompute_now =
-            match parent.kind with
-            | Uninitialized -> assert false
-            (* These nodes aren't parents. *)
-            | At _ -> assert false
-            | At_intervals _ -> assert false
-            | Const _ | Invalid | Snapshot _ | Step_function _ | Var _ -> assert false
-            (* These nodes have more than one child. *)
-            | Array_fold _
-            | Map2 _
-            | Map3 _
-            | Map4 _
-            | Map5 _
-            | Map6 _
-            | Map7 _
-            | Map8 _
-            | Map9 _
-            | Unordered_array_fold _
-            | Expert _ -> false
-            (* We can immediately recompute [parent] if no other node needs to be stable
-               before computing it.  If [parent] has a single child (i.e. [node]), then
-               this amounts to checking that [parent] won't be invalidated, i.e. that
-               [parent]'s scope has already stabilized. *)
-            | Bind_lhs_change _ -> node.height > Scope.height parent.created_in
-            | Freeze _ -> node.height > Scope.height parent.created_in
-            | If_test_change _ -> node.height > Scope.height parent.created_in
-            | Join_lhs_change _ -> node.height > Scope.height parent.created_in
-            | Map _ -> node.height > Scope.height parent.created_in
-            (* For these, we need to check that the "_change" child has already been
-               evaluated (if needed).  If so, this also implies:
+        (* We don't do the [can_recompute_now] optimization.  Since most nodes only have
+           one parent, it is not probably not a big loss.  If we did it anyway, we'd
+           have to be careful, because while we iterate over the list of parents, we
+           would execute them, and in particular we can execute lhs-change nodes who can
+           change the structure of the list of parents we iterate on.  Think about:
 
-               {[
-                 node.height > Scope.height parent.created_in
-               ]} *)
-            | Bind_main b -> node.height > b.lhs_change.height
-            | If_then_else i -> node.height > i.test_change.height
-            | Join_main j -> node.height > j.lhs_change.height
-          in
-          if can_recompute_now
-          then (
-            t.num_nodes_recomputed_directly_because_one_child
-            <- t.num_nodes_recomputed_directly_because_one_child + 1;
-            recompute t parent)
-          else if parent.height <= Recompute_heap.min_height t.recompute_heap
-          then (
-            (* If [parent.height] is [<=] the height of all nodes in the recompute heap
-               (possibly because the recompute heap is empty), then we can recompute
-               [parent] immediately and save adding it to and then removing it from the
-               recompute heap. *)
-            t.num_nodes_recomputed_directly_because_min_height
-            <- t.num_nodes_recomputed_directly_because_min_height + 1;
-            recompute t parent)
-          else (
-            if debug then assert (Node.needs_to_be_computed parent);
-            if debug then assert (not (Node.is_in_recompute_heap parent));
-            Recompute_heap.add t.recompute_heap parent))));
-    if debug then invariant t
+           {[
+             lhs >>= fun b -> if b then lhs >>| Fn.id else const b
+           ]}
+
+           If the optimization kicks in when we propagate change to the parents of [lhs]
+           (which changes from [true] to [false]), we could execute the [lhs-change]
+           first, which would make disconnect the [map] node from [lhs].  And then we
+           would execute the second child of the [lhs], which doesn't exist anymore and
+           incremental would segfault (there may be a less naive way of making this work
+           though). *)
+        if not (Node.is_in_recompute_heap parent)
+        then Recompute_heap.add t.recompute_heap parent
+      done;
+      let (T parent) = Uopt.value_exn node.parent0 in
+      (match parent.kind with
+       | Expert p ->
+         let child_index = node.my_child_index_in_parent_at_index.(0) in
+         Expert.run_edge_callback ~child_index p
+       | Unordered_array_fold u ->
+         Unordered_array_fold.child_changed
+           u
+           ~child:node
+           ~child_index:node.my_child_index_in_parent_at_index.(0)
+           ~old_value_opt
+           ~new_value
+       | _ -> ());
+      if debug then assert (Node.needs_to_be_computed parent);
+      if not (Node.is_in_recompute_heap parent)
+      then (
+        let can_recompute_now =
+          match parent.kind with
+          | Uninitialized -> assert false
+          (* These nodes aren't parents. *)
+          | At _ -> assert false
+          | At_intervals _ -> assert false
+          | Const _ | Invalid | Snapshot _ | Step_function _ | Var _ -> assert false
+          (* These nodes have more than one child. *)
+          | Array_fold _
+          | Map2 _
+          | Map3 _
+          | Map4 _
+          | Map5 _
+          | Map6 _
+          | Map7 _
+          | Map8 _
+          | Map9 _
+          | Unordered_array_fold _
+          | Expert _ -> false
+          (* We can immediately recompute [parent] if no other node needs to be stable
+             before computing it.  If [parent] has a single child (i.e. [node]), then
+             this amounts to checking that [parent] won't be invalidated, i.e. that
+             [parent]'s scope has already stabilized. *)
+          | Bind_lhs_change _ -> node.height > Scope.height parent.created_in
+          | Freeze _ -> node.height > Scope.height parent.created_in
+          | If_test_change _ -> node.height > Scope.height parent.created_in
+          | Join_lhs_change _ -> node.height > Scope.height parent.created_in
+          | Map _ -> node.height > Scope.height parent.created_in
+          (* For these, we need to check that the "_change" child has already been
+             evaluated (if needed).  If so, this also implies:
+
+             {[
+               node.height > Scope.height parent.created_in
+             ]} *)
+          | Bind_main b -> node.height > b.lhs_change.height
+          | If_then_else i -> node.height > i.test_change.height
+          | Join_main j -> node.height > j.lhs_change.height
+        in
+        if can_recompute_now
+        then (
+          t.num_nodes_recomputed_directly_because_one_child
+          <- t.num_nodes_recomputed_directly_because_one_child + 1;
+          recompute t parent)
+        else if parent.height <= Recompute_heap.min_height t.recompute_heap
+        then (
+          (* If [parent.height] is [<=] the height of all nodes in the recompute heap
+             (possibly because the recompute heap is empty), then we can recompute
+             [parent] immediately and save adding it to and then removing it from the
+             recompute heap. *)
+          t.num_nodes_recomputed_directly_because_min_height
+          <- t.num_nodes_recomputed_directly_because_min_height + 1;
+          recompute t parent)
+        else (
+          if debug then assert (Node.needs_to_be_computed parent);
+          if debug then assert (not (Node.is_in_recompute_heap parent));
+          Recompute_heap.add t.recompute_heap parent))));
+  if debug then invariant t
 ;;
 
 let recompute_everything_that_is_necessary t =
