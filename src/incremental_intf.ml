@@ -1238,11 +1238,7 @@ module type S = sig
 
         In certain pathological cases, [advance_clock] can raise due to it detecting a
         cycle in the incremental graph. *)
-    val advance_clock
-      :  ?deprecated_allow_backwards:bool
-      -> t
-      -> to_:Time_ns.t
-      -> unit
+    val advance_clock : t -> to_:Time_ns.t -> unit
 
     (** [advance_clock_by t span = advance_clock t ~to_:(Time_ns.add (now t) span)] *)
     val advance_clock_by : t -> Time_ns.Span.t -> unit

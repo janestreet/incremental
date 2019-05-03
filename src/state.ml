@@ -1639,10 +1639,10 @@ let change_leaf t (node : _ Node.t) =
   then Recompute_heap.add t.recompute_heap node
 ;;
 
-let advance_clock ?(deprecated_allow_backwards = false) t (clock : Clock.t) ~to_ =
+let advance_clock t (clock : Clock.t) ~to_ =
   ensure_not_stabilizing t ~name:"advance_clock" ~allow_in_update_handler:true;
   if debug then invariant t;
-  if Time_ns.( > ) to_ (now clock) || deprecated_allow_backwards
+  if Time_ns.( > ) to_ (now clock)
   then (
     set_var_while_not_stabilizing t clock.now to_;
     Timing_wheel.advance_clock clock.timing_wheel ~to_ ~handle_fired:clock.handle_fired;
