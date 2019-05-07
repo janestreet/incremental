@@ -168,7 +168,8 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
       let level_bits = [ 14; 13; 5 ] in
       Timing_wheel.Config.create
         ~alarm_precision
-        ~level_bits:(Timing_wheel.Level_bits.create_exn level_bits)
+        ~level_bits:
+          (Timing_wheel.Level_bits.create_exn level_bits ~extend_to_max_num_bits:true)
         ()
     ;;
 
