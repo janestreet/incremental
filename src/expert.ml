@@ -14,7 +14,7 @@ type 'a edge = 'a Types.Expert.edge =
 [@@deriving sexp_of]
 
 type packed_edge = Types.Expert.packed_edge = E : 'a edge -> packed_edge
-[@@deriving sexp_of]
+[@@unboxed] [@@deriving sexp_of]
 
 type 'a t = 'a Types.Expert.t =
   { f : unit -> 'a

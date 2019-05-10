@@ -92,7 +92,7 @@ and Expert : sig
     ; mutable index : int Uopt.t
     }
 
-  type packed_edge = E : 'a edge -> packed_edge
+  type packed_edge = E : 'a edge -> packed_edge [@@unboxed]
 
   type 'a t =
     { f : unit -> 'a
