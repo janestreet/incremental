@@ -179,7 +179,7 @@ let iter_observers t ~f =
 
 let directly_observed t =
   let r : Node.Packed.t list ref = ref [] in
-  iter_observers t ~f:(fun (Internal_observer.Packed.T internal_observer) ->
+  iter_observers t ~f:(fun (T internal_observer) ->
     r := T internal_observer.observing :: !r);
   !r
 ;;
@@ -237,7 +237,7 @@ let invariant t =
   | Running_on_update_handlers | Stabilizing | Not_stabilizing ->
     Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
       let check f = Invariant.check_field t f in
-      iter_observers t ~f:(fun (Internal_observer.Packed.T internal_observer) ->
+      iter_observers t ~f:(fun (T internal_observer) ->
         (match internal_observer.state with
          | In_use | Disallowed -> ()
          | Created | Unlinked ->
@@ -276,7 +276,7 @@ let invariant t =
           (check
              (Stack.invariant (fun packed ->
                 Internal_observer.Packed.invariant packed;
-                let (Internal_observer.Packed.T internal_observer) = packed in
+                let (T internal_observer) = packed in
                 (* When an observer is added to [new_observers], it has [state = Created].
                    The only possible transitions from there are to [Unlinked] or to
                    [In_use], which also removes it from [new_observers], never to be added
@@ -289,7 +289,7 @@ let invariant t =
           (check
              (Stack.invariant (fun packed ->
                 Internal_observer.Packed.invariant packed;
-                let (Internal_observer.Packed.T internal_observer) = packed in
+                let (T internal_observer) = packed in
                 match internal_observer.state with
                 | Disallowed -> ()
                 | Created | In_use | Unlinked -> assert false)))
@@ -848,6 +848,111 @@ let rec recompute : type a. t -> a Node.t -> unit =
          (Node.value_exn n7)
          (Node.value_exn n8)
          (Node.value_exn n9))
+  | Map10 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10) ->
+    maybe_change_value
+      t
+      node
+      (f
+         (Node.value_exn n1)
+         (Node.value_exn n2)
+         (Node.value_exn n3)
+         (Node.value_exn n4)
+         (Node.value_exn n5)
+         (Node.value_exn n6)
+         (Node.value_exn n7)
+         (Node.value_exn n8)
+         (Node.value_exn n9)
+         (Node.value_exn n10))
+  | Map11 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11) ->
+    maybe_change_value
+      t
+      node
+      (f
+         (Node.value_exn n1)
+         (Node.value_exn n2)
+         (Node.value_exn n3)
+         (Node.value_exn n4)
+         (Node.value_exn n5)
+         (Node.value_exn n6)
+         (Node.value_exn n7)
+         (Node.value_exn n8)
+         (Node.value_exn n9)
+         (Node.value_exn n10)
+         (Node.value_exn n11))
+  | Map12 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12) ->
+    maybe_change_value
+      t
+      node
+      (f
+         (Node.value_exn n1)
+         (Node.value_exn n2)
+         (Node.value_exn n3)
+         (Node.value_exn n4)
+         (Node.value_exn n5)
+         (Node.value_exn n6)
+         (Node.value_exn n7)
+         (Node.value_exn n8)
+         (Node.value_exn n9)
+         (Node.value_exn n10)
+         (Node.value_exn n11)
+         (Node.value_exn n12))
+  | Map13 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13) ->
+    maybe_change_value
+      t
+      node
+      (f
+         (Node.value_exn n1)
+         (Node.value_exn n2)
+         (Node.value_exn n3)
+         (Node.value_exn n4)
+         (Node.value_exn n5)
+         (Node.value_exn n6)
+         (Node.value_exn n7)
+         (Node.value_exn n8)
+         (Node.value_exn n9)
+         (Node.value_exn n10)
+         (Node.value_exn n11)
+         (Node.value_exn n12)
+         (Node.value_exn n13))
+  | Map14 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14) ->
+    maybe_change_value
+      t
+      node
+      (f
+         (Node.value_exn n1)
+         (Node.value_exn n2)
+         (Node.value_exn n3)
+         (Node.value_exn n4)
+         (Node.value_exn n5)
+         (Node.value_exn n6)
+         (Node.value_exn n7)
+         (Node.value_exn n8)
+         (Node.value_exn n9)
+         (Node.value_exn n10)
+         (Node.value_exn n11)
+         (Node.value_exn n12)
+         (Node.value_exn n13)
+         (Node.value_exn n14))
+  | Map15 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15) ->
+    maybe_change_value
+      t
+      node
+      (f
+         (Node.value_exn n1)
+         (Node.value_exn n2)
+         (Node.value_exn n3)
+         (Node.value_exn n4)
+         (Node.value_exn n5)
+         (Node.value_exn n6)
+         (Node.value_exn n7)
+         (Node.value_exn n8)
+         (Node.value_exn n9)
+         (Node.value_exn n10)
+         (Node.value_exn n11)
+         (Node.value_exn n12)
+         (Node.value_exn n13)
+         (Node.value_exn n14)
+         (Node.value_exn n15))
   | Expert expert ->
     (match Expert.before_main_computation expert with
      | `Invalid ->
@@ -949,6 +1054,12 @@ and maybe_change_value : type a. t -> a Node.t -> a -> unit =
           | Map7 _
           | Map8 _
           | Map9 _
+          | Map10 _
+          | Map11 _
+          | Map12 _
+          | Map13 _
+          | Map14 _
+          | Map15 _
           | Unordered_array_fold _
           | Expert _ -> false
           (* We can immediately recompute [parent] if no other node needs to be stable
@@ -1014,7 +1125,7 @@ let unlink_disallowed_observers t =
   while Stack.length t.disallowed_observers > 0 do
     let packed = Stack.pop_exn t.disallowed_observers in
     let module Packed = Internal_observer.Packed in
-    let (Packed.T internal_observer) = packed in
+    let (T internal_observer) = packed in
     if debug
     then
       assert (
@@ -1022,7 +1133,7 @@ let unlink_disallowed_observers t =
         | Disallowed -> true
         | _ -> false);
     internal_observer.state <- Unlinked;
-    let (Packed.T all_observers) = Uopt.value_exn t.all_observers in
+    let (T all_observers) = Uopt.value_exn t.all_observers in
     if Internal_observer.same internal_observer all_observers
     then t.all_observers <- internal_observer.next_in_all;
     Internal_observer.unlink internal_observer;
@@ -1045,9 +1156,7 @@ let disallow_future_use t (internal_observer : _ Internal_observer.t) =
 
 let disallow_finalized_observers t =
   while Thread_safe_queue.length t.finalized_observers > 0 do
-    let (Internal_observer.Packed.T internal_observer) =
-      Thread_safe_queue.dequeue_exn t.finalized_observers
-    in
+    let (T internal_observer) = Thread_safe_queue.dequeue_exn t.finalized_observers in
     if List.is_empty internal_observer.on_update_handlers
     then disallow_future_use t internal_observer
   done
@@ -1082,7 +1191,7 @@ let add_new_observers t =
   while Stack.length t.new_observers > 0 do
     let packed = Stack.pop_exn t.new_observers in
     let module Packed = Internal_observer.Packed in
-    let (Packed.T internal_observer) = packed in
+    let (T internal_observer) = packed in
     match internal_observer.state with
     | In_use | Disallowed -> assert false
     | Unlinked -> ()
@@ -1174,9 +1283,7 @@ let set_var t var value =
 
 let reclaim_space_in_weak_hashtbls t =
   while Thread_safe_queue.length t.weak_hashtbls > 0 do
-    let (Packed_weak_hashtbl.T weak_hashtbl) =
-      Thread_safe_queue.dequeue_exn t.weak_hashtbls
-    in
+    let (T weak_hashtbl) = Thread_safe_queue.dequeue_exn t.weak_hashtbls in
     Weak_hashtbl.reclaim_space_for_keys_with_unused_data weak_hashtbl
   done
 ;;
@@ -1224,9 +1331,7 @@ let stabilize t =
     t.status <- Running_on_update_handlers;
     let now = t.stabilization_num in
     while not (Stack.is_empty t.run_on_update_handlers) do
-      let (Run_on_update_handlers.T (node, node_update)) =
-        Stack.pop_exn t.run_on_update_handlers
-      in
+      let (T (node, node_update)) = Stack.pop_exn t.run_on_update_handlers in
       Node.run_on_update_handlers node node_update ~now
     done;
     t.status <- Not_stabilizing;
@@ -1276,6 +1381,32 @@ let map8 t n1 n2 n3 n4 n5 n6 n7 n8 ~f =
 
 let map9 t n1 n2 n3 n4 n5 n6 n7 n8 n9 ~f =
   create_node t (Map9 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9))
+;;
+
+let map10 t n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 ~f =
+  create_node t (Map10 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10))
+;;
+
+let map11 t n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 ~f =
+  create_node t (Map11 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11))
+;;
+
+let map12 t n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 ~f =
+  create_node t (Map12 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12))
+;;
+
+let map13 t n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 ~f =
+  create_node t (Map13 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13))
+;;
+
+let map14 t n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 n14 ~f =
+  create_node t (Map14 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14))
+;;
+
+let map15 t n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 n14 n15 ~f =
+  create_node
+    t
+    (Map15 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15))
 ;;
 
 let preserve_cutoff ~(input : _ Node.t) ~output =
@@ -1683,7 +1814,7 @@ let now_dummy =
   { Var.value = Time_ns.epoch
   ; value_set_during_stabilization = Uopt.none
   ; set_at = Stabilization_num.zero
-  ; watch = Node.create Top Kind.Invalid
+  ; watch = Node.create Top Invalid
   }
 ;;
 
@@ -1868,7 +1999,7 @@ module Expert = struct
          necessary makes sense. *)
       assert (Node.is_necessary node);
       let edge_index = Uopt.value_exn edge.index in
-      let (Expert.E last_edge) = Expert.last_child_edge_exn e in
+      let (E last_edge) = Expert.last_child_edge_exn e in
       let last_edge_index = Uopt.value_exn last_edge.index in
       if edge_index <> last_edge_index
       then (

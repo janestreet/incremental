@@ -140,11 +140,17 @@ and Internal_observer : sig
     { mutable state : State.t
     ; observing : 'a Node.t
     ; mutable on_update_handlers : 'a On_update_handler.t list
-    ; mutable prev_in_all : Packed_internal_observer.t Uopt.t
-    ; mutable next_in_all : Packed_internal_observer.t Uopt.t
+    ; mutable prev_in_all : Internal_observer.Packed.t Uopt.t
+    ; mutable next_in_all : Internal_observer.Packed.t Uopt.t
     ; mutable prev_in_observing : 'a t Uopt.t
     ; mutable next_in_observing : 'a t Uopt.t
     }
+
+  type 'a internal_observer = 'a t
+
+  module Packed : sig
+    type t = T : _ internal_observer -> t [@@unboxed]
+  end
 end =
   Internal_observer
 
@@ -237,6 +243,164 @@ and Kind : sig
         * 'a7 Node.t
         * 'a8 Node.t
         * 'a9 Node.t
+        -> 'a t
+    | Map10 :
+        ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10 -> 'a)
+        * 'a1 Node.t
+        * 'a2 Node.t
+        * 'a3 Node.t
+        * 'a4 Node.t
+        * 'a5 Node.t
+        * 'a6 Node.t
+        * 'a7 Node.t
+        * 'a8 Node.t
+        * 'a9 Node.t
+        * 'a10 Node.t
+        -> 'a t
+    | Map11 :
+        ('a1
+         -> 'a2
+         -> 'a3
+         -> 'a4
+         -> 'a5
+         -> 'a6
+         -> 'a7
+         -> 'a8
+         -> 'a9
+         -> 'a10
+         -> 'a11
+         -> 'a)
+        * 'a1 Node.t
+        * 'a2 Node.t
+        * 'a3 Node.t
+        * 'a4 Node.t
+        * 'a5 Node.t
+        * 'a6 Node.t
+        * 'a7 Node.t
+        * 'a8 Node.t
+        * 'a9 Node.t
+        * 'a10 Node.t
+        * 'a11 Node.t
+        -> 'a t
+    | Map12 :
+        ('a1
+         -> 'a2
+         -> 'a3
+         -> 'a4
+         -> 'a5
+         -> 'a6
+         -> 'a7
+         -> 'a8
+         -> 'a9
+         -> 'a10
+         -> 'a11
+         -> 'a12
+         -> 'a)
+        * 'a1 Node.t
+        * 'a2 Node.t
+        * 'a3 Node.t
+        * 'a4 Node.t
+        * 'a5 Node.t
+        * 'a6 Node.t
+        * 'a7 Node.t
+        * 'a8 Node.t
+        * 'a9 Node.t
+        * 'a10 Node.t
+        * 'a11 Node.t
+        * 'a12 Node.t
+        -> 'a t
+    | Map13 :
+        ('a1
+         -> 'a2
+         -> 'a3
+         -> 'a4
+         -> 'a5
+         -> 'a6
+         -> 'a7
+         -> 'a8
+         -> 'a9
+         -> 'a10
+         -> 'a11
+         -> 'a12
+         -> 'a13
+         -> 'a)
+        * 'a1 Node.t
+        * 'a2 Node.t
+        * 'a3 Node.t
+        * 'a4 Node.t
+        * 'a5 Node.t
+        * 'a6 Node.t
+        * 'a7 Node.t
+        * 'a8 Node.t
+        * 'a9 Node.t
+        * 'a10 Node.t
+        * 'a11 Node.t
+        * 'a12 Node.t
+        * 'a13 Node.t
+        -> 'a t
+    | Map14 :
+        ('a1
+         -> 'a2
+         -> 'a3
+         -> 'a4
+         -> 'a5
+         -> 'a6
+         -> 'a7
+         -> 'a8
+         -> 'a9
+         -> 'a10
+         -> 'a11
+         -> 'a12
+         -> 'a13
+         -> 'a14
+         -> 'a)
+        * 'a1 Node.t
+        * 'a2 Node.t
+        * 'a3 Node.t
+        * 'a4 Node.t
+        * 'a5 Node.t
+        * 'a6 Node.t
+        * 'a7 Node.t
+        * 'a8 Node.t
+        * 'a9 Node.t
+        * 'a10 Node.t
+        * 'a11 Node.t
+        * 'a12 Node.t
+        * 'a13 Node.t
+        * 'a14 Node.t
+        -> 'a t
+    | Map15 :
+        ('a1
+         -> 'a2
+         -> 'a3
+         -> 'a4
+         -> 'a5
+         -> 'a6
+         -> 'a7
+         -> 'a8
+         -> 'a9
+         -> 'a10
+         -> 'a11
+         -> 'a12
+         -> 'a13
+         -> 'a14
+         -> 'a15
+         -> 'a)
+        * 'a1 Node.t
+        * 'a2 Node.t
+        * 'a3 Node.t
+        * 'a4 Node.t
+        * 'a5 Node.t
+        * 'a6 Node.t
+        * 'a7 Node.t
+        * 'a8 Node.t
+        * 'a9 Node.t
+        * 'a10 Node.t
+        * 'a11 Node.t
+        * 'a12 Node.t
+        * 'a13 Node.t
+        * 'a14 Node.t
+        * 'a15 Node.t
         -> 'a t
 end =
   Kind
@@ -342,11 +506,6 @@ and Observer : sig
   type 'a t = 'a Internal_observer.t ref
 end =
   Observer
-
-and Packed_internal_observer : sig
-  type t = T : _ Internal_observer.t -> t
-end =
-  Packed_internal_observer
 
 and Scope : sig
   type t =

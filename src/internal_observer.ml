@@ -3,7 +3,7 @@ open! Import
 open Types.Internal_observer
 
 module Packed_ = struct
-  include Types.Packed_internal_observer
+  include Types.Internal_observer.Packed
 
   let sexp_of_t (T internal_observer) =
     internal_observer.observing |> [%sexp_of: _ Types.Node.t]

@@ -503,6 +503,170 @@ module type S = sig
     -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'b)
     -> 'b t
 
+  val map10
+    :  'a1 t
+    -> 'a2 t
+    -> 'a3 t
+    -> 'a4 t
+    -> 'a5 t
+    -> 'a6 t
+    -> 'a7 t
+    -> 'a8 t
+    -> 'a9 t
+    -> 'a10 t
+    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10 -> 'b)
+    -> 'b t
+
+  val map11
+    :  'a1 t
+    -> 'a2 t
+    -> 'a3 t
+    -> 'a4 t
+    -> 'a5 t
+    -> 'a6 t
+    -> 'a7 t
+    -> 'a8 t
+    -> 'a9 t
+    -> 'a10 t
+    -> 'a11 t
+    -> f:('a1
+          -> 'a2
+          -> 'a3
+          -> 'a4
+          -> 'a5
+          -> 'a6
+          -> 'a7
+          -> 'a8
+          -> 'a9
+          -> 'a10
+          -> 'a11
+          -> 'b)
+    -> 'b t
+
+  val map12
+    :  'a1 t
+    -> 'a2 t
+    -> 'a3 t
+    -> 'a4 t
+    -> 'a5 t
+    -> 'a6 t
+    -> 'a7 t
+    -> 'a8 t
+    -> 'a9 t
+    -> 'a10 t
+    -> 'a11 t
+    -> 'a12 t
+    -> f:('a1
+          -> 'a2
+          -> 'a3
+          -> 'a4
+          -> 'a5
+          -> 'a6
+          -> 'a7
+          -> 'a8
+          -> 'a9
+          -> 'a10
+          -> 'a11
+          -> 'a12
+          -> 'b)
+    -> 'b t
+
+  val map13
+    :  'a1 t
+    -> 'a2 t
+    -> 'a3 t
+    -> 'a4 t
+    -> 'a5 t
+    -> 'a6 t
+    -> 'a7 t
+    -> 'a8 t
+    -> 'a9 t
+    -> 'a10 t
+    -> 'a11 t
+    -> 'a12 t
+    -> 'a13 t
+    -> f:('a1
+          -> 'a2
+          -> 'a3
+          -> 'a4
+          -> 'a5
+          -> 'a6
+          -> 'a7
+          -> 'a8
+          -> 'a9
+          -> 'a10
+          -> 'a11
+          -> 'a12
+          -> 'a13
+          -> 'b)
+    -> 'b t
+
+  val map14
+    :  'a1 t
+    -> 'a2 t
+    -> 'a3 t
+    -> 'a4 t
+    -> 'a5 t
+    -> 'a6 t
+    -> 'a7 t
+    -> 'a8 t
+    -> 'a9 t
+    -> 'a10 t
+    -> 'a11 t
+    -> 'a12 t
+    -> 'a13 t
+    -> 'a14 t
+    -> f:('a1
+          -> 'a2
+          -> 'a3
+          -> 'a4
+          -> 'a5
+          -> 'a6
+          -> 'a7
+          -> 'a8
+          -> 'a9
+          -> 'a10
+          -> 'a11
+          -> 'a12
+          -> 'a13
+          -> 'a14
+          -> 'b)
+    -> 'b t
+
+  val map15
+    :  'a1 t
+    -> 'a2 t
+    -> 'a3 t
+    -> 'a4 t
+    -> 'a5 t
+    -> 'a6 t
+    -> 'a7 t
+    -> 'a8 t
+    -> 'a9 t
+    -> 'a10 t
+    -> 'a11 t
+    -> 'a12 t
+    -> 'a13 t
+    -> 'a14 t
+    -> 'a15 t
+    -> f:('a1
+          -> 'a2
+          -> 'a3
+          -> 'a4
+          -> 'a5
+          -> 'a6
+          -> 'a7
+          -> 'a8
+          -> 'a9
+          -> 'a10
+          -> 'a11
+          -> 'a12
+          -> 'a13
+          -> 'a14
+          -> 'a15
+          -> 'b)
+    -> 'b t
+
   (** [bind t1 ~f] returns an incremental [t2] that behaves like [f v], where [v] is the
       value of [t1].  If [t1]'s value changes, then incremental applies [f] to that new
       value and [t2] behaves like the resulting incremental.
@@ -1210,8 +1374,8 @@ module type S = sig
   module Clock : sig
     type t [@@deriving sexp_of]
 
-    (** The default timing-wheel configuration, with one millisecond precision with alarms
-        up to 30 days in the future. *)
+    (** The default timing-wheel configuration, with one millisecond precision, and alarms
+        allowed arbitrarily far in the future. *)
     val default_timing_wheel_config : Timing_wheel.Config.t
 
     val create

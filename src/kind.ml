@@ -81,6 +81,153 @@ type 'a t = 'a Types.Kind.t =
       * 'a8 Node.t
       * 'a9 Node.t
       -> 'a t
+  | Map10 :
+      ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10 -> 'a)
+      * 'a1 Node.t
+      * 'a2 Node.t
+      * 'a3 Node.t
+      * 'a4 Node.t
+      * 'a5 Node.t
+      * 'a6 Node.t
+      * 'a7 Node.t
+      * 'a8 Node.t
+      * 'a9 Node.t
+      * 'a10 Node.t
+      -> 'a t
+  | Map11 :
+      ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10 -> 'a11 -> 'a)
+      * 'a1 Node.t
+      * 'a2 Node.t
+      * 'a3 Node.t
+      * 'a4 Node.t
+      * 'a5 Node.t
+      * 'a6 Node.t
+      * 'a7 Node.t
+      * 'a8 Node.t
+      * 'a9 Node.t
+      * 'a10 Node.t
+      * 'a11 Node.t
+      -> 'a t
+  | Map12 :
+      ('a1
+       -> 'a2
+       -> 'a3
+       -> 'a4
+       -> 'a5
+       -> 'a6
+       -> 'a7
+       -> 'a8
+       -> 'a9
+       -> 'a10
+       -> 'a11
+       -> 'a12
+       -> 'a)
+      * 'a1 Node.t
+      * 'a2 Node.t
+      * 'a3 Node.t
+      * 'a4 Node.t
+      * 'a5 Node.t
+      * 'a6 Node.t
+      * 'a7 Node.t
+      * 'a8 Node.t
+      * 'a9 Node.t
+      * 'a10 Node.t
+      * 'a11 Node.t
+      * 'a12 Node.t
+      -> 'a t
+  | Map13 :
+      ('a1
+       -> 'a2
+       -> 'a3
+       -> 'a4
+       -> 'a5
+       -> 'a6
+       -> 'a7
+       -> 'a8
+       -> 'a9
+       -> 'a10
+       -> 'a11
+       -> 'a12
+       -> 'a13
+       -> 'a)
+      * 'a1 Node.t
+      * 'a2 Node.t
+      * 'a3 Node.t
+      * 'a4 Node.t
+      * 'a5 Node.t
+      * 'a6 Node.t
+      * 'a7 Node.t
+      * 'a8 Node.t
+      * 'a9 Node.t
+      * 'a10 Node.t
+      * 'a11 Node.t
+      * 'a12 Node.t
+      * 'a13 Node.t
+      -> 'a t
+  | Map14 :
+      ('a1
+       -> 'a2
+       -> 'a3
+       -> 'a4
+       -> 'a5
+       -> 'a6
+       -> 'a7
+       -> 'a8
+       -> 'a9
+       -> 'a10
+       -> 'a11
+       -> 'a12
+       -> 'a13
+       -> 'a14
+       -> 'a)
+      * 'a1 Node.t
+      * 'a2 Node.t
+      * 'a3 Node.t
+      * 'a4 Node.t
+      * 'a5 Node.t
+      * 'a6 Node.t
+      * 'a7 Node.t
+      * 'a8 Node.t
+      * 'a9 Node.t
+      * 'a10 Node.t
+      * 'a11 Node.t
+      * 'a12 Node.t
+      * 'a13 Node.t
+      * 'a14 Node.t
+      -> 'a t
+  | Map15 :
+      ('a1
+       -> 'a2
+       -> 'a3
+       -> 'a4
+       -> 'a5
+       -> 'a6
+       -> 'a7
+       -> 'a8
+       -> 'a9
+       -> 'a10
+       -> 'a11
+       -> 'a12
+       -> 'a13
+       -> 'a14
+       -> 'a15
+       -> 'a)
+      * 'a1 Node.t
+      * 'a2 Node.t
+      * 'a3 Node.t
+      * 'a4 Node.t
+      * 'a5 Node.t
+      * 'a6 Node.t
+      * 'a7 Node.t
+      * 'a8 Node.t
+      * 'a9 Node.t
+      * 'a10 Node.t
+      * 'a11 Node.t
+      * 'a12 Node.t
+      * 'a13 Node.t
+      * 'a14 Node.t
+      * 'a15 Node.t
+      -> 'a t
 [@@deriving sexp_of]
 
 let name : type a. a t -> string = function
@@ -106,6 +253,12 @@ let name : type a. a t -> string = function
   | Map7 _ -> "Map7"
   | Map8 _ -> "Map8"
   | Map9 _ -> "Map9"
+  | Map10 _ -> "Map10"
+  | Map11 _ -> "Map11"
+  | Map12 _ -> "Map12"
+  | Map13 _ -> "Map13"
+  | Map14 _ -> "Map14"
+  | Map15 _ -> "Map15"
   | Snapshot _ -> "Snapshot"
   | Step_function _ -> "Step_function"
   | Uninitialized -> "Uninitialized"
@@ -138,6 +291,12 @@ let invariant : type a. a Invariant.t -> a t Invariant.t =
   | Map7 _ -> ()
   | Map8 _ -> ()
   | Map9 _ -> ()
+  | Map10 _ -> ()
+  | Map11 _ -> ()
+  | Map12 _ -> ()
+  | Map13 _ -> ()
+  | Map14 _ -> ()
+  | Map15 _ -> ()
   | Snapshot snapshot -> Snapshot.invariant invariant_a snapshot
   | Step_function step_function -> Step_function.invariant invariant_a step_function
   | Uninitialized -> ()
@@ -169,6 +328,12 @@ let initial_num_children (type a) (t : a t) =
   | Map7 _ -> 7
   | Map8 _ -> 8
   | Map9 _ -> 9
+  | Map10 _ -> 10
+  | Map11 _ -> 11
+  | Map12 _ -> 12
+  | Map13 _ -> 13
+  | Map14 _ -> 14
+  | Map15 _ -> 15
   | Snapshot _ -> 0
   | Step_function _ -> 0
   | Uninitialized -> 0
@@ -279,6 +444,147 @@ let iteri_children (type a) (t : a t) ~(f : int -> Node.Packed.t -> unit) : unit
     f 6 (T node6);
     f 7 (T node7);
     f 8 (T node8)
+  | Map10 (_, node0, node1, node2, node3, node4, node5, node6, node7, node8, node9) ->
+    f 0 (T node0);
+    f 1 (T node1);
+    f 2 (T node2);
+    f 3 (T node3);
+    f 4 (T node4);
+    f 5 (T node5);
+    f 6 (T node6);
+    f 7 (T node7);
+    f 8 (T node8);
+    f 9 (T node9)
+  | Map11
+      (_, node0, node1, node2, node3, node4, node5, node6, node7, node8, node9, node10)
+    ->
+    f 0 (T node0);
+    f 1 (T node1);
+    f 2 (T node2);
+    f 3 (T node3);
+    f 4 (T node4);
+    f 5 (T node5);
+    f 6 (T node6);
+    f 7 (T node7);
+    f 8 (T node8);
+    f 9 (T node9);
+    f 10 (T node10)
+  | Map12
+      ( _
+      , node0
+      , node1
+      , node2
+      , node3
+      , node4
+      , node5
+      , node6
+      , node7
+      , node8
+      , node9
+      , node10
+      , node11 ) ->
+    f 0 (T node0);
+    f 1 (T node1);
+    f 2 (T node2);
+    f 3 (T node3);
+    f 4 (T node4);
+    f 5 (T node5);
+    f 6 (T node6);
+    f 7 (T node7);
+    f 8 (T node8);
+    f 9 (T node9);
+    f 10 (T node10);
+    f 11 (T node11)
+  | Map13
+      ( _
+      , node0
+      , node1
+      , node2
+      , node3
+      , node4
+      , node5
+      , node6
+      , node7
+      , node8
+      , node9
+      , node10
+      , node11
+      , node12 ) ->
+    f 0 (T node0);
+    f 1 (T node1);
+    f 2 (T node2);
+    f 3 (T node3);
+    f 4 (T node4);
+    f 5 (T node5);
+    f 6 (T node6);
+    f 7 (T node7);
+    f 8 (T node8);
+    f 9 (T node9);
+    f 10 (T node10);
+    f 11 (T node11);
+    f 12 (T node12)
+  | Map14
+      ( _
+      , node0
+      , node1
+      , node2
+      , node3
+      , node4
+      , node5
+      , node6
+      , node7
+      , node8
+      , node9
+      , node10
+      , node11
+      , node12
+      , node13 ) ->
+    f 0 (T node0);
+    f 1 (T node1);
+    f 2 (T node2);
+    f 3 (T node3);
+    f 4 (T node4);
+    f 5 (T node5);
+    f 6 (T node6);
+    f 7 (T node7);
+    f 8 (T node8);
+    f 9 (T node9);
+    f 10 (T node10);
+    f 11 (T node11);
+    f 12 (T node12);
+    f 13 (T node13)
+  | Map15
+      ( _
+      , node0
+      , node1
+      , node2
+      , node3
+      , node4
+      , node5
+      , node6
+      , node7
+      , node8
+      , node9
+      , node10
+      , node11
+      , node12
+      , node13
+      , node14 ) ->
+    f 0 (T node0);
+    f 1 (T node1);
+    f 2 (T node2);
+    f 3 (T node3);
+    f 4 (T node4);
+    f 5 (T node5);
+    f 6 (T node6);
+    f 7 (T node7);
+    f 8 (T node8);
+    f 9 (T node9);
+    f 10 (T node10);
+    f 11 (T node11);
+    f 12 (T node12);
+    f 13 (T node13);
+    f 14 (T node14)
 ;;
 
 (* [slow_get_child] is only used by [Node.invariant], so we don't mind using [with_return]
@@ -290,7 +596,7 @@ let slow_get_child : type a. a t -> index:_ -> Node.Packed.t =
   | Array_fold { children; _ } -> T children.(index)
   | Unordered_array_fold { children; _ } -> T children.(index)
   | Expert { children; _ } ->
-    let (Expert.E edge) = Uopt.value_exn children.(index) in
+    let (E edge) = Uopt.value_exn children.(index) in
     T edge.child
   | _ ->
     with_return (fun r ->

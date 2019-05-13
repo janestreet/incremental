@@ -19,8 +19,8 @@ val on_update_exn : 'a t -> 'a On_update_handler.t -> unit
 val unlink : _ t -> unit
 
 module Packed : sig
-  type t = Types.Packed_internal_observer.t = T : _ Types.Internal_observer.t -> t
-  [@@deriving sexp_of]
+  type t = Types.Internal_observer.Packed.t = T : _ Types.Internal_observer.t -> t
+  [@@unboxed] [@@deriving sexp_of]
 
   include Invariant.S with type t := t
 

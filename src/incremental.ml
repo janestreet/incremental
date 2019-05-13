@@ -45,6 +45,31 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
   let map7 t1 t2 t3 t4 t5 t6 t7 ~f = State.map7 state t1 t2 t3 t4 t5 t6 t7 ~f
   let map8 t1 t2 t3 t4 t5 t6 t7 t8 ~f = State.map8 state t1 t2 t3 t4 t5 t6 t7 t8 ~f
   let map9 t1 t2 t3 t4 t5 t6 t7 t8 t9 ~f = State.map9 state t1 t2 t3 t4 t5 t6 t7 t8 t9 ~f
+
+  let map10 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 ~f =
+    State.map10 state t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 ~f
+  ;;
+
+  let map11 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 ~f =
+    State.map11 state t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 ~f
+  ;;
+
+  let map12 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 ~f =
+    State.map12 state t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 ~f
+  ;;
+
+  let map13 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 ~f =
+    State.map13 state t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 ~f
+  ;;
+
+  let map14 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 t14 ~f =
+    State.map14 state t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 t14 ~f
+  ;;
+
+  let map15 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 t14 t15 ~f =
+    State.map15 state t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 t14 t15 ~f
+  ;;
+
   let bind t ~f = State.bind state t ~f
   let bind2 t1 t2 ~f = State.bind2 state t1 t2 ~f
   let bind3 t1 t2 t3 ~f = State.bind3 state t1 t2 t3 ~f

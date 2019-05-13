@@ -156,6 +156,12 @@ let is_stale : type a. a t -> bool =
   | Map7 _
   | Map8 _
   | Map9 _
+  | Map10 _
+  | Map11 _
+  | Map12 _
+  | Map13 _
+  | Map14 _
+  | Map15 _
   | Unordered_array_fold _ ->
     Stabilization_num.is_none t.recomputed_at || is_stale_with_respect_to_a_child t
   | Expert { force_stale; _ } ->
@@ -220,6 +226,12 @@ let should_be_invalidated : type a. a t -> bool =
   | Map7 _
   | Map8 _
   | Map9 _
+  | Map10 _
+  | Map11 _
+  | Map12 _
+  | Map13 _
+  | Map14 _
+  | Map15 _
   | Unordered_array_fold _ -> has_invalid_child t
   (* A *_change node is invalid if the node it is watching for changes is invalid (same
      reason as above).  This is equivalent to [has_invalid_child t]. *)

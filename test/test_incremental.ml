@@ -528,6 +528,12 @@ struct
         let map7 = map7
         let map8 = map8
         let map9 = map9
+        let map10 = map10
+        let map11 = map11
+        let map12 = map12
+        let map13 = map13
+        let map14 = map14
+        let map15 = map15
         let ( >>| ) = ( >>| )
 
         let test_map n (mapN : int t -> int t) =
@@ -587,6 +593,61 @@ struct
           test_map 9 (fun i ->
             map9 i i i i i i i i i ~f:(fun a1 a2 a3 a4 a5 a6 a7 a8 a9 ->
               a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9))
+        ;;
+
+        let%test_unit _ =
+          test_map 10 (fun i ->
+            map10 i i i i i i i i i i ~f:(fun a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 ->
+              a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10))
+        ;;
+
+        let%test_unit _ =
+          let f a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 =
+            a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11
+          in
+          test_map 11 (fun i -> map11 i i i i i i i i i i i ~f)
+        ;;
+
+        let%test_unit _ =
+          let f a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 =
+            a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12
+          in
+          test_map 12 (fun i -> map12 i i i i i i i i i i i i ~f)
+        ;;
+
+        let%test_unit _ =
+          let f a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 =
+            a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12 + a13
+          in
+          test_map 13 (fun i -> map13 i i i i i i i i i i i i i ~f)
+        ;;
+
+        let%test_unit _ =
+          let f a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 =
+            a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12 + a13 + a14
+          in
+          test_map 14 (fun i -> map14 i i i i i i i i i i i i i i ~f)
+        ;;
+
+        let%test_unit _ =
+          let f a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 =
+            a1
+            + a2
+            + a3
+            + a4
+            + a5
+            + a6
+            + a7
+            + a8
+            + a9
+            + a10
+            + a11
+            + a12
+            + a13
+            + a14
+            + a15
+          in
+          test_map 15 (fun i -> map15 i i i i i i i i i i i i i i i ~f)
         ;;
 
         let%test_unit _ =
