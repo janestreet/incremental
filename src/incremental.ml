@@ -98,8 +98,10 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
   let array_fold ts ~init ~f = State.array_fold state ts ~init ~f
   let reduce_balanced ts ~f ~reduce = Reduce_balanced.create state ts ~f ~reduce
 
-  let unordered_array_fold ?full_compute_every_n_changes ts ~init ~f ~f_inverse =
-    State.unordered_array_fold state ts ~init ~f ~f_inverse ?full_compute_every_n_changes
+  module Unordered_array_fold_update = State.Unordered_array_fold_update
+
+  let unordered_array_fold ?full_compute_every_n_changes ts ~init ~f ~update =
+    State.unordered_array_fold state ts ~init ~f ~update ?full_compute_every_n_changes
   ;;
 
   let opt_unordered_array_fold ?full_compute_every_n_changes ts ~init ~f ~f_inverse =

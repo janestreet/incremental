@@ -1940,6 +1940,8 @@ struct
               assert_expected_reductions_and_reset ())
         ;;
 
+        module Unordered_array_fold_update = Unordered_array_fold_update
+
         let unordered_array_fold = unordered_array_fold
 
         let%test_unit _ =
@@ -1951,7 +1953,7 @@ struct
                  [||]
                  ~init:13
                  ~f:(fun _ -> assert false)
-                 ~f_inverse:(fun _ -> assert false))
+                 ~update:(F_inverse (fun _ -> assert false)))
           in
           stabilize_ [%here];
           assert (value o = 13)
@@ -1967,9 +1969,11 @@ struct
               [| Var.watch x |]
               ~init:0
               ~f:( + )
-              ~f_inverse:(fun b a ->
-                incr num_f_inverse;
-                b - a)
+              ~update:
+                (F_inverse
+                   (fun b a ->
+                      incr num_f_inverse;
+                      b - a))
           in
           let r = observe fold in
           stabilize_ [%here];
@@ -1998,7 +2002,7 @@ struct
               [| watch x; watch x |]
               ~init:0
               ~f:( + )
-              ~f_inverse:( - )
+              ~update:(F_inverse ( - ))
           in
           let o = observe f in
           stabilize_ [%here];
@@ -2013,6 +2017,29 @@ struct
           let o = observe f in
           stabilize_ [%here];
           assert (value o = 8)
+        ;;
+
+        let%expect_test "[~update:(Update _)]" =
+          let x = Var.create_ [%here] 1 in
+          let fold =
+            unordered_array_fold
+              [| Var.watch x |]
+              ~init:0
+              ~f:( + )
+              ~update:
+                (Update (fun acc ~old_value ~new_value -> acc - old_value + new_value))
+          in
+          let r = observe fold in
+          let print () =
+            stabilize_ [%here];
+            let r = value r in
+            print_s [%sexp (r : int)]
+          in
+          print ();
+          [%expect {| 1 |}];
+          Var.set x 3;
+          print ();
+          [%expect {| 3 |}]
         ;;
 
         let opt_unordered_array_fold = opt_unordered_array_fold

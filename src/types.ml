@@ -550,7 +550,7 @@ and Unordered_array_fold : sig
     { main : 'acc Node.t
     ; init : 'acc
     ; f : 'acc -> 'a -> 'acc
-    ; f_inverse : 'acc -> 'a -> 'acc
+    ; update : 'acc -> old_value:'a -> new_value:'a -> 'acc
     ; full_compute_every_n_changes : int
     ; children : 'a Node.t array
     ; mutable fold_value : 'acc Uopt.t

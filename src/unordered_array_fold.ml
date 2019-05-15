@@ -3,11 +3,26 @@ open Import
 open Types.Kind
 module Node = Types.Node
 
+module Update = struct
+  type ('a, 'b) t =
+    | F_inverse of ('b -> 'a -> 'b)
+    | Update of ('b -> old_value:'a -> new_value:'a -> 'b)
+  [@@deriving sexp_of]
+
+  let update t ~f =
+    match t with
+    | Update update -> update
+    | F_inverse f_inverse ->
+      fun fold_value ~old_value ~new_value ->
+        f (f_inverse fold_value old_value) new_value
+  ;;
+end
+
 type ('a, 'acc) t = ('a, 'acc) Types.Unordered_array_fold.t =
   { main : 'acc Node.t
   ; init : 'acc
   ; f : 'acc -> 'a -> 'acc
-  ; f_inverse : 'acc -> 'a -> 'acc
+  ; update : 'acc -> old_value:'a -> new_value:'a -> 'acc
   ; full_compute_every_n_changes : int
   ; children : 'a Node.t array
   ; mutable fold_value : 'acc Uopt.t
@@ -29,7 +44,7 @@ let invariant invariant_a invariant_acc t =
            | _ -> assert false))
       ~init:(check invariant_acc)
       ~f:ignore
-      ~f_inverse:ignore
+      ~update:ignore
       ~children:
         (check (fun children ->
            Array.iter children ~f:(fun (child : _ Node.t) ->
@@ -55,10 +70,10 @@ let invariant invariant_a invariant_acc t =
            assert (full_compute_every_n_changes > 0))))
 ;;
 
-let create ~init ~f ~f_inverse ~full_compute_every_n_changes ~children ~main =
+let create ~init ~f ~update ~full_compute_every_n_changes ~children ~main =
   { init
   ; f
-  ; f_inverse
+  ; update = Update.update update ~f
   ; full_compute_every_n_changes
   ; children
   ; main
@@ -116,9 +131,10 @@ let child_changed
          [Uopt.is_some t.fold_value] and [Uopt.is_some old_value_opt]. *)
       t.fold_value
       <- Uopt.some
-           (t.f
-              (t.f_inverse (Uopt.value_exn t.fold_value) (Uopt.value_exn old_value_opt))
-              new_value))
+           (t.update
+              (Uopt.value_exn t.fold_value)
+              ~old_value:(Uopt.value_exn old_value_opt)
+              ~new_value))
     else if t.num_changes_since_last_full_compute < t.full_compute_every_n_changes
     then force_full_compute t
 ;;

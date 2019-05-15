@@ -1555,13 +1555,15 @@ let array_fold t children ~init ~f =
 
 let all t ts = array_fold t (Array.of_list_rev ts) ~init:[] ~f:(fun ac a -> a :: ac)
 
+module Unordered_array_fold_update = Unordered_array_fold.Update
+
 let unordered_array_fold
       ?(full_compute_every_n_changes = Int.max_value)
       t
       children
       ~init
       ~f
-      ~f_inverse
+      ~update
   =
   if Array.length children = 0
   then const t init
@@ -1579,7 +1581,7 @@ let unordered_array_fold
          (Unordered_array_fold.create
             ~init
             ~f
-            ~f_inverse
+            ~update
             ~full_compute_every_n_changes
             ~children
             ~main));
@@ -1604,7 +1606,7 @@ let opt_unordered_array_fold ?full_compute_every_n_changes t ts ~init ~f ~f_inve
        ts
        ~init:(init, 0)
        ~f
-       ~f_inverse
+       ~update:(F_inverse f_inverse)
        ?full_compute_every_n_changes)
     ~f:(fun (accum, num_invalid) -> if num_invalid = 0 then Some accum else None)
 ;;
@@ -1619,7 +1621,7 @@ let at_least_k_of t nodes ~k =
        nodes
        ~init:0
        ~f:(fun num_true b -> num_true + bool_to_int b)
-       ~f_inverse:(fun num_true b -> num_true - bool_to_int b))
+       ~update:(F_inverse (fun num_true b -> num_true - bool_to_int b)))
 ;;
 
 let exists t nodes = at_least_k_of t nodes ~k:1
@@ -1631,7 +1633,7 @@ let sum ?full_compute_every_n_changes t nodes ~zero ~add ~sub =
     nodes
     ~init:zero
     ~f:add
-    ~f_inverse:sub
+    ~update:(F_inverse sub)
     ?full_compute_every_n_changes
 ;;
 

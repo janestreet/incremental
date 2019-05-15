@@ -800,28 +800,37 @@ module type S = sig
     -> reduce:('b -> 'b -> 'b)
     -> 'b t option
 
-  (** [unordered_array_fold ts ~init ~f ~f_inverse] folds over the [ts].  Unlike
+  module Unordered_array_fold_update : sig
+    type ('a, 'b) t =
+      | F_inverse of ('b -> 'a -> 'b)
+      | Update of ('b -> old_value:'a -> new_value:'a -> 'b)
+  end
+
+  (** [unordered_array_fold ts ~init ~f ~update] folds over the [ts].  Unlike
       [array_fold], the fold will be computed in time proportional to the number of [ts]
       that change rather than the number of [ts].  In a stabilization, for each [t] in
       [ts] that changes from [old_value] to [new_value], the value of the unordered-array
-      fold will change from [b] to [f (f_inverse b old_value) new_value].  The [t]'s that
-      change may take effect in any order.
+      fold, [b], will change depending on [update]:
+
+      - [F_inverse f_inverse]: from [b] to [f (f_inverse b old_value) new_value]
+      - [Update update]: from [b] to [update b ~old_value ~new_value]
+
+      The [t]'s that change may take effect in any order.
 
       If repeated changes might accumulate error, one can cause the fold to be fully
       computed after every [full_compute_every_n_changes] changes.  If you do not supply
       [full_compute_every_n_changes], then full computes will never happen after the
-      initial one.
-
-      [opt_unordered_array_fold] is like [unordered_array_fold], except that its result is
-      [Some] iff all its inputs are [Some]. *)
+      initial one. *)
   val unordered_array_fold
     :  ?full_compute_every_n_changes:int
     -> 'a t array
     -> init:'b
     -> f:('b -> 'a -> 'b)
-    -> f_inverse:('b -> 'a -> 'b)
+    -> update:('a, 'b) Unordered_array_fold_update.t
     -> 'b t
 
+  (** [opt_unordered_array_fold] is like [unordered_array_fold], except that its result is
+      [Some] iff all its inputs are [Some]. *)
   val opt_unordered_array_fold
     :  ?full_compute_every_n_changes:int
     -> 'a option t array

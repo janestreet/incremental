@@ -13,10 +13,17 @@ end
 include Invariant.S2 with type ('a, 'acc) t := ('a, 'acc) t
 include Sexp_of.S2 with type ('a, 'acc) t := ('a, 'acc) t
 
+module Update : sig
+  type ('a, 'b) t =
+    | F_inverse of ('b -> 'a -> 'b)
+    | Update of ('b -> old_value:'a -> new_value:'a -> 'b)
+  [@@deriving sexp_of]
+end
+
 val create
   :  init:'acc
   -> f:('acc -> 'a -> 'acc)
-  -> f_inverse:('acc -> 'a -> 'acc)
+  -> update:('a, 'acc) Update.t
   -> full_compute_every_n_changes:int
   -> children:'a Types.Node.t array
   -> main:'acc Types.Node.t
