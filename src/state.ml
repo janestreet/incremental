@@ -164,10 +164,6 @@ let num_stabilizes t = Stabilization_num.to_int t.stabilization_num
 let max_height_allowed t = Adjust_heights_heap.max_height_allowed t.adjust_heights_heap
 let max_height_seen t = Adjust_heights_heap.max_height_seen t.adjust_heights_heap
 
-let alarm_would_have_fired (clock : Clock.t) ~at =
-  Time_ns.( <= ) at (Timing_wheel.now clock.timing_wheel)
-;;
-
 let iter_observers t ~f =
   let r = ref t.all_observers in
   while Uopt.is_some !r do
@@ -676,7 +672,7 @@ let rec recompute : type a. t -> a Node.t -> unit =
   | At { at; clock; _ } ->
     (* It is a bug if we try to compute an [At] node after [at].  [advance_clock] was
        supposed to convert it to a [Const] at the appropriate time. *)
-    if debug then assert (not (alarm_would_have_fired clock ~at));
+    if debug then assert (Time_ns.( > ) at (now clock));
     maybe_change_value t node Before
   | At_intervals _ -> maybe_change_value t node ()
   | Bind_lhs_change
@@ -766,7 +762,7 @@ let rec recompute : type a. t -> a Node.t -> unit =
     (* It is a bug if we try to compute a [Snapshot] and the alarm should have fired.
        [advance_clock] was supposed to convert it to a [Freeze] at the appropriate
        time. *)
-    if debug then assert (not (alarm_would_have_fired clock ~at));
+    if debug then assert (Time_ns.( > ) at (now clock));
     maybe_change_value t node before
   | Step_function { value; upcoming_steps; _ } ->
     (* It is a bug if we try to compute a [Step_function] with no upcoming steps.
@@ -1676,12 +1672,12 @@ let freeze t child ~only_freeze_when =
 ;;
 
 let add_alarm clock ~at alarm_value =
-  if debug then assert (not (alarm_would_have_fired clock ~at));
+  if debug then assert (Time_ns.( > ) at (now clock));
   Timing_wheel.add clock.timing_wheel ~at alarm_value
 ;;
 
 let at t clock time =
-  if alarm_would_have_fired clock ~at:time
+  if Time_ns.( <= ) time (now clock)
   then const t Before_or_after.After
   else (
     let main = create_node t Uninitialized in
@@ -1694,10 +1690,9 @@ let at t clock time =
 let after t clock span = at t clock (Time_ns.add (now clock) span)
 
 let next_interval_alarm_strict (clock : Clock.t) ~base ~interval =
-  let at =
-    Time_ns.next_multiple ~base ~after:(now clock) ~interval ~can_equal_after:false ()
-  in
-  if debug then assert (not (alarm_would_have_fired clock ~at));
+  let after = now clock in
+  let at = Time_ns.next_multiple ~base ~after ~interval ~can_equal_after:false () in
+  if debug then assert (Time_ns.( > ) at after);
   at
 ;;
 
@@ -1721,7 +1716,7 @@ let at_intervals t (clock : Clock.t) interval =
 ;;
 
 let snapshot t clock value_at ~at ~before =
-  if alarm_would_have_fired clock ~at
+  if Time_ns.( <= ) at (now clock)
   then
     if Time_ns.( < ) at (now clock)
     then Or_error.error "cannot take snapshot in the past" at [%sexp_of: Time_ns.t]
@@ -1739,7 +1734,7 @@ let snapshot t clock value_at ~at ~before =
 
 let advance_step_function clock node step_function alarm_value =
   Step_function.advance step_function ~time_passed:(fun at ->
-    alarm_would_have_fired clock ~at);
+    Time_ns.( <= ) at (now clock));
   match step_function.upcoming_steps with
   | [] -> Node.set_kind node (Const step_function.value)
   | (at, _) :: _ -> step_function.alarm <- add_alarm clock ~at alarm_value
