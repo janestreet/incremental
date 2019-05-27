@@ -11,6 +11,7 @@ module Config = Config
 module Make_with_config (Incremental_config : Incremental_config) () = struct
   module Incremental_config = Incremental_config
   module Cutoff = Cutoff
+  module Step_function = Step_function
 
   module State = struct
     include State
@@ -220,7 +221,15 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
     let at_intervals t span = State.at_intervals state t span
     let advance_clock t ~to_ = State.advance_clock state t ~to_
     let advance_clock_by t span = advance_clock t ~to_:(Time_ns.add (now t) span)
-    let step_function t ~init steps = State.step_function state t ~init steps
+
+    let incremental_step_function t step_function =
+      State.incremental_step_function state t step_function
+    ;;
+
+    let step_function t ~init steps =
+      incremental_step_function t (const (Step_function.create_exn ~init ~steps))
+    ;;
+
     let snapshot t incr ~at ~before = State.snapshot state t incr ~at ~before
   end
 

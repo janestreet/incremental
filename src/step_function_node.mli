@@ -8,10 +8,10 @@ open! Core_kernel
 open! Import
 
 include module type of struct
-  include Types.Step_function
+  include Types.Step_function_node
 end
 
 include Invariant.S1 with type 'a t := 'a t
 include Sexp_of.S1 with type 'a t := 'a t
 
-val advance : _ t -> time_passed:(Time_ns.t -> bool) -> unit
+val advance : _ t -> to_:Time_ns.t -> unit

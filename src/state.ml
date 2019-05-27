@@ -444,7 +444,7 @@ let rec invalidate_node : type a. t -> a Node.t -> unit =
      | At at -> remove_alarm at.clock at.alarm
      | At_intervals at_intervals -> remove_alarm at_intervals.clock at_intervals.alarm
      | Bind_main bind -> invalidate_nodes_created_on_rhs t bind.all_nodes_created_on_rhs
-     | Step_function step_function -> remove_alarm step_function.clock step_function.alarm
+     | Step_function { alarm; clock; _ } -> remove_alarm clock alarm
      | _ -> ());
     Node.set_kind node Invalid;
     (* If we called [propagate_invalidity] right away on the parents, we would get into
@@ -659,6 +659,11 @@ let change_child : type a b.
       check_if_unnecessary t old_child))
 ;;
 
+let add_alarm clock ~at alarm_value =
+  if debug then assert (Time_ns.( > ) at (now clock));
+  Timing_wheel.add clock.timing_wheel ~at alarm_value
+;;
+
 let rec recompute : type a. t -> a Node.t -> unit =
   fun t (node : a Node.t) ->
   if debug
@@ -764,11 +769,34 @@ let rec recompute : type a. t -> a Node.t -> unit =
        time. *)
     if debug then assert (Time_ns.( > ) at (now clock));
     maybe_change_value t node before
-  | Step_function { value; upcoming_steps; _ } ->
-    (* It is a bug if we try to compute a [Step_function] with no upcoming steps.
-       [advance_clock] was supposed to convert it to a [Const]. *)
-    if debug then assert (not (List.is_empty upcoming_steps));
-    maybe_change_value t node value
+  | Step_function ({ child; clock; _ } as step_function_node) ->
+    if Uopt.is_some child
+    then (
+      let child = Uopt.value_exn child in
+      if Stabilization_num.compare
+           child.changed_at
+           step_function_node.extracted_step_function_from_child_at
+         > 0
+      then (
+        step_function_node.extracted_step_function_from_child_at <- child.changed_at;
+        remove_alarm clock step_function_node.alarm;
+        let step_function = Node.value_exn child in
+        step_function_node.value <- Uopt.some (Step_function.init step_function);
+        step_function_node.upcoming_steps <- Step_function.steps step_function;
+        (* If the child is a constant, we drop our reference to it, to avoid holding on to
+           the entire step function. *)
+        if Node.is_const child
+        then (
+          remove_children t node;
+          step_function_node.child <- Uopt.none;
+          set_height t node (Scope.height node.created_in + 1))));
+    Step_function_node.advance step_function_node ~to_:(now clock);
+    let step_function_value = Uopt.value_exn step_function_node.value in
+    (match Sequence.hd step_function_node.upcoming_steps with
+     | None -> if Uopt.is_none child then Node.set_kind node (Const step_function_value)
+     | Some (at, _) ->
+       step_function_node.alarm <- add_alarm clock ~at step_function_node.alarm_value);
+    maybe_change_value t node step_function_value
   | Unordered_array_fold u -> maybe_change_value t node (Unordered_array_fold.compute u)
   | Uninitialized -> assert false
   | Var var -> maybe_change_value t node var.value
@@ -1039,7 +1067,7 @@ and maybe_change_value : type a. t -> a Node.t -> a -> unit =
           (* These nodes aren't parents. *)
           | At _ -> assert false
           | At_intervals _ -> assert false
-          | Const _ | Invalid | Snapshot _ | Step_function _ | Var _ -> assert false
+          | Const _ | Invalid | Snapshot _ | Var _ -> assert false
           (* These nodes have more than one child. *)
           | Array_fold _
           | Map2 _
@@ -1067,6 +1095,7 @@ and maybe_change_value : type a. t -> a Node.t -> a -> unit =
           | If_test_change _ -> node.height > Scope.height parent.created_in
           | Join_lhs_change _ -> node.height > Scope.height parent.created_in
           | Map _ -> node.height > Scope.height parent.created_in
+          | Step_function _ -> node.height > Scope.height parent.created_in
           (* For these, we need to check that the "_change" child has already been
              evaluated (if needed).  If so, this also implies:
 
@@ -1671,11 +1700,6 @@ let freeze t child ~only_freeze_when =
   node
 ;;
 
-let add_alarm clock ~at alarm_value =
-  if debug then assert (Time_ns.( > ) at (now clock));
-  Timing_wheel.add clock.timing_wheel ~at alarm_value
-;;
-
 let at t clock time =
   if Time_ns.( <= ) time (now clock)
   then const t Before_or_after.After
@@ -1732,35 +1756,25 @@ let snapshot t clock value_at ~at ~before =
     Ok main)
 ;;
 
-let advance_step_function clock node step_function alarm_value =
-  Step_function.advance step_function ~time_passed:(fun at ->
-    Time_ns.( <= ) at (now clock));
-  match step_function.upcoming_steps with
-  | [] -> Node.set_kind node (Const step_function.value)
-  | (at, _) :: _ -> step_function.alarm <- add_alarm clock ~at alarm_value
-;;
-
-let step_function t clock ~init steps =
-  if not
-       (List.is_sorted steps ~compare:(fun (time, _) (time', _) ->
-          Time_ns.compare time time'))
-  then
-    failwiths "step_function got unsorted times" steps [%sexp_of: (Time_ns.t * _) list];
+let incremental_step_function t clock child =
   let main = create_node t Uninitialized in
-  let step_function =
-    { Step_function.main; value = init; upcoming_steps = steps; alarm = Alarm.null; clock
+  let step_function_node =
+    { Step_function_node.main
+    ; value = Uopt.none
+    ; child = Uopt.some child
+    ; extracted_step_function_from_child_at = Stabilization_num.none
+    ; upcoming_steps = Sequence.empty
+    ; alarm = Alarm.null
+    ; alarm_value = Obj.magic None (* set below *)
+    ; clock
     }
   in
-  Node.set_kind main (Step_function step_function);
-  advance_step_function
-    clock
-    main
-    step_function
-    (Alarm_value.create (Step_function step_function));
+  step_function_node.alarm_value <- Alarm_value.create (Step_function step_function_node);
+  Node.set_kind main (Step_function step_function_node);
   main
 ;;
 
-let change_leaf t (node : _ Node.t) =
+let make_stale t (node : _ Node.t) =
   node.recomputed_at <- Stabilization_num.none;
   (* force the node to be stale *)
   if Node.needs_to_be_computed node && not (Node.is_in_recompute_heap node)
@@ -1784,7 +1798,7 @@ let advance_clock t (clock : Clock.t) ~to_ =
         if Node.is_valid main
         then (
           Node.set_kind main (Const After);
-          change_leaf t main)
+          make_stale t main)
       | At_intervals ({ main; base; interval; _ } as at_intervals) ->
         if Node.is_valid main
         then (
@@ -1793,16 +1807,12 @@ let advance_clock t (clock : Clock.t) ~to_ =
                clock
                ~at:(next_interval_alarm_strict clock ~base ~interval)
                alarm_value;
-          change_leaf t main)
+          make_stale t main)
       | Snapshot { main; value_at; _ } ->
         if debug then assert (Node.is_valid main);
         set_freeze t main ~child:value_at ~only_freeze_when:(fun _ -> true);
-        change_leaf t main
-      | Step_function ({ main; _ } as step_function) ->
-        if Node.is_valid main
-        then (
-          advance_step_function clock main step_function alarm_value;
-          change_leaf t main)
+        make_stale t main
+      | Step_function { main; _ } -> if Node.is_valid main then make_stale t main
     done;
     if debug then invariant t)
 ;;

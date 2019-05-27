@@ -1,0 +1,3 @@
+(library (name incremental_step_function)
+ (public_name incremental.incremental_step_function) (libraries core_kernel)
+ (preprocess (pps ppx_jane -check-doc-comments)))

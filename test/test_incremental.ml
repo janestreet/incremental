@@ -97,6 +97,7 @@ struct
 
         module Infix = Infix
         module Before_or_after = Before_or_after
+        module Step_function = Step_function
 
         let invariant = invariant
         let stabilize = stabilize
@@ -125,7 +126,7 @@ struct
           let invariant = invariant
           let t = t
 
-          let%test_unit _ = invariant t
+          let%expect_test _ = invariant t
 
           let max_height_allowed = max_height_allowed
 
@@ -139,16 +140,16 @@ struct
 
           let set_max_height_allowed = set_max_height_allowed
 
-          let%test_unit _ =
+          let%expect_test _ =
             List.iter [ -1; 2 ] ~f:(fun height ->
               assert (does_raise (fun () -> set_max_height_allowed t height)))
           ;;
 
-          let%test_unit _ = set_max_height_allowed t 10
+          let%expect_test _ = set_max_height_allowed t 10
           let%test _ = max_height_allowed t = 10
-          let%test_unit _ = set_max_height_allowed t 128
+          let%expect_test _ = set_max_height_allowed t 128
 
-          let%test_unit _ =
+          let%expect_test _ =
             set_max_height_allowed t 256;
             let rec loop n =
               if n = 0 then return 0 else loop (n - 1) >>| fun i -> i + 1
@@ -159,11 +160,11 @@ struct
           ;;
 
           let%test _ = max_height_allowed t = max_height_seen t
-          let%test_unit _ = invariant t
+          let%expect_test _ = invariant t
 
           let num_active_observers = num_active_observers
 
-          let%test_unit _ =
+          let%expect_test _ =
             Gc.full_major ();
             stabilize_ [%here];
             let n = num_active_observers t in
@@ -172,7 +173,7 @@ struct
             [%test_result: int] (num_active_observers t) ~expect:n
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             Gc.full_major ();
             stabilize_ [%here];
             let n = num_active_observers t in
@@ -185,7 +186,7 @@ struct
             [%test_result: int] (num_active_observers t) ~expect:n
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [observe ~should_finalize:true] *)
             Gc.full_major ();
             stabilize_ [%here];
@@ -197,7 +198,7 @@ struct
             [%test_result: int] (num_active_observers t) ~expect:(n - 1)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [observe ~should_finalize:false] *)
             Gc.full_major ();
             stabilize_ [%here];
@@ -222,7 +223,7 @@ struct
             num_nodes_recomputed_directly_because_min_height
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             let var = Var.create 1 in
             let o =
               observe
@@ -244,7 +245,7 @@ struct
             num_nodes_recomputed_directly_because_one_child
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* We can't use the same variable twice otherwise the optimization is not
                applied. *)
             let var1 = Var.create 1 in
@@ -270,7 +271,7 @@ struct
 
         let sexp_of_t = sexp_of_t
 
-        let%test_unit _ =
+        let%expect_test _ =
           State.(invariant t);
           let i = 13 in
           let t = const i in
@@ -321,7 +322,7 @@ struct
         let is_const = is_const
         let is_necessary = is_necessary
 
-        let%test_unit _ =
+        let%expect_test _ =
           List.iter [ const; return ] ~f:(fun const ->
             let i = const 13 in
             assert (is_const i);
@@ -351,7 +352,7 @@ struct
           let value = value
           let watch = watch
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* observing a var after stabilization *)
             let x = create_ [%here] 0 in
             stabilize_ [%here];
@@ -360,7 +361,7 @@ struct
             assert (Observer.value_exn o = 0)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* observing a set var after stabilization *)
             let x = create_ [%here] 0 in
             set x 1;
@@ -370,7 +371,7 @@ struct
             assert (Observer.value_exn o = 1)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* observing and setting var after stabilization *)
             let x = create_ [%here] 0 in
             stabilize_ [%here];
@@ -380,7 +381,7 @@ struct
             assert (Observer.value_exn o = 1)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [set] without stabilizing *)
             let x = create_ [%here] 13 in
             assert (value x = 13);
@@ -394,7 +395,7 @@ struct
             assert (Observer.value_exn o = 13)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [set] during stabilization *)
             let v0 = create_ [%here] 0 in
             let v1 = create_ [%here] 1 in
@@ -441,7 +442,7 @@ struct
             assert (var_values_are 13 13 13)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [set] during stabilization gets the last value that was set *)
             let x = create_ [%here] 0 in
             let o =
@@ -459,7 +460,7 @@ struct
             disallow_future_use o
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [create] during stabilization *)
             let o =
               observe
@@ -471,7 +472,7 @@ struct
             assert (Observer.value_exn o = 13)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [create] and [set] during stabilization *)
             let o =
               observe
@@ -485,7 +486,7 @@ struct
             assert (Observer.value_exn o = 13)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* maybe invalidating a variable *)
             List.iter [ false; true ] ~f:(fun use_current_scope ->
               let lhs = Var.create 0 in
@@ -512,7 +513,7 @@ struct
 
         let%test _ = not (am_stabilizing ())
 
-        let%test_unit _ =
+        let%expect_test _ =
           let x = Var.create_ [%here] 13 in
           let o = observe (map (watch x) ~f:(fun _ -> assert (am_stabilizing ()))) in
           stabilize_ [%here];
@@ -554,82 +555,82 @@ struct
           assert (is_invalidated_on_bind_rhs (fun i -> mapN (const i)))
         ;;
 
-        let%test_unit _ = test_map 1 (fun i -> i >>| fun a1 -> a1)
-        let%test_unit _ = test_map 1 (fun i -> map i ~f:(fun a1 -> a1))
-        let%test_unit _ = test_map 2 (fun i -> map2 i i ~f:(fun a1 a2 -> a1 + a2))
+        let%expect_test _ = test_map 1 (fun i -> i >>| fun a1 -> a1)
+        let%expect_test _ = test_map 1 (fun i -> map i ~f:(fun a1 -> a1))
+        let%expect_test _ = test_map 2 (fun i -> map2 i i ~f:(fun a1 a2 -> a1 + a2))
 
-        let%test_unit _ =
+        let%expect_test _ =
           test_map 3 (fun i -> map3 i i i ~f:(fun a1 a2 a3 -> a1 + a2 + a3))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           test_map 4 (fun i -> map4 i i i i ~f:(fun a1 a2 a3 a4 -> a1 + a2 + a3 + a4))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           test_map 5 (fun i ->
             map5 i i i i i ~f:(fun a1 a2 a3 a4 a5 -> a1 + a2 + a3 + a4 + a5))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           test_map 6 (fun i ->
             map6 i i i i i i ~f:(fun a1 a2 a3 a4 a5 a6 ->
               a1 + a2 + a3 + a4 + a5 + a6))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           test_map 7 (fun i ->
             map7 i i i i i i i ~f:(fun a1 a2 a3 a4 a5 a6 a7 ->
               a1 + a2 + a3 + a4 + a5 + a6 + a7))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           test_map 8 (fun i ->
             map8 i i i i i i i i ~f:(fun a1 a2 a3 a4 a5 a6 a7 a8 ->
               a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           test_map 9 (fun i ->
             map9 i i i i i i i i i ~f:(fun a1 a2 a3 a4 a5 a6 a7 a8 a9 ->
               a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           test_map 10 (fun i ->
             map10 i i i i i i i i i i ~f:(fun a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 ->
               a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let f a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 =
             a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11
           in
           test_map 11 (fun i -> map11 i i i i i i i i i i i ~f)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let f a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 =
             a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12
           in
           test_map 12 (fun i -> map12 i i i i i i i i i i i i ~f)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let f a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 =
             a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12 + a13
           in
           test_map 13 (fun i -> map13 i i i i i i i i i i i i i ~f)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let f a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 =
             a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12 + a13 + a14
           in
           test_map 14 (fun i -> map14 i i i i i i i i i i i i i i ~f)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let f a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 a13 a14 a15 =
             a1
             + a2
@@ -650,7 +651,7 @@ struct
           test_map 15 (fun i -> map15 i i i i i i i i i i i i i i i ~f)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let x0 = Var.create_ [%here] 13 in
           let o0 = observe (watch x0) in
           let t1 = map (watch x0) ~f:(fun x -> x + 1) in
@@ -682,7 +683,7 @@ struct
           check ()
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* deep *)
           let rec loop i t =
             if i = 0 then t else loop (i - 1) (map t ~f:(fun x -> x + 1))
@@ -702,7 +703,7 @@ struct
         let bind = bind
         let ( >>= ) = ( >>= )
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [bind] of a constant *)
           stabilize_ [%here];
           let o = observe (const 13 >>= const) in
@@ -714,14 +715,14 @@ struct
           is_invalidated_on_bind_rhs (fun i -> bind (const i) ~f:(fun _ -> const i))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* bind created with an invalid rhs *)
           let o = observe (const () >>= fun () -> invalid) in
           stabilize_ [%here];
           assert (skip_invalidity_check || not (is_valid (Observer.observing o)))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* bind created with an rhs that becomes invalid *)
           let b = Var.create true in
           let o =
@@ -734,7 +735,7 @@ struct
           assert (skip_invalidity_check || not (is_valid (Observer.observing o)))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* an invalid node created on the rhs of a valid bind, later invalidated *)
           let x = Var.create_ [%here] 13 in
           let r = ref None in
@@ -754,7 +755,7 @@ struct
           disallow_future_use o2
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* invariants blow up here if we don't make sure that we first make the
              lhs-change node of binds necessary and only then the rhs necessary. *)
           let node1 = const () >>= return in
@@ -767,7 +768,7 @@ struct
           disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let v1 = Var.create_ [%here] 0 in
           let i1 = Var.watch v1 in
           let i2 = i1 >>| fun x -> x + 1 in
@@ -781,7 +782,7 @@ struct
             assert (Observer.value_exn o4 = (2 * x) + 3))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* graph changes only *)
           let x = Var.create_ [%here] true in
           let a = const 3 in
@@ -798,7 +799,7 @@ struct
           check [%here] 3
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let x0 = Var.create_ [%here] 13 in
           let o0 = observe (watch x0) in
           let x1 = Var.create_ [%here] 15 in
@@ -823,7 +824,7 @@ struct
           check ()
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* walking chains of maps is not allowed to cross scopes *)
           let x0 = Var.create_ [%here] 0 in
           let x1 = Var.create_ [%here] 1 in
@@ -848,7 +849,7 @@ struct
           assert (value i2 = 10)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let v1 = Var.create_ [%here] 0 in
           let i1 = Var.watch v1 in
           let o1 = observe i1 in
@@ -861,7 +862,7 @@ struct
           Gc.keep_alive (i1, i2, o1, o2)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* topological overload many *)
           let rec copy_true c1 = bind c1 ~f:(fun x -> if x then c1 else copy_false c1)
           and copy_false c1 = bind c1 ~f:(fun x -> if x then copy_true c1 else c1) in
@@ -881,7 +882,7 @@ struct
           Gc.keep_alive hold
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* nested var sets *)
           (* We model a simple ETF that initially consists of 100 shares of IBM and
              200 shares of microsoft with an implicit divisor of 1. *)
@@ -904,7 +905,7 @@ struct
           assert (value nav =. (0.6 *. 50.) +. (0.4 *. 20.))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* adjust heights *)
           let x = Var.create_ [%here] 0 in
           let rec chain i =
@@ -933,7 +934,7 @@ struct
           loop t 5
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* an invalid unused rhs doesn't invalidate the [bind] *)
           let r = ref None in
           let lhs = Var.create_ [%here] 1 in
@@ -963,7 +964,7 @@ struct
           disallow_future_use o2
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* plugging an invalid node in a bind can invalidate the bind (though
              not always) *)
           let x = Var.create 4 in
@@ -990,7 +991,7 @@ struct
           disallow_future_use escaped_o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* changing the rhs from a node to its ancestor, which causes problems if
              we leave the node with a broken invariant while adding the ancestor. *)
           let lhs_var = Var.create false in
@@ -1022,7 +1023,7 @@ struct
         let bind3 = bind3
         let bind4 = bind4
 
-        let%test_unit _ =
+        let%expect_test _ =
           let v1 = Var.create_ [%here] 1 in
           let v2 = Var.create_ [%here] 2 in
           let v3 = Var.create_ [%here] 3 in
@@ -1073,14 +1074,14 @@ struct
         struct
           let join = X.join
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [join] of a constant *)
             let o = observe (join (const (const 1))) in
             stabilize_ [%here];
             assert (value o = 1)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* graph changes only *)
             let a = const 3 in
             let b = const 4 in
@@ -1097,7 +1098,7 @@ struct
             check [%here] 3
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             let v1 = Var.create_ [%here] 1 in
             let v2 = Var.create_ [%here] 2 in
             let v3 = Var.create_ [%here] (Var.watch v1) in
@@ -1116,7 +1117,7 @@ struct
             assert (value o = 14)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* an invalid unused rhs doesn't invalidate the [join] *)
             let x = Var.create_ [%here] (const 0) in
             let lhs = Var.create_ [%here] 1 in
@@ -1138,7 +1139,7 @@ struct
             disallow_future_use o2
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* checking that join can be invalidated *)
             let join = join (const invalid) in
             let o = observe join in
@@ -1147,7 +1148,7 @@ struct
             assert (skip_invalidity_check || not (is_valid join))
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* changing the rhs from a node to its ancestor, which causes problems if
                we leave the node with a broken invariant while adding the ancestor. *)
             let num_calls = ref 0 in
@@ -1179,21 +1180,21 @@ struct
 
         let if_ = if_
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [if_ true] *)
           let o = observe (if_ (const true) ~then_:(const 13) ~else_:(const 14)) in
           stabilize_ [%here];
           assert (value o = 13)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [if_ false] *)
           let o = observe (if_ (const false) ~then_:(const 13) ~else_:(const 14)) in
           stabilize_ [%here];
           assert (value o = 14)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* graph changes only *)
           let x = Var.create_ [%here] true in
           let o = observe (if_ (watch x) ~then_:(const 3) ~else_:(const 4)) in
@@ -1210,7 +1211,7 @@ struct
           check [%here] 4
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let test = Var.create_ [%here] true in
           let then_ = Var.create_ [%here] 1 in
           let else_ = Var.create_ [%here] 2 in
@@ -1256,7 +1257,7 @@ struct
           assert (Observer.value_exn ite = 6)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* an invalid unused branch doesn't invalidate the [if_] *)
           let r = ref None in
           let lhs = Var.create_ [%here] 1 in
@@ -1281,7 +1282,7 @@ struct
           disallow_future_use o2
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* if-then-else created with an invalid test *)
           let o =
             observe
@@ -1291,14 +1292,14 @@ struct
           assert (skip_invalidity_check || not (is_valid (Observer.observing o)))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* if-then-else created with an invalid branch *)
           let o = observe (if_ (const true) ~then_:invalid ~else_:(const 13)) in
           stabilize_ [%here];
           assert (skip_invalidity_check || not (is_valid (Observer.observing o)))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* if-then-else switching to an invalid branch *)
           let b = Var.create false in
           let o = observe (if_ (Var.watch b) ~then_:invalid ~else_:(const 13)) in
@@ -1309,7 +1310,7 @@ struct
           assert (skip_invalidity_check || not (is_valid (Observer.observing o)))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* if-then-else switching to an invalid branch via a map *)
           let b = Var.create false in
           let o =
@@ -1323,7 +1324,7 @@ struct
           assert (skip_invalidity_check || not (is_valid (Observer.observing o)))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* if-then-else switching to an invalid test *)
           let b = Var.create false in
           let o =
@@ -1343,7 +1344,7 @@ struct
           assert (skip_invalidity_check || not (is_valid (Observer.observing o)))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* changing branches from a node to its ancestor, which causes problems if
              we leave the node with a broken invariant while adding the ancestor. *)
           let test_var = Var.create false in
@@ -1370,7 +1371,7 @@ struct
 
         let freeze = freeze
 
-        let%test_unit _ =
+        let%expect_test _ =
           let x = Var.create_ [%here] 13 in
           let f = freeze (Var.watch x) in
           let y = observe f in
@@ -1394,7 +1395,7 @@ struct
           assert (value z = 15)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let x = Var.create_ [%here] 13 in
           let o1 = observe (freeze (Var.watch x >>| Fn.id)) in
           let o2 = observe (Var.watch x >>| Fn.id) in
@@ -1410,7 +1411,7 @@ struct
           assert (value o2 = 14)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [freeze] nodes increment [num_nodes_became_necessary] *)
           let i1 = State.(num_nodes_became_necessary t) in
           ignore (freeze (const ()) : unit t);
@@ -1432,7 +1433,7 @@ struct
          *   done;
          * ;; *)
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [freeze]ing something that is otherwise unnecessary. *)
           let x = Var.create_ [%here] 0 in
           let i = freeze (Var.watch x >>| fun i -> i + 1) in
@@ -1443,7 +1444,7 @@ struct
           assert (value o = 1 (* not 14 *))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* a frozen node remains valid, even if its original scope isn't *)
           let x = Var.create_ [%here] 13 in
           let r = ref None in
@@ -1466,7 +1467,7 @@ struct
           stabilize_ [%here]
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* a frozen node remains valid, even if the node it froze isn't *)
           let x = Var.create_ [%here] 13 in
           let r = ref (const 14) in
@@ -1486,7 +1487,7 @@ struct
           disallow_future_use o1
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [freeze ~when] *)
           let x = Var.create_ [%here] 13 in
           let o = observe (freeze (watch x) ~when_:(fun i -> i >= 15)) in
@@ -1505,7 +1506,7 @@ struct
           check [%here] 15
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* a freeze that is invalidated before it is frozen. *)
           let r = ref None in
           let x = Var.create_ [%here] 13 in
@@ -1523,7 +1524,7 @@ struct
           disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* a freeze that is stabilized and invalidated before it is frozen. *)
           let r = ref None in
           let x = Var.create_ [%here] 13 in
@@ -1544,7 +1545,7 @@ struct
 
         let depend_on = depend_on
 
-        let%test_unit _ =
+        let%expect_test _ =
           let x = Var.create_ [%here] 13 in
           let y = Var.create_ [%here] 14 in
           let d = depend_on (watch x) ~depend_on:(watch y) in
@@ -1595,7 +1596,7 @@ struct
           [%test_result: int] (value o) ~expect:19
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* propagating the first argument of [depend_on] while the result of
              [depend_on] is not observable *)
           let var = Var.create 1 in
@@ -1614,7 +1615,7 @@ struct
           [%test_eq: int] (Observer.value_exn o) 2
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* depend_on doesn't cutoff using phys_equal *)
           let v1 = Var.create () in
           let v2 = Var.create 1 in
@@ -1636,7 +1637,7 @@ struct
 
         let necessary_if_alive = necessary_if_alive
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* dead => unnecessary *)
           let x = Var.create 13 in
           let push, check = on_update_queue () in
@@ -1655,7 +1656,7 @@ struct
           check [ Unnecessary ]
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* cutoff is preserved *)
           let x = Var.create 13 in
           set_cutoff (watch x) Cutoff.never;
@@ -1701,19 +1702,19 @@ struct
           done
         ;;
 
-        let%test_unit _ = test exists List.exists
-        let%test_unit _ = test for_all List.for_all
+        let%expect_test _ = test exists List.exists
+        let%expect_test _ = test for_all List.for_all
 
         let array_fold = array_fold
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* empty array *)
           let o = observe (array_fold [||] ~init:13 ~f:(fun _ -> assert false)) in
           stabilize_ [%here];
           assert (value o = 13)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let x = Var.create_ [%here] 13 in
           let y = Var.create_ [%here] 14 in
           let o =
@@ -1740,7 +1741,7 @@ struct
           Option.value_exn (reduce_balanced a ~f ~reduce)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* empty array *)
           let f =
             reduce_balanced
@@ -1751,7 +1752,7 @@ struct
           assert (Option.is_none f)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* singular value *)
           let f =
             reduce_balanced_exn
@@ -1764,7 +1765,7 @@ struct
           assert (value o = 1)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* non-commutative function test *)
           let list = [ "a"; "b"; "c"; "d"; "e"; "f"; "g" ] in
           let list = List.map list ~f:(Var.create_ [%here]) in
@@ -1785,7 +1786,7 @@ struct
           [%test_eq: int] !reduce_calls 9
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* observability changes *)
           let observe_stabilize_disallow node =
             let o = observe node in
@@ -1810,7 +1811,7 @@ struct
           assert (res = 1)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* multiple occurences of a node in the fold. *)
           let x = Var.create_ [%here] 1 in
           let f =
@@ -1843,7 +1844,7 @@ struct
           assert (value o2 = 12)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* general creation and updating *)
           let module Test_value = struct
             type t =
@@ -1944,7 +1945,7 @@ struct
 
         let unordered_array_fold = unordered_array_fold
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* empty array *)
           let o =
             observe
@@ -1959,7 +1960,7 @@ struct
           assert (value o = 13)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* an unnecessary [unordered_array_fold] isn't computed. *)
           let x = Var.create_ [%here] 1 in
           let num_f_inverse = ref 0 in
@@ -1994,7 +1995,7 @@ struct
           assert (!num_f_inverse = 1)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* multiple occurences of a node in the fold. *)
           let x = Var.create_ [%here] 1 in
           let f =
@@ -2044,7 +2045,7 @@ struct
 
         let opt_unordered_array_fold = opt_unordered_array_fold
 
-        let%test_unit _ =
+        let%expect_test _ =
           let o =
             observe
               (opt_unordered_array_fold
@@ -2057,7 +2058,7 @@ struct
           assert (is_some (value o))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let x = Var.create_ [%here] None in
           let y = Var.create_ [%here] None in
           let t =
@@ -2083,7 +2084,7 @@ struct
 
         let sum = sum
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* empty *)
           let o =
             observe
@@ -2097,7 +2098,7 @@ struct
           assert (value o = 13)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* full recompute *)
           let x = Var.create_ [%here] 13. in
           let y = Var.create_ [%here] 15. in
@@ -2140,7 +2141,7 @@ struct
 
         let opt_sum = opt_sum
 
-        let%test_unit _ =
+        let%expect_test _ =
           let t =
             observe
               (opt_sum
@@ -2153,7 +2154,7 @@ struct
           assert (is_some (value t))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let x = Var.create_ [%here] None in
           let y = Var.create_ [%here] None in
           let t =
@@ -2191,10 +2192,10 @@ struct
           assert (equal (value z) (of_int 40))
         ;;
 
-        let%test_unit _ = test_sum sum_int Fn.id Int.equal
-        let%test_unit _ = test_sum sum_float Float.of_int Float.equal
+        let%expect_test _ = test_sum sum_int Fn.id Int.equal
+        let%expect_test _ = test_sum sum_float Float.of_int Float.equal
 
-        let%test_unit _ =
+        let%expect_test _ =
           let o = observe (sum_float [||]) in
           stabilize_ [%here];
           [%test_result: Float.t] (value o) ~expect:0.
@@ -2202,7 +2203,7 @@ struct
 
         module Clock = Clock
 
-        let%test_unit _ =
+        let%expect_test _ =
           let clock = Clock.create ~start:Time_ns.epoch () in
           let w = observe (Clock.watch_now clock) in
           stabilize_ [%here];
@@ -2287,7 +2288,7 @@ struct
           is_invalidated_on_bind_rhs (fun _ -> Clock.after clock (sec (-1.)))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let clock = Clock.create ~start:(Time_ns.add Time_ns.epoch (sec 1.)) () in
           let now = Clock.now clock in
           let at span = observe (Clock.at clock (Time_ns.add now span)) in
@@ -2310,7 +2311,7 @@ struct
           assert (is i3 After)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* advancing the clock in the same stabilization cycle as creation *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           let i = observe (Clock.after clock (sec 1.)) in
@@ -2319,7 +2320,7 @@ struct
           assert (is i After)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* firing an unnecessary [after] and then observing it *)
           let clock = Clock.create ~start:(Time_ns.add Time_ns.epoch (sec 1.)) () in
           let i = Clock.after clock (sec (-1.)) in
@@ -2359,7 +2360,7 @@ struct
           is_invalidated_on_bind_rhs (fun _ -> Clock.at_intervals clock (sec 1.))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* advancing the clock does nothing by itself *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           let r = ref 0 in
@@ -2416,7 +2417,7 @@ struct
           disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* advancing exactly to intervals doesn't skip any *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           let r = ref (-1) in
@@ -2434,13 +2435,13 @@ struct
           disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [interval < alarm precision] raises *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           assert (does_raise (fun () -> Clock.at_intervals clock (sec 0.0005)))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [at] in the past *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           assert (
@@ -2452,7 +2453,7 @@ struct
                  ~before:13))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [at] in the future *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           let o =
@@ -2473,7 +2474,7 @@ struct
           assert (value o = 14)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [at] in the future, unobserved *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           let x = Var.create_ [%here] 13 in
@@ -2495,7 +2496,7 @@ struct
           assert (value o = 17)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [advance_clock] past [at] prior to stabilization. *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           let o =
@@ -2512,7 +2513,7 @@ struct
           assert (value o = 15)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* unobserved, [advance_clock] past [at] prior to stabilization. *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           let x = Var.create_ [%here] 13 in
@@ -2532,7 +2533,7 @@ struct
           assert (value o = 13)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* invalidated *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           let t =
@@ -2552,7 +2553,7 @@ struct
           disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [snapshot] nodes increment [num_nodes_became_necessary] *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           let i1 = State.(num_nodes_became_necessary t) in
@@ -2575,102 +2576,139 @@ struct
 
         let relative_step_function clock ~init steps =
           let now = Clock.now clock in
+          Step_function.create_exn
+            ~init
+            ~steps:
+              (List.map steps ~f:(fun (after, a) ->
+                 Time_ns.add now (sec (Float.of_int after)), a))
+        ;;
+
+        let relative_step_function_incr clock ~init steps =
           Clock.step_function
             clock
             ~init
             (List.map steps ~f:(fun (after, a) ->
-               Time_ns.add now (sec (Float.of_int after)), a))
+               Time_ns.add (Clock.now clock) (sec (Float.of_int after)), a))
         ;;
 
-        let%test _ =
+        let%expect_test _ =
           let clock = Clock.create ~start:Time_ns.epoch () in
-          is_invalidated_on_bind_rhs (fun i -> Clock.step_function clock ~init:i [])
+          require
+            [%here]
+            (is_invalidated_on_bind_rhs (fun i ->
+               Clock.step_function clock ~init:i []))
         ;;
 
-        let%test _ =
+        let%expect_test _ =
           let clock = Clock.create ~start:Time_ns.epoch () in
-          is_invalidated_on_bind_rhs (fun i ->
-            relative_step_function clock ~init:i [ 1, i + 1 ])
+          require
+            [%here]
+            (is_invalidated_on_bind_rhs (fun i ->
+               relative_step_function_incr clock ~init:i [ 1, i + 1 ]))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* no steps *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           let i = Clock.step_function clock ~init:13 [] in
           let o = observe i in
           stabilize_ [%here];
-          assert (value o = 13)
+          print_s [%sexp (value o : int)];
+          [%expect {| 13 |}];
+          disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* one step at a time *)
           let clock = Clock.create ~start:Time_ns.epoch () in
-          let i = relative_step_function clock ~init:13 [ 1, 14; 2, 15 ] in
+          let i = relative_step_function_incr clock ~init:13 [ 1, 14; 2, 15 ] in
           let o = observe i in
+          let show () = print_s [%sexp (value o : int)] in
           stabilize_ [%here];
-          assert (value o = 13);
+          show ();
+          [%expect {| 13 |}];
           Clock.advance_clock_by clock (sec 1.5);
           stabilize_ [%here];
-          assert (value o = 14);
+          show ();
+          [%expect {| 14 |}];
           Clock.advance_clock_by clock (sec 1.);
           stabilize_ [%here];
-          assert (value o = 15)
+          show ();
+          [%expect {| 15 |}];
+          disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* all steps in the past *)
           let clock = Clock.create ~start:(Time_ns.add Time_ns.epoch (sec 2.)) () in
-          let i = relative_step_function clock ~init:13 [ -2, 14; -1, 15 ] in
+          let i = relative_step_function_incr clock ~init:13 [ -2, 14; -1, 15 ] in
           let o = observe i in
+          let show () = print_s [%sexp (value o : int)] in
           stabilize_ [%here];
-          assert (value o = 15)
+          show ();
+          [%expect {| 15 |}];
+          disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* some steps in the past *)
           let clock = Clock.create ~start:(Time_ns.add Time_ns.epoch (sec 1.)) () in
-          let i = relative_step_function clock ~init:13 [ -1, 14; 1, 15 ] in
+          let i = relative_step_function_incr clock ~init:13 [ -1, 14; 1, 15 ] in
           let o = observe i in
+          let show () = print_s [%sexp (value o : int)] in
           stabilize_ [%here];
-          assert (value o = 14);
+          show ();
+          [%expect {| 14 |}];
           Clock.advance_clock_by clock (sec 1.5);
           stabilize_ [%here];
-          assert (value o = 15)
+          show ();
+          [%expect {| 15 |}];
+          disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* cross multiple steps in one stabilization cycle *)
           let clock = Clock.create ~start:Time_ns.epoch () in
-          let i = relative_step_function clock ~init:13 [ 1, 14; 2, 15 ] in
+          let i = relative_step_function_incr clock ~init:13 [ 1, 14; 2, 15 ] in
           let o = observe i in
+          let show () = print_s [%sexp (value o : int)] in
           stabilize_ [%here];
-          assert (value o = 13);
+          show ();
+          [%expect {| 13 |}];
           Clock.advance_clock_by clock (sec 1.5);
           Clock.advance_clock_by clock (sec 1.);
           stabilize_ [%here];
-          assert (value o = 15)
+          show ();
+          [%expect {| 15 |}];
+          disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* cross step in same stabilization as creation *)
           let clock = Clock.create ~start:Time_ns.epoch () in
-          let i = relative_step_function clock ~init:13 [ 1, 14 ] in
+          let i = relative_step_function_incr clock ~init:13 [ 1, 14 ] in
           let o = observe i in
+          let show () = print_s [%sexp (value o : int)] in
           Clock.advance_clock_by clock (sec 2.);
           stabilize_ [%here];
-          assert (value o = 14)
+          show ();
+          [%expect {| 14 |}];
+          disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* observe after step *)
           let clock = Clock.create ~start:Time_ns.epoch () in
-          let i = relative_step_function clock ~init:13 [ 1, 14 ] in
+          let i = relative_step_function_incr clock ~init:13 [ 1, 14 ] in
           stabilize_ [%here];
           Clock.advance_clock_by clock (sec 1.5);
           stabilize_ [%here];
           let o = observe i in
+          let show () = print_s [%sexp (value o : int)] in
           stabilize_ [%here];
-          assert (value o = 14)
+          show ();
+          [%expect {| 14 |}];
+          disallow_future_use o
         ;;
 
         let%expect_test _ =
@@ -2714,7 +2752,134 @@ struct
           disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test "[incremental_step_function]" =
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let x = Var.create (Step_function.constant 1) in
+          let o = observe (Clock.incremental_step_function clock (watch x)) in
+          let show () = print_s [%sexp (value o : int)] in
+          stabilize_ [%here];
+          show ();
+          [%expect {| 1 |}];
+          Var.set x (Step_function.constant 2);
+          stabilize_ [%here];
+          show ();
+          [%expect {| 2 |}];
+          disallow_future_use o
+        ;;
+
+        let%expect_test "incremental step function with step in the past, present, \
+                         and future"
+          =
+          let test ~step_at =
+            let clock = Clock.create ~start:Time_ns.epoch () in
+            let x = Var.create (Step_function.constant 1) in
+            let o = observe (Clock.incremental_step_function clock (watch x)) in
+            let show () = print_s [%sexp (value o : int)] in
+            stabilize_ [%here];
+            show ();
+            [%expect {| 1 |}];
+            Var.set x (relative_step_function clock ~init:2 [ step_at, 3 ]);
+            stabilize_ [%here];
+            show ();
+            disallow_future_use o
+          in
+          test ~step_at:(-1);
+          [%expect {| 3 |}];
+          test ~step_at:0;
+          [%expect {| 3 |}];
+          test ~step_at:1;
+          [%expect {| 2 |}]
+        ;;
+
+        let%expect_test "incremental step function; advance time and change function"
+          =
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let x = Var.create (relative_step_function clock ~init:13 [ 1, 14 ]) in
+          let o = observe (Clock.incremental_step_function clock (watch x)) in
+          let show () = print_s [%sexp (value o : int)] in
+          stabilize_ [%here];
+          show ();
+          [%expect {| 13 |}];
+          Var.set x (relative_step_function clock ~init:15 [ 1, 16 ]);
+          Clock.advance_clock_by clock (sec 1.);
+          stabilize_ [%here];
+          show ();
+          [%expect {| 16 |}];
+          disallow_future_use o
+        ;;
+
+        let%expect_test "incremental step function; change to const and then \
+                         advance time"
+          =
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let x = Var.create (relative_step_function clock ~init:13 [ 1, 14 ]) in
+          let o = observe (Clock.incremental_step_function clock (watch x)) in
+          let show () = print_s [%sexp (value o : int)] in
+          stabilize_ [%here];
+          show ();
+          [%expect {| 13 |}];
+          Var.set x (Step_function.constant 15);
+          stabilize_ [%here];
+          show ();
+          [%expect {| 15 |}];
+          Clock.advance_clock_by clock (sec 1.);
+          stabilize_ [%here];
+          show ();
+          [%expect {| 15 |}];
+          disallow_future_use o
+        ;;
+
+        let%expect_test "incremental step function is invalidated when child is" =
+          let b = Var.create true in
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let t =
+            Clock.incremental_step_function
+              clock
+              (if_ (watch b) ~then_:(const 0) ~else_:invalid
+               >>| Step_function.constant)
+          in
+          let o = observe t in
+          let show () = print_s [%sexp (value o : int)] in
+          stabilize_ [%here];
+          show ();
+          [%expect {| 0 |}];
+          Var.set b false;
+          stabilize_ [%here];
+          print_s [%sexp (check_invalidity && is_valid t : bool)];
+          [%expect {| false |}];
+          disallow_future_use o
+        ;;
+
+        let%expect_test "incremental step function that becomes observable in a \
+                         stabilization after its child stabilizes"
+          =
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let x = Var.create (Step_function.constant 13) in
+          let ox = observe (watch x) in
+          let t = Clock.incremental_step_function clock (watch x) in
+          stabilize_ [%here];
+          let o = observe t in
+          let show () = print_s [%sexp (value o : int)] in
+          stabilize_ [%here];
+          show ();
+          [%expect {| 13 |}];
+          disallow_future_use ox;
+          disallow_future_use o
+        ;;
+
+        let%expect_test "incremental step function of const used in other places" =
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let c = const (Step_function.constant 13) in
+          let c1 = c >>| fun s -> s in
+          let o1 = observe c1 in
+          let x = Clock.incremental_step_function clock c in
+          let ox = observe x in
+          stabilize_ [%here];
+          disallow_future_use o1;
+          disallow_future_use ox
+        ;;
+
+        let%expect_test _ =
           (* Equivalence between [step_function] and reimplementation with [at] *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           let my_step_function ~init steps =
@@ -2749,13 +2914,69 @@ struct
           for i = 1 to 7 do
             Clock.advance_clock clock ~to_:(Time_ns.add base (sec (Float.of_int i)));
             stabilize_ [%here];
-            [%test_eq: int] (value o1) (value o2)
+            print_s [%sexp (value o1 : int), (value o2 : int)];
+            require [%here] (value o1 = value o2)
           done;
+          [%expect
+            {|
+            (1 1)
+            (3 3)
+            (3 3)
+            (5 5)
+            (6 6)
+            (7 7)
+            (7 7) |}];
           disallow_future_use o1;
           disallow_future_use o2
         ;;
 
-        let%test_unit _ =
+        let%expect_test "[Step_function.create_from_sequence]" =
+          let clock = Clock.create ~start:Time_ns.epoch () in
+          let x =
+            Var.create
+              (Step_function.create_from_sequence
+                 ~init:13
+                 ~steps:
+                   (Sequence.unfold
+                      ~init:(Clock.now clock, 14)
+                      ~f:(fun (at, i) ->
+                        print_s [%message "unfold" (i : int)];
+                        Some ((at, i), (Time_ns.add at (sec 1.), i + 1)))))
+          in
+          let o = observe (Clock.incremental_step_function clock (watch x)) in
+          let show () = print_s [%sexp (value o : int)] in
+          for _ = 1 to 5 do
+            Clock.advance_clock_by clock (sec 1.);
+            stabilize_ [%here];
+            show ()
+          done;
+          [%expect
+            {|
+            (unfold (i 14))
+            (unfold (i 15))
+            (unfold (i 16))
+            (unfold (i 16))
+            15
+            (unfold (i 16))
+            (unfold (i 17))
+            (unfold (i 17))
+            16
+            (unfold (i 17))
+            (unfold (i 18))
+            (unfold (i 18))
+            17
+            (unfold (i 18))
+            (unfold (i 19))
+            (unfold (i 19))
+            18
+            (unfold (i 19))
+            (unfold (i 20))
+            (unfold (i 20))
+            19 |}];
+          disallow_future_use o
+        ;;
+
+        let%expect_test _ =
           (* Advancing to a scheduled time shouldn't break things. *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           let fut = Time_ns.add (Clock.now clock) (sec 1.0) in
@@ -2769,13 +2990,13 @@ struct
           disallow_future_use o2
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* alarms get cleaned up for invalidated time-based incrementals *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           List.iter
             [ (fun () -> Clock.after clock (sec 1.) >>| fun _ -> ())
             ; (fun () -> Clock.at_intervals clock (sec 1.))
-            ; (fun () -> relative_step_function clock ~init:() [ 1, () ])
+            ; (fun () -> relative_step_function_incr clock ~init:() [ 1, () ])
             ]
             ~f:(fun create_time_based_incremental ->
               let num_alarms = Clock.timing_wheel_length clock in
@@ -2818,18 +3039,16 @@ struct
               <unstabilized> |}];
             stabilize_ [%here];
             show_t ();
-            [%expect {|
-              13 |}];
+            [%expect {| 13 |}];
             disallow_future_use t;
             show_t ();
-            [%expect {|
-              <disallowed> |}]
+            [%expect {| <disallowed> |}]
           ;;
 
           let invariant = invariant
           let observing = observing
 
-          let%test_unit _ =
+          let%expect_test _ =
             let x = Var.create_ [%here] 0 in
             let o = observe (watch x) in
             assert (phys_same (observing o) (watch x))
@@ -2837,7 +3056,7 @@ struct
 
           let use_is_allowed = use_is_allowed
 
-          let%test_unit _ =
+          let%expect_test _ =
             let o = observe (watch (Var.create_ [%here] 0)) in
             assert (use_is_allowed o);
             disallow_future_use o;
@@ -2848,7 +3067,7 @@ struct
           let value = value
           let value_exn = value_exn
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* calling [value] before stabilizing returns error. *)
             let x = Var.create_ [%here] 0 in
             let o = observe (watch x) in
@@ -2856,7 +3075,7 @@ struct
             assert (does_raise (fun () -> value_exn o))
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* calling [value] on a just-created observer of an already computed
                incremental before stabilizing returns error. *)
             let x = Var.create_ [%here] 13 in
@@ -2871,7 +3090,7 @@ struct
             assert (does_raise (fun () -> value_exn o))
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* calling [value] after [disallow_future_use] returns error. *)
             let x = Var.create_ [%here] 0 in
             let o = observe (watch x) in
@@ -2881,7 +3100,7 @@ struct
             assert (does_raise (fun () -> value_exn o))
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [disallow_future_use] disables on-update handlers. *)
             let x = Var.create_ [%here] 13 in
             let o = observe (Var.watch x) in
@@ -2895,7 +3114,7 @@ struct
             assert (!r = 1)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* finalizers work *)
             Gc.full_major ();
             stabilize_ [%here];
@@ -2912,7 +3131,7 @@ struct
             assert (State.(num_active_observers t) = before)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* finalizers don't disable on-update handlers *)
             let x = Var.create_ [%here] 13 in
             let o = observe (Var.watch x) in
@@ -2926,7 +3145,7 @@ struct
             assert (!r = 2)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* finalizers cause an [Unnecessary] update to be sent *)
             let x = Var.create 13 in
             let o = observe (watch x) in
@@ -2940,7 +3159,7 @@ struct
             check [ Unnecessary ]
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [disallow_future_use] and finalize in the same stabilization. *)
             let x = Var.create_ [%here] 1 in
             let o = observe (Var.watch x) in
@@ -2950,7 +3169,7 @@ struct
             stabilize_ [%here]
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* finalize after disallow_future_use *)
             let x = Var.create_ [%here] 1 in
             let o = observe (Var.watch x) in
@@ -2964,7 +3183,7 @@ struct
             stabilize_ [%here]
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* after user resurrection of an observer, it is still disallowed *)
             let x = Var.create_ [%here] 13 in
             let o = observe (Var.watch x) in
@@ -2978,7 +3197,7 @@ struct
             assert (not (use_is_allowed o))
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* lots of observers on the same node isn't quadratic. *)
             (* We can't run this test with debugging, because it's too slow. *)
             if not debug
@@ -3004,7 +3223,7 @@ struct
 
           let on_update_exn = on_update_exn
 
-          let%test_unit _ =
+          let%expect_test _ =
             let x = Var.create_ [%here] 13 in
             let parent = map (watch x) ~f:(fun x -> x + 1) in
             let parent_o = observe parent in
@@ -3029,14 +3248,14 @@ struct
             assert (!r = 16)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [on_update_exn] of an invalid node, not during a stabilization *)
             let o = observe invalid in
             on_update_exn o ~f:(fun _ -> assert false);
             disallow_future_use o
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [on_update_exn] of an invalid node *)
             let o = observe invalid in
             let is_ok = ref false in
@@ -3047,7 +3266,7 @@ struct
             assert (skip_invalidity_check || !is_ok)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* stabilizing with an on-update handler of a node that is invalidated *)
             let x = Var.create 0 in
             let r = ref None in
@@ -3073,14 +3292,14 @@ struct
             disallow_future_use o2
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [on_update_exn] of a disallowed observer *)
             let o = observe (const 5) in
             disallow_future_use o;
             assert (does_raise (fun () -> on_update_exn o ~f:(fun _ -> assert false)))
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [disallow_future_use] before first stabilization *)
             let o = observe (const 5) in
             disallow_future_use o;
@@ -3088,7 +3307,7 @@ struct
             disallow_future_use o
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [disallow_future_use] during an on-update handler *)
             let x = Var.create_ [%here] 13 in
             let o = observe (watch x) in
@@ -3097,7 +3316,7 @@ struct
             assert (is_error (value o))
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* disallowing other on-update handlers in an on-update handler *)
             let x = Var.create_ [%here] 13 in
             let o = observe (watch x) in
@@ -3109,7 +3328,7 @@ struct
             stabilize_ [%here]
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* disallowing other observers of the same node an on-update handler *)
             let x = Var.create_ [%here] 13 in
             let o1 = observe (watch x) in
@@ -3123,7 +3342,7 @@ struct
             stabilize_ [%here]
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* disallowing observers of other nodes in an on-update handler *)
             let o () = observe (watch (Var.create_ [%here] 13)) in
             let o1 = o () in
@@ -3137,7 +3356,7 @@ struct
             stabilize_ [%here]
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* adding an on-update-handler to an already stable node *)
             let x = watch (Var.create 13) in
             let o = observe x in
@@ -3150,7 +3369,7 @@ struct
             disallow_future_use o
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* adding an on-update handler after a change *)
             let x = Var.create 13 in
             let o = observe (watch x) in
@@ -3171,7 +3390,7 @@ struct
             check2 [ Changed (14, 15) ]
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* adding an on-update handler in an on-update handler. *)
             let x = Var.create 13 in
             let o = observe (watch x) in
@@ -3187,7 +3406,7 @@ struct
             stabilize_ [%here]
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* adding an on-update-handler to an invalid node in an on-update
                handler. *)
             let module I = Make () in
@@ -3204,7 +3423,7 @@ struct
             assert (skip_invalidity_check || !is_ok)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* on-update-handlers added during the firing of other on-update-handlers
                should not fire now but instead after the next stabilization *)
             List.iter [ const 1; invalid ] ~f:(fun node ->
@@ -3225,7 +3444,7 @@ struct
               disallow_future_use o2)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* on-update handler set up during stabilization fires after the
                stabilization *)
             let called = ref false in
@@ -3243,7 +3462,7 @@ struct
             disallow_future_use o_unit
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* on-update handlers are initialized once *)
             let v = Var.create (const 0) in
             let i = Var.watch v in
@@ -3263,7 +3482,7 @@ struct
             stabilize ()
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* creating an observer during stabilization *)
             let x = Var.create 13 in
             let r = ref None in
@@ -3289,7 +3508,7 @@ struct
             assert (is_error (value o2))
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* creating an observer and adding on_update handler during
                stabilization *)
             let v = Var.create 0 in
@@ -3313,7 +3532,7 @@ struct
             disallow_future_use (Option.value_exn !inner_obs)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* disallow_future_use during stabilization *)
             let x = Var.create 13 in
             let handler_ran = ref false in
@@ -3335,7 +3554,7 @@ struct
             disallow_future_use o2
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* creating an observer and disallowing use during stabilization *)
             let x = Var.create 13 in
             let r = ref None in
@@ -3355,7 +3574,7 @@ struct
             stabilize_ [%here]
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* creating an observer and finalizing it during stabilization *)
             let x = Var.create 13 in
             let o =
@@ -3374,7 +3593,7 @@ struct
 
         let on_update = on_update
 
-        let%test_unit _ =
+        let%expect_test _ =
           let v = Var.create_ [%here] 13 in
           let push, check = on_update_queue () in
           let o = observe (watch v) in
@@ -3392,7 +3611,7 @@ struct
           check [ Unnecessary ]
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* on-change handlers of a node that changes but is not necessary at the end
              of a stabilization *)
           let v = Var.create_ [%here] 0 in
@@ -3410,7 +3629,7 @@ struct
           disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* value changing with different observers *)
           let v = Var.create_ [%here] 13 in
           let o = observe (watch v) in
@@ -3428,7 +3647,7 @@ struct
           check [ Necessary 14 ]
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* call at next stabilization *)
           let v = Var.create_ [%here] 13 in
           let o = observe (Var.watch v) in
@@ -3440,7 +3659,7 @@ struct
           disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* called at next stabilization with [Unnecessary] update *)
           let v = Var.create_ [%here] 13 in
           let o = observe (Var.watch v) in
@@ -3452,7 +3671,7 @@ struct
           check [ Unnecessary ]
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* transition from unnecessary to necessary and back *)
           let x = Var.create 13 in
           let push, check = on_update_queue () in
@@ -3470,7 +3689,7 @@ struct
           check [ Unnecessary ]
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* an indirectly necessary node *)
           let x = Var.create_ [%here] 13 in
           let push, check = on_update_queue () in
@@ -3492,7 +3711,7 @@ struct
           check [ Unnecessary ]
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [on_update] doesn't make a node necessary *)
           let v = Var.create_ [%here] 13 in
           let push, check = on_update_queue () in
@@ -3508,7 +3727,7 @@ struct
           disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* invalid from the start *)
           let push, check = on_update_queue () in
           on_update invalid ~f:push;
@@ -3516,7 +3735,7 @@ struct
           if check_invalidity then check [ Invalidated ]
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* invalidation of an unnecessary node *)
           let v = Var.create_ [%here] 13 in
           let r = ref None in
@@ -3538,7 +3757,7 @@ struct
           disallow_future_use o
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* invalidation of a necessary node *)
           let v = Var.create_ [%here] 13 in
           let r = ref None in
@@ -3562,7 +3781,7 @@ struct
           disallow_future_use o2
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* invalidation of a necessary node after a change *)
           let v = Var.create_ [%here] 13 in
           let w = Var.create_ [%here] 14 in
@@ -3590,7 +3809,7 @@ struct
           disallow_future_use o2
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* making a node necessary from an on-update handler *)
           let x = Var.create_ [%here] 13 in
           let y = Var.create_ [%here] 14 in
@@ -3614,7 +3833,7 @@ struct
           disallow_future_use ox
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* calling [advance_clock] in an on-update handler *)
           let clock = Clock.create ~start:Time_ns.epoch () in
           let i = Clock.after clock (sec 1.) in
@@ -3647,13 +3866,13 @@ struct
           let of_equal = of_equal
           let should_cutoff = should_cutoff
 
-          let%test_unit _ =
+          let%expect_test _ =
             let t = of_compare Int.compare in
             assert (should_cutoff t ~old_value:0 ~new_value:0);
             assert (not (should_cutoff t ~old_value:0 ~new_value:1))
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             let t = of_equal Int.equal in
             assert (should_cutoff t ~old_value:0 ~new_value:0);
             assert (not (should_cutoff t ~old_value:0 ~new_value:1))
@@ -3661,7 +3880,7 @@ struct
 
           let always = always
 
-          let%test_unit _ =
+          let%expect_test _ =
             let x = Var.create_ [%here] 0 in
             set_cutoff (watch x) always;
             let r = ref 0 in
@@ -3677,7 +3896,7 @@ struct
 
           let never = never
 
-          let%test_unit _ =
+          let%expect_test _ =
             let x = Var.create_ [%here] 0 in
             set_cutoff (watch x) never;
             let r = ref 0 in
@@ -3693,7 +3912,7 @@ struct
 
           let phys_equal = phys_equal
 
-          let%test_unit _ =
+          let%expect_test _ =
             let r1 = ref () in
             let r2 = ref () in
             let x = Var.create_ [%here] r1 in
@@ -3711,7 +3930,7 @@ struct
 
           let poly_equal = poly_equal
 
-          let%test_unit _ =
+          let%expect_test _ =
             let r1a = ref 1 in
             let r1b = ref 1 in
             let r2 = ref 2 in
@@ -3737,14 +3956,14 @@ struct
         let get_cutoff = get_cutoff
         let set_cutoff = set_cutoff
 
-        let%test_unit _ =
+        let%expect_test _ =
           let i = Var.watch (Var.create_ [%here] 0) in
           assert (Cutoff.equal (get_cutoff i) Cutoff.phys_equal);
           set_cutoff i Cutoff.never;
           assert (Cutoff.equal (get_cutoff i) Cutoff.never)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           let a = Var.create_ [%here] 0 in
           let n = map ~f:Fn.id (watch a) in
           set_cutoff
@@ -3767,7 +3986,7 @@ struct
 
           let top = top
 
-          let%test_unit _ =
+          let%expect_test _ =
             let t = current () in
             assert (phys_equal t top)
           ;;
@@ -3775,13 +3994,13 @@ struct
           let current = current
           let within = within
 
-          let%test_unit _ =
+          let%expect_test _ =
             let o = observe (within (current ()) ~f:(fun () -> const 13)) in
             stabilize_ [%here];
             assert (value o = 13)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* escaping a [bind] *)
             let s = current () in
             let r = ref None in
@@ -3804,7 +4023,7 @@ struct
             assert (value o2 = 13)
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* returning to a [bind] *)
             let r = ref None in
             let x = Var.create_ [%here] 13 in
@@ -3828,7 +4047,7 @@ struct
 
         let lazy_from_fun = lazy_from_fun
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* laziness *)
           let r = ref 0 in
           let l = lazy_from_fun (fun () -> incr r) in
@@ -3839,7 +4058,7 @@ struct
           assert (!r = 1)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* nodes created when forcing are in the right scope *)
           let l = lazy_from_fun (fun () -> const 13) in
           let x = Var.create_ [%here] 13 in
@@ -3898,13 +4117,13 @@ struct
           [%test_eq: int] (value o) 66
         ;;
 
-        let%test_unit _ = test_memoize_fun memoize_fun
+        let%expect_test _ = test_memoize_fun memoize_fun
 
-        let%test_unit _ =
+        let%expect_test _ =
           test_memoize_fun (fun hashable f -> memoize_fun_by_key hashable Fn.id f)
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           test_memoize_fun (fun hashable f ->
             let memo_f =
               unstage
@@ -3913,7 +4132,7 @@ struct
             stage (fun a -> Heap_block.value (memo_f a)))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           test_memoize_fun (fun hashable f ->
             let memo_f =
               unstage
@@ -3923,7 +4142,7 @@ struct
             stage (fun a -> Heap_block.value (memo_f a)))
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* removal of unused data *)
           let num_calls = ref 0 in
           let f =
@@ -3950,7 +4169,7 @@ struct
           Gc.keep_alive x1
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* removing a parent is constant time *)
           (* We can't run this test with debugging, because it's too slow. *)
           if not debug
@@ -3977,7 +4196,7 @@ struct
             done
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* Deleting a parent from a child in such a way that it is replaced by a
              second parent, and the two parents have different child_indexes for the
              child. *)
@@ -3996,7 +4215,7 @@ struct
           stabilize_ [%here]
         ;;
 
-        let%test_unit _ =
+        let%expect_test _ =
           (* [bind_lhs_change_should_invalidate_rhs = false] *)
           if not M.bind_lhs_change_should_invalidate_rhs
           then (
@@ -4057,7 +4276,7 @@ struct
               ;;
             end)
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* plugging an already invalid incremental node make
                the expert node invalid *)
             let t = E.Node.create ignore in
@@ -4065,7 +4284,7 @@ struct
             assert (is_invalid (E.Node.watch t))
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             (* [invalidate] does invalidate *)
             let var = Var.create `Valid in
             let result = E.Node.create ignore in
@@ -4181,7 +4400,7 @@ struct
               E.Node.watch result
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             let module M = On_update_queue (struct
                              type 'a t =
                                [ `Left of string
@@ -4374,7 +4593,7 @@ struct
                 E.Node.watch (force result))
           ;;
 
-          let%test_unit _ =
+          let%expect_test _ =
             let module M = On_update_queue (struct
                              type 'a t =
                                [ `Scheduling
@@ -4456,7 +4675,7 @@ struct
 
       (* Situations that cause failures. *)
 
-      let%test_unit _ =
+      let%expect_test _ =
         (* stabilizing while stabilizing *)
         let module I = Make () in
         let open I in
@@ -4465,7 +4684,7 @@ struct
         disallow_future_use o
       ;;
 
-      let%test_unit _ =
+      let%expect_test _ =
         (* calling [set_max_height_allowed] while stabilizing *)
         let module I = Make () in
         let open I in
@@ -4474,7 +4693,7 @@ struct
         disallow_future_use o
       ;;
 
-      let%test_unit _ =
+      let%expect_test _ =
         (* creating a cycle *)
         let module I = Make () in
         let open I in
@@ -4489,7 +4708,7 @@ struct
         assert (does_raise stabilize)
       ;;
 
-      let%test_unit _ =
+      let%expect_test _ =
         (* trying to make a node necessary without its scope being necessary *)
         let module I = Make () in
         let open I in
@@ -4512,7 +4731,7 @@ struct
         disallow_future_use o
       ;;
 
-      let%test_unit _ =
+      let%expect_test _ =
         (* stabilizing in an on-update handler *)
         let module I = Make () in
         let open I in
@@ -4523,7 +4742,7 @@ struct
         disallow_future_use o
       ;;
 
-      let%test_unit _ =
+      let%expect_test _ =
         (* snapshot cycle *)
         let module I = Make () in
         let open I in
@@ -4537,7 +4756,7 @@ struct
         assert (does_raise stabilize)
       ;;
 
-      let%test_unit _ =
+      let%expect_test _ =
         (* snapshot cycle in the future *)
         let module I = Make () in
         let open I in
@@ -4565,7 +4784,7 @@ struct
       ;;
 
 
-      let%test_unit _ =
+      let%expect_test _ =
         let module I = Incremental_Make () in
         let open I in
         let v = Var.create (const 0) in
@@ -4588,7 +4807,7 @@ struct
         Gc.keep_alive os
       ;;
 
-      let%test_unit _ =
+      let%expect_test _ =
         let module I = Make () in
         let open I in
         let v = Var.create (const 0) in
@@ -4608,7 +4827,7 @@ struct
       ;;
 
       (* Same as previous test, except with the [Var.set]s in the reverse order. *)
-      let%test_unit _ =
+      let%expect_test _ =
         let module I = Incremental_Make () in
         let open I in
         List.iter
@@ -4634,7 +4853,7 @@ struct
       ;;
 
       (* Demonstrates the cycle that isn't created in the above two tests. *)
-      let%test_unit _ =
+      let%expect_test _ =
         let module I = Incremental_Make () in
         let open I in
         let v = Var.create (const 0) in
@@ -4648,7 +4867,7 @@ struct
         Gc.keep_alive o
       ;;
 
-      let%test_unit _ =
+      let%expect_test _ =
         let module I = Incremental_Make () in
         let open I in
         let v = Var.create true in
@@ -4669,7 +4888,7 @@ struct
         ()
       ;;
 
-      let%test_unit _ =
+      let%expect_test _ =
         (* [at_intervals] doesn't try to add alarms before the current time, even when
            floating-point imprecision causes:
 

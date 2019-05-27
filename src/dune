@@ -1,6 +1,6 @@
 (library (name incremental) (public_name incremental)
  (libraries core_kernel.balanced_reducer core_kernel
-  core_kernel.thread_safe_queue core_kernel.timing_wheel core_kernel.uopt
-  core_kernel.weak_hashtbl)
+  incremental_step_function core_kernel.thread_safe_queue
+  core_kernel.timing_wheel core_kernel.uopt core_kernel.weak_hashtbl)
  (preprocess (pps ppx_jane -check-doc-comments))
  (preprocessor_deps debug.mlh))

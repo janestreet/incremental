@@ -1,7 +1,7 @@
 (library (name incremental_debug)
  (libraries core_kernel.balanced_reducer core_kernel
-  core_kernel.thread_safe_queue core_kernel.timing_wheel core_kernel.uopt
-  core_kernel.weak_hashtbl)
+  incremental_step_function core_kernel.thread_safe_queue
+  core_kernel.timing_wheel core_kernel.uopt core_kernel.weak_hashtbl)
  (preprocessor_deps debug.mlh) (preprocess (pps ppx_jane)))
 
 (rule
@@ -17,8 +17,8 @@
   on_update_handler.mli raised_exn.ml raised_exn.mli recompute_heap.ml
   recompute_heap.mli reduce_balanced.ml reduce_balanced.mli scope.ml
   scope.mli sexp_of.ml snapshot.ml snapshot.mli stabilization_num.ml
-  stabilization_num.mli state.ml step_function.ml step_function.mli types.ml
-  unordered_array_fold.ml unordered_array_fold.mli var.ml var.mli)
+  stabilization_num.mli state.ml step_function_node.ml step_function_node.mli
+  types.ml unordered_array_fold.ml unordered_array_fold.mli var.ml var.mli)
  (deps (glob_files ../src/*.ml) (glob_files ../src/*.mli)
   ./generate_debug_lib.sh)
  (action (bash ./generate_debug_lib.sh)))

@@ -22,7 +22,7 @@ and Alarm_value : sig
       | At of At.t
       | At_intervals of At_intervals.t
       | Snapshot : _ Snapshot.t -> t
-      | Step_function : _ Step_function.t -> t
+      | Step_function : _ Step_function_node.t -> t
   end
 
   type t =
@@ -181,7 +181,7 @@ and Kind : sig
     | Join_main of 'a Join.t
     | Map : ('a1 -> 'a) * 'a1 Node.t -> 'a t
     | Snapshot of 'a Snapshot.t
-    | Step_function of 'a Step_function.t
+    | Step_function of 'a Step_function_node.t
     | Uninitialized
     | Unordered_array_fold : (_, 'a) Unordered_array_fold.t -> 'a t
     | Var of 'a Var.t
@@ -534,16 +534,19 @@ and Snapshot : sig
 end =
   Snapshot
 
-and Step_function : sig
+and Step_function_node : sig
   type 'a t =
     { main : 'a Node.t
-    ; mutable value : 'a
-    ; mutable upcoming_steps : (Time_ns.t * 'a) list
+    ; mutable child : 'a Step_function.t Node.t Uopt.t
+    ; mutable extracted_step_function_from_child_at : Stabilization_num.t
+    ; mutable value : 'a Uopt.t
+    ; mutable upcoming_steps : (Time_ns.t * 'a) Sequence.t
     ; mutable alarm : Alarm.t
+    ; mutable alarm_value : Alarm_value.t
     ; clock : Clock.t
     }
 end =
-  Step_function
+  Step_function_node
 
 and Unordered_array_fold : sig
   type ('a, 'acc) t =

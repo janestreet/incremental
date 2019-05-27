@@ -129,7 +129,6 @@ let is_stale : type a. a t -> bool =
   | At _ -> Stabilization_num.is_none t.recomputed_at
   | At_intervals _ -> Stabilization_num.is_none t.recomputed_at
   | Snapshot _ -> Stabilization_num.is_none t.recomputed_at
-  | Step_function _ -> Stabilization_num.is_none t.recomputed_at
   (* We never consider an invalidated node to be stale -- when we invalidate a node, we
      immediately propagate invalidity to its ancestors. *)
   | Invalid -> false
@@ -162,6 +161,7 @@ let is_stale : type a. a t -> bool =
   | Map13 _
   | Map14 _
   | Map15 _
+  | Step_function _
   | Unordered_array_fold _ ->
     Stabilization_num.is_none t.recomputed_at || is_stale_with_respect_to_a_child t
   | Expert { force_stale; _ } ->
@@ -212,7 +212,7 @@ let should_be_invalidated : type a. a t -> bool =
   | Uninitialized -> assert false
   | At _ -> false
   | At_intervals _ -> false
-  | Const _ | Snapshot _ | Step_function _ | Var _ -> false
+  | Const _ | Snapshot _ | Var _ -> false
   | Invalid -> false
   (* Nodes with a fixed set of children are invalid if any child is invalid. *)
   | Array_fold _
@@ -232,6 +232,7 @@ let should_be_invalidated : type a. a t -> bool =
   | Map13 _
   | Map14 _
   | Map15 _
+  | Step_function _
   | Unordered_array_fold _ -> has_invalid_child t
   (* A *_change node is invalid if the node it is watching for changes is invalid (same
      reason as above).  This is equivalent to [has_invalid_child t]. *)

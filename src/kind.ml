@@ -18,7 +18,7 @@ type 'a t = 'a Types.Kind.t =
   | Join_main of 'a Join.t
   | Map : ('a1 -> 'a) * 'a1 Node.t -> 'a t
   | Snapshot of 'a Snapshot.t
-  | Step_function of 'a Step_function.t
+  | Step_function of 'a Step_function_node.t
   | Uninitialized
   | Unordered_array_fold : (_, 'a) Unordered_array_fold.t -> 'a t
   | Var of 'a Var.t
@@ -298,7 +298,8 @@ let invariant : type a. a Invariant.t -> a t Invariant.t =
   | Map14 _ -> ()
   | Map15 _ -> ()
   | Snapshot snapshot -> Snapshot.invariant invariant_a snapshot
-  | Step_function step_function -> Step_function.invariant invariant_a step_function
+  | Step_function step_function_node ->
+    Step_function_node.invariant invariant_a step_function_node
   | Uninitialized -> ()
   | Unordered_array_fold unordered_array_fold ->
     Unordered_array_fold.invariant ignore invariant_a unordered_array_fold
@@ -335,7 +336,7 @@ let initial_num_children (type a) (t : a t) =
   | Map14 _ -> 14
   | Map15 _ -> 15
   | Snapshot _ -> 0
-  | Step_function _ -> 0
+  | Step_function _ -> 1
   | Uninitialized -> 0
   | Var _ -> 0
   | Array_fold { children; _ } -> Array.length children
@@ -384,7 +385,8 @@ let iteri_children (type a) (t : a t) ~(f : int -> Node.Packed.t -> unit) : unit
     f 0 (T lhs_change);
     if Uopt.is_some rhs then f 1 (T (Uopt.unsafe_value rhs))
   | Snapshot _ -> ()
-  | Step_function _ -> ()
+  | Step_function { child; _ } ->
+    if Uopt.is_some child then f 0 (T (Uopt.unsafe_value child))
   | Uninitialized -> ()
   | Unordered_array_fold { children; _ } ->
     for i = 0 to Array.length children - 1 do

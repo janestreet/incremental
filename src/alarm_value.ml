@@ -6,14 +6,15 @@ module Action = struct
     | At of At.t
     | At_intervals of At_intervals.t
     | Snapshot : _ Snapshot.t -> t
-    | Step_function : _ Step_function.t -> t
+    | Step_function : _ Step_function_node.t -> t
   [@@deriving sexp_of]
 
   let invariant = function
     | At at -> At.invariant at
     | At_intervals at_intervals -> At_intervals.invariant at_intervals
     | Snapshot snapshot -> Snapshot.invariant ignore snapshot
-    | Step_function step_function -> Step_function.invariant ignore step_function
+    | Step_function step_function_node ->
+      Step_function_node.invariant ignore step_function_node
   ;;
 end
 

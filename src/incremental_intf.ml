@@ -373,7 +373,7 @@
     - [If_then_else]
     - [Join]
     - [Snapshot]
-    - [Step_function]
+    - [Step_function_node]
     - [Unordered_array_fold]
     - [Var]  }
       {li [Scope] -- a packed bind. }
@@ -1380,6 +1380,8 @@ module type S = sig
     [@@deriving sexp_of]
   end
 
+  module Step_function = Step_function
+
   module Clock : sig
     type t [@@deriving sexp_of]
 
@@ -1450,6 +1452,10 @@ module type S = sig
         The times must be in nondecreasing order, i.e. [step_function] raises if for some
         [i < j], [ti > tj]. *)
     val step_function : t -> init:'a -> (Time_ns.t * 'a) list -> 'a incremental
+
+    (** [incremental_step_function t i] returns an incremental whose value is
+        [Step_function.value f ~at:(now t)], where [f] is the value of [i]. *)
+    val incremental_step_function : t -> 'a Step_function.t incremental -> 'a incremental
 
     (** [snapshot t value_at ~at ~before] returns an incremental whose value is [before]
         before [at] and whose value is frozen to the value of [value_at] during the first

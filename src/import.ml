@@ -24,6 +24,8 @@ let debug = false
 let concat = String.concat
 let tag name a sexp_of_a = (name, a) |> [%sexp_of: string * a]
 
+module Step_function = Incremental_step_function
+
 module Time_ns = struct
   include Time_ns
 
