@@ -8,7 +8,8 @@ module T = struct
 end
 
 let show t = print_s [%sexp (t : int t)]
-let time = Time_ns.of_int_ns_since_epoch
+
+let time n = Time_ns.of_int63_ns_since_epoch (Int63.of_int n)
 let value t ~at = print_s [%sexp (value t ~at:(time at) : int)]
 
 let create_exn ~init ~steps =
