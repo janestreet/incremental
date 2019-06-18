@@ -282,20 +282,20 @@ let invariant : type a. a Invariant.t -> a t Invariant.t =
   | Invalid -> ()
   | Join_lhs_change join -> Join.invariant ignore join
   | Join_main join -> Join.invariant invariant_a join
-  | Map _ -> ()
-  | Map2 _ -> ()
-  | Map3 _ -> ()
-  | Map4 _ -> ()
-  | Map5 _ -> ()
-  | Map6 _ -> ()
-  | Map7 _ -> ()
-  | Map8 _ -> ()
-  | Map9 _ -> ()
-  | Map10 _ -> ()
-  | Map11 _ -> ()
-  | Map12 _ -> ()
-  | Map13 _ -> ()
-  | Map14 _ -> ()
+  | Map _
+  | Map2 _
+  | Map3 _
+  | Map4 _
+  | Map5 _
+  | Map6 _
+  | Map7 _
+  | Map8 _
+  | Map9 _
+  | Map10 _
+  | Map11 _
+  | Map12 _
+  | Map13 _
+  | Map14 _
   | Map15 _ -> ()
   | Snapshot snapshot -> Snapshot.invariant invariant_a snapshot
   | Step_function step_function_node ->

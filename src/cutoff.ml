@@ -16,12 +16,7 @@ type 'a t =
 let invariant _ t =
   Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
     match t with
-    | Always -> ()
-    | Never -> ()
-    | Phys_equal -> ()
-    | Compare _ -> ()
-    | Equal _ -> ()
-    | F _ -> ())
+    | Always | Never | Phys_equal | Compare _ | Equal _ | F _ -> ())
 ;;
 
 let create f = F f
