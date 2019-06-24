@@ -53,7 +53,8 @@ let invariant t =
     let check f = Invariant.check_field t f in
     Fields.iter
       ~length:
-        (check (fun length -> assert (length = Nodes_by_height.length t.nodes_by_height)))
+        (check (fun length ->
+           assert (length = Nodes_by_height.length t.nodes_by_height)))
       ~height_lower_bound:
         (check (fun height_lower_bound ->
            assert (height_lower_bound >= 0);
@@ -82,7 +83,7 @@ let set_max_height_allowed t max_height_allowed =
     failwiths
       "cannot set_max_height_allowed less than the max height already seen"
       (max_height_allowed, `max_height_seen t.max_height_seen)
-      [%sexp_of: int * [`max_height_seen of int]];
+      [%sexp_of: int * [ `max_height_seen of int ]];
   if debug then assert (is_empty t);
   t.nodes_by_height <- Nodes_by_height.create ~max_height_allowed
 ;;
@@ -128,7 +129,7 @@ let set_height t (node : _ Node.t) height =
       failwiths
         "node with too large height"
         (`Height height, `Max (max_height_allowed t))
-        [%sexp_of: [`Height of int] * [`Max of int]]);
+        [%sexp_of: [ `Height of int ] * [ `Max of int ]]);
   node.height <- height
 ;;
 
@@ -140,7 +141,7 @@ let ensure_height_requirement t ~original_child ~original_parent ~child ~parent 
     failwiths
       "adding edge made graph cyclic"
       (`child original_child, `parent original_parent)
-      [%sexp_of: [`child of _ Node.t] * [`parent of _ Node.t]];
+      [%sexp_of: [ `child of _ Node.t ] * [ `parent of _ Node.t ]];
   if child.height >= parent.height
   then (
     add_unless_mem t parent;

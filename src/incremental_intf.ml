@@ -973,7 +973,7 @@ module type S = sig
     module Update : sig
       type 'a t =
         | Initialized of 'a
-        | Changed of 'a * 'a  (** [Changed (old_value, new_value)] *)
+        | Changed of 'a * 'a (** [Changed (old_value, new_value)] *)
         | Invalidated
       [@@deriving compare, sexp_of]
     end
@@ -1024,7 +1024,7 @@ module type S = sig
   module Update : sig
     type 'a t =
       | Necessary of 'a
-      | Changed of 'a * 'a  (** [Changed (old_value, new_value)] *)
+      | Changed of 'a * 'a (** [Changed (old_value, new_value)] *)
       | Invalidated
       | Unnecessary
     [@@deriving compare, sexp_of]
@@ -1139,6 +1139,7 @@ module type S = sig
   val lazy_from_fun : (unit -> 'a) -> 'a Lazy.t
 
   val default_hash_table_initial_size : int
+
 
   (** [memoize_fun f hashable] returns a function [m] that is a memoized version of [f]
       that will run [f a] on each distinct [a] that [m] is applied to, memoize the result
@@ -1273,7 +1274,8 @@ module type S = sig
 
     (** [invariant] checks invariants of all necessary nodes, as well as other data
         structures used for stabilization. *)
-    include Invariant.S with type t := t
+    include
+      Invariant.S with type t := t
 
     (** [t] is the shared state for this call to [Incremental.Make]. *)
     val t : t

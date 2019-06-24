@@ -564,7 +564,8 @@ struct
         ;;
 
         let%expect_test _ =
-          test_map 4 (fun i -> map4 i i i i ~f:(fun a1 a2 a3 a4 -> a1 + a2 + a3 + a4))
+          test_map 4 (fun i ->
+            map4 i i i i ~f:(fun a1 a2 a3 a4 -> a1 + a2 + a3 + a4))
         ;;
 
         let%expect_test _ =
@@ -864,7 +865,8 @@ struct
 
         let%expect_test _ =
           (* topological overload many *)
-          let rec copy_true c1 = bind c1 ~f:(fun x -> if x then c1 else copy_false c1)
+          let rec copy_true c1 =
+            bind c1 ~f:(fun x -> if x then c1 else copy_false c1)
           and copy_false c1 = bind c1 ~f:(fun x -> if x then copy_true c1 else c1) in
           let x1 = Var.create_ [%here] false in
           let rec loop cur i =
@@ -2028,7 +2030,8 @@ struct
               ~init:0
               ~f:( + )
               ~update:
-                (Update (fun acc ~old_value ~new_value -> acc - old_value + new_value))
+                (Update
+                   (fun acc ~old_value ~new_value -> acc - old_value + new_value))
           in
           let r = observe fold in
           let print () =
@@ -2560,13 +2563,13 @@ struct
           let c = const () in
           for _ = 1 to 5 do
             ignore
-              ( ok_exn
-                  (Clock.snapshot
-                     clock
-                     c
-                     ~at:(Time_ns.add (Clock.now clock) (sec 1.))
-                     ~before:())
-                : _ t )
+              (ok_exn
+                 (Clock.snapshot
+                    clock
+                    c
+                    ~at:(Time_ns.add (Clock.now clock) (sec 1.))
+                    ~before:())
+               : _ t)
           done;
           Clock.advance_clock_by clock (sec 2.);
           let i2 = State.(num_nodes_became_necessary t) in
@@ -3230,8 +3233,7 @@ struct
             let num_calls = ref 0 in
             let r = ref 0 in
             on_update_exn parent_o ~f:(function
-              | Initialized i
-              | Changed (_, i) ->
+              | Initialized i | Changed (_, i) ->
                 num_calls := !num_calls + 1;
                 r := i
               | Invalidated -> assert false);
@@ -4311,18 +4313,21 @@ struct
                complexities we're trying to get.
              - behavior when observability if turned off and on
           *)
-          let map_filter_mapi : type k v1 v2.
-            on_event:([ `Left of k
-                      | `Lhs_change
-                      | `Main
-                      | `On_change of k * v2 option
-                      | `Per_key of k
-                      | `Right of k
-                      | `Unequal of k ]
-                      -> unit)
-            -> (k, v1, 'comparator) Map.t t
-            -> f:(k -> v1 t -> v2 option t)
-            -> (k, v2, 'comparator) Map.t t =
+          let map_filter_mapi
+            : type k v1 v2.
+              on_event:([ `Left of k
+                        | `Lhs_change
+                        | `Main
+                        | `On_change of k * v2 option
+                        | `Per_key of k
+                        | `Right of k
+                        | `Unequal of k
+                        ]
+                        -> unit)
+              -> (k, v1, 'comparator) Map.t t
+              -> f:(k -> v1 t -> v2 option t)
+              -> (k, v2, 'comparator) Map.t t
+            =
             fun ~on_event lhs ~f ->
               let prev_map = ref None in
               let prev_nodes = ref None in
@@ -4381,14 +4386,14 @@ struct
                                  ~on_change:(fun opt ->
                                    on_event (`On_change (key, opt));
                                    let old = Option.value_exn !acc in
-                                   acc :=
-                                     Some
-                                       (match opt with
-                                        | None ->
-                                          if Map.mem old key
-                                          then Map.remove old key
-                                          else old
-                                        | Some v -> Map.set old ~key ~data:v))
+                                   acc
+                                   := Some
+                                        (match opt with
+                                         | None ->
+                                           if Map.mem old key
+                                           then Map.remove old key
+                                           else old
+                                         | Some v -> Map.set old ~key ~data:v))
                              in
                              E.Node.add_dependency result user_function_dep;
                              Map.set nodes ~key ~data:(node, user_function_dep))
@@ -4401,17 +4406,19 @@ struct
           ;;
 
           let%expect_test _ =
-            let module M = On_update_queue (struct
-                             type 'a t =
-                               [ `Left of string
-                               | `Lhs_change
-                               | `Main
-                               | `On_change of string * int option
-                               | `Per_key of string
-                               | `Right of string
-                               | `Unequal of string ]
-                             [@@deriving compare, sexp_of]
-                           end)
+            let module M =
+              On_update_queue (struct
+                type 'a t =
+                  [ `Left of string
+                  | `Lhs_change
+                  | `Main
+                  | `On_change of string * int option
+                  | `Per_key of string
+                  | `Right of string
+                  | `Unequal of string
+                  ]
+                [@@deriving compare, sexp_of]
+              end)
             in
             let push, check = M.on_update_queue () in
             let var =
@@ -4544,15 +4551,18 @@ struct
              - expressivity of the interface, again
              - on_observability_change callback
           *)
-          let staged_eq : type a.
-            on_event:([ `Scheduling
-                      | `Is_eq of a
-                      | `Add_reverse_dep of a
-                      | `Remove_reverse_dep of a ]
-                      -> unit)
-            -> a Hashtbl.Hashable.t
-            -> a t
-            -> (a -> bool t) Staged.t =
+          let staged_eq
+            : type a.
+              on_event:([ `Scheduling
+                        | `Is_eq of a
+                        | `Add_reverse_dep of a
+                        | `Remove_reverse_dep of a
+                        ]
+                        -> unit)
+              -> a Hashtbl.Hashable.t
+              -> a t
+              -> (a -> bool t) Staged.t
+            =
             fun ~on_event hashable incr ->
               let last = ref None in
               let reverse_dependencies = Hashtbl.Using_hashable.create ~hashable () in
@@ -4594,14 +4604,16 @@ struct
           ;;
 
           let%expect_test _ =
-            let module M = On_update_queue (struct
-                             type 'a t =
-                               [ `Scheduling
-                               | `Is_eq of int
-                               | `Add_reverse_dep of int
-                               | `Remove_reverse_dep of int ]
-                             [@@deriving compare, sexp_of]
-                           end)
+            let module M =
+              On_update_queue (struct
+                type 'a t =
+                  [ `Scheduling
+                  | `Is_eq of int
+                  | `Add_reverse_dep of int
+                  | `Remove_reverse_dep of int
+                  ]
+                [@@deriving compare, sexp_of]
+              end)
             in
             let push, check = M.on_update_queue () in
             let var = Var.create 2 in
@@ -4900,9 +4912,10 @@ struct
            ]}
         *)
         let module I =
-          Incremental.Make_with_config (struct
-            let bind_lhs_change_should_invalidate_rhs = true
-          end)
+          Incremental.Make_with_config
+            (struct
+              let bind_lhs_change_should_invalidate_rhs = true
+            end)
             ()
         in
         let open I in
@@ -4940,9 +4953,10 @@ let%test_module "" =
   (module struct
     ;;
     List.iter [ true; false ] ~f:(fun bool ->
-      let module M = Test (struct
-                       let bind_lhs_change_should_invalidate_rhs = bool
-                     end)
+      let module M =
+        Test (struct
+          let bind_lhs_change_should_invalidate_rhs = bool
+        end)
       in
       ())
   end)

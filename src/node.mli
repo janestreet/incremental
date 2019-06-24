@@ -53,11 +53,10 @@ module Packed : sig
   val save_dot : string -> t list -> unit
 end
 
-include
-  module type of struct
-    include Types.Node
-  end
-  with module Packed := Types.Node.Packed
+include module type of struct
+  include Types.Node
+end
+with module Packed := Types.Node.Packed
 
 include Invariant.S1 with type 'a t := 'a t
 
@@ -71,6 +70,7 @@ val same : _ t -> _ t -> bool
 
 (** [iteri_children t ~f] applies [f] to all children of [t]. *)
 val iteri_children : _ t -> f:(int -> Packed.t -> unit) -> unit
+
 (*_
   (** [iteri_parents  t ~f] applies [f] to all necessary parents of [t]. *)
   val iteri_parents  : _ t -> f:(int -> Packed.t -> unit) -> unit *)

@@ -536,24 +536,25 @@ let make_space_for_child_if_necessary t ~child_index =
   if debug then assert (child_index < Array.length t.my_parent_index_in_child_at_index)
 ;;
 
-let set_parent : type a. child:a t -> parent:Packed.t Uopt.t -> parent_index:int -> unit
-  =
+let set_parent : type a. child:a t -> parent:Packed.t Uopt.t -> parent_index:int -> unit =
   fun ~child ~parent ~parent_index ->
   if parent_index = 0
   then child.parent0 <- parent
   else child.parent1_and_beyond.(parent_index - 1) <- parent
 ;;
 
-let link : type a b.
-  child:a t -> child_index:int -> parent:b t -> parent_index:int -> unit =
+let link
+  : type a b. child:a t -> child_index:int -> parent:b t -> parent_index:int -> unit
+  =
   fun ~child ~child_index ~parent ~parent_index ->
   set_parent ~child ~parent:(Uopt.some (Packed.T parent)) ~parent_index;
   child.my_child_index_in_parent_at_index.(parent_index) <- child_index;
   parent.my_parent_index_in_child_at_index.(child_index) <- parent_index
 ;;
 
-let unlink : type a b.
-  child:a t -> child_index:int -> parent:b t -> parent_index:int -> unit =
+let unlink
+  : type a b. child:a t -> child_index:int -> parent:b t -> parent_index:int -> unit
+  =
   fun ~child ~child_index ~parent ~parent_index ->
   set_parent ~child ~parent:Uopt.none ~parent_index;
   if debug
@@ -602,9 +603,11 @@ let swap_children_except_in_kind parent ~child1 ~child_index1 ~child2 ~child_ind
   if debug
   then (
     assert (
-      child1.my_child_index_in_parent_at_index.(index_of_parent_in_child1) = child_index1);
+      child1.my_child_index_in_parent_at_index.(index_of_parent_in_child1) = child_index1
+    );
     assert (
-      child2.my_child_index_in_parent_at_index.(index_of_parent_in_child2) = child_index2));
+      child2.my_child_index_in_parent_at_index.(index_of_parent_in_child2) = child_index2
+    ));
   (* now start swapping *)
   child1.my_child_index_in_parent_at_index.(index_of_parent_in_child1) <- child_index2;
   child2.my_child_index_in_parent_at_index.(index_of_parent_in_child2) <- child_index1;

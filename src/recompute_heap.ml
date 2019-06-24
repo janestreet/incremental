@@ -128,7 +128,7 @@ let add (type a) t (node : a Node.t) =
 ;;
 
 let remove (type a) t (node : a Node.t) =
-  if debug && (not (Node.is_in_recompute_heap node) || Node.needs_to_be_computed node)
+  if debug && ((not (Node.is_in_recompute_heap node)) || Node.needs_to_be_computed node)
   then
     failwiths "incorrect [remove] of node from recompute heap" node [%sexp_of: _ Node.t];
   unlink t node;

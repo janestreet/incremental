@@ -364,8 +364,9 @@ let rec remove_children : type a. t -> a Node.t -> unit =
   Node.iteri_children parent ~f:(fun child_index (T child) ->
     remove_child t ~child ~parent ~child_index)
 
-and remove_child : type a b.
-  t -> child:b Node.t -> parent:a Node.t -> child_index:int -> unit =
+and remove_child
+  : type a b. t -> child:b Node.t -> parent:a Node.t -> child_index:int -> unit
+  =
   fun t ~child ~parent ~child_index ->
   Node.remove_parent ~child ~parent ~child_index;
   check_if_unnecessary t child
@@ -534,8 +535,9 @@ let propagate_invalidity t =
    [child], and makes [child] and all its descendants necessary, ensuring their heights
    are accurate.  There is no guarantee about the relative heights of [child] and [parent]
    though. *)
-let rec add_parent_without_adjusting_heights : type a b.
-  t -> child:a Node.t -> parent:b Node.t -> child_index:int -> unit =
+let rec add_parent_without_adjusting_heights
+  : type a b. t -> child:a Node.t -> parent:b Node.t -> child_index:int -> unit
+  =
   fun t ~child ~parent ~child_index ->
   if debug then assert (Node.is_necessary parent);
   let was_necessary = Node.is_necessary child in
@@ -606,7 +608,7 @@ let add_parent t ~child ~parent ~child_index =
   propagate_invalidity t;
   if debug then assert (Node.is_necessary parent);
   (* we only add necessary parents *)
-  if not (Node.is_in_recompute_heap parent)
+  if (not (Node.is_in_recompute_heap parent))
   && (Stabilization_num.is_none parent.recomputed_at
       || Node.edge_is_stale ~child ~parent)
   then Recompute_heap.add t.recompute_heap parent
@@ -631,13 +633,15 @@ let within_scope t scope ~f =
   run_with_scope t scope ~f
 ;;
 
-let change_child : type a b.
-  t
-  -> parent:a Node.t
-  -> old_child:b Node.t Uopt.t
-  -> new_child:b Node.t
-  -> child_index:int
-  -> unit =
+let change_child
+  : type a b.
+    t
+    -> parent:a Node.t
+    -> old_child:b Node.t Uopt.t
+    -> new_child:b Node.t
+    -> child_index:int
+    -> unit
+  =
   fun t ~parent ~old_child ~new_child ~child_index ->
   if Uopt.is_none old_child
   then add_parent t ~child:new_child ~parent ~child_index
@@ -668,8 +672,8 @@ let rec recompute : type a. t -> a Node.t -> unit =
   fun t (node : a Node.t) ->
   if debug
   then (
-    (t.only_in_debug).currently_running_node <- Some (T node);
-    (t.only_in_debug).expert_nodes_created_by_current_node <- []);
+    t.only_in_debug.currently_running_node <- Some (T node);
+    t.only_in_debug.expert_nodes_created_by_current_node <- []);
   t.num_nodes_recomputed <- t.num_nodes_recomputed + 1;
   node.recomputed_at <- t.stabilization_num;
   match node.kind with
@@ -686,7 +690,8 @@ let rec recompute : type a. t -> a Node.t -> unit =
        ; lhs
        ; rhs_scope
        ; rhs = old_rhs
-       ; all_nodes_created_on_rhs = old_all_nodes_created_on_rhs; _
+       ; all_nodes_created_on_rhs = old_all_nodes_created_on_rhs
+       ; _
        } as bind) ->
     (* We clear [all_nodes_created_on_rhs] so it will hold just the nodes created by
        this call to [f]. *)
@@ -1142,8 +1147,8 @@ let recompute_everything_that_is_necessary t =
   done;
   if debug
   then (
-    (t.only_in_debug).currently_running_node <- None;
-    (t.only_in_debug).expert_nodes_created_by_current_node <- [])
+    t.only_in_debug.currently_running_node <- None;
+    t.only_in_debug.expert_nodes_created_by_current_node <- [])
 ;;
 
 let unlink_disallowed_observers t =
@@ -1917,7 +1922,7 @@ module Expert = struct
     then
       if Option.is_some state.only_in_debug.currently_running_node
       then
-        (state.only_in_debug).expert_nodes_created_by_current_node
+        state.only_in_debug.expert_nodes_created_by_current_node
         <- T node :: state.only_in_debug.expert_nodes_created_by_current_node;
     node
   ;;

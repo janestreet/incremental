@@ -44,8 +44,8 @@ let invariant invariant_a t =
 
 let rec advance_internal t ~to_ a1 steps =
   match Sequence.next steps with
-  | Some ((step_at, a2), steps2)
-    when Time_ns.( >= ) to_ step_at -> advance_internal t ~to_ a2 steps2
+  | Some ((step_at, a2), steps2) when Time_ns.( >= ) to_ step_at ->
+    advance_internal t ~to_ a2 steps2
   | _ ->
     t.value <- Uopt.some a1;
     t.upcoming_steps <- steps

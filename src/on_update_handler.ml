@@ -27,7 +27,9 @@ type 'a t =
   }
 [@@deriving sexp_of]
 
-let create f ~at:created_at = { f; previous_update_kind = Never_been_updated; created_at }
+let create f ~at:created_at =
+  { f; previous_update_kind = Never_been_updated; created_at }
+;;
 
 let really_run t (node_update : _ Node_update.t) =
   t.previous_update_kind
@@ -54,9 +56,7 @@ let run t (node_update : _ Node_update.t) ~now =
     (* These cases can happen if a node is handled after stabilization due to another
        handler.  But for the current handler, there is nothing to do because there is no
        new information to provide. *)
-    | Changed, Necessary _
-    | Necessary, Necessary _
-    | Unnecessary, Unnecessary -> ()
+    | Changed, Necessary _ | Necessary, Necessary _ | Unnecessary, Unnecessary -> ()
     (* If this handler hasn't seen a node that is changing, we treat the update as an
        initialization. *)
     | (Never_been_updated | Unnecessary), Changed (_, a) -> really_run t (Necessary a)
