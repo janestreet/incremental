@@ -342,10 +342,7 @@ struct
 
           type nonrec 'a t = 'a t [@@deriving sexp_of]
 
-          let create_ ?use_current_scope _where value =
-            create ?use_current_scope value
-          ;;
-
+          let create_ ?use_current_scope _where value = create ?use_current_scope value
           let create = create
           let latest_value = latest_value
           let set = set
@@ -564,8 +561,7 @@ struct
         ;;
 
         let%expect_test _ =
-          test_map 4 (fun i ->
-            map4 i i i i ~f:(fun a1 a2 a3 a4 -> a1 + a2 + a3 + a4))
+          test_map 4 (fun i -> map4 i i i i ~f:(fun a1 a2 a3 a4 -> a1 + a2 + a3 + a4))
         ;;
 
         let%expect_test _ =
@@ -726,9 +722,7 @@ struct
         let%expect_test _ =
           (* bind created with an rhs that becomes invalid *)
           let b = Var.create true in
-          let o =
-            observe (Var.watch b >>= fun b -> if b then const 13 else invalid)
-          in
+          let o = observe (Var.watch b >>= fun b -> if b then const 13 else invalid) in
           stabilize_ [%here];
           Var.set b false;
           assert (is_valid (Observer.observing o));
@@ -865,8 +859,7 @@ struct
 
         let%expect_test _ =
           (* topological overload many *)
-          let rec copy_true c1 =
-            bind c1 ~f:(fun x -> if x then c1 else copy_false c1)
+          let rec copy_true c1 = bind c1 ~f:(fun x -> if x then c1 else copy_false c1)
           and copy_false c1 = bind c1 ~f:(fun x -> if x then copy_true c1 else c1) in
           let x1 = Var.create_ [%here] false in
           let rec loop cur i =
@@ -1032,17 +1025,11 @@ struct
           let v4 = Var.create_ [%here] 4 in
           let o =
             observe
-              (bind4
-                 (watch v1)
-                 (watch v2)
-                 (watch v3)
-                 (watch v4)
-                 ~f:(fun x1 x2 x3 x4 ->
-                   bind3 (watch v2) (watch v3) (watch v4) ~f:(fun y2 y3 y4 ->
-                     bind2 (watch v3) (watch v4) ~f:(fun z3 z4 ->
-                       bind (watch v4) ~f:(fun w4 ->
-                         return
-                           (x1 + x2 + x3 + x4 + y2 + y3 + y4 + z3 + z4 + w4))))))
+              (bind4 (watch v1) (watch v2) (watch v3) (watch v4) ~f:(fun x1 x2 x3 x4 ->
+                 bind3 (watch v2) (watch v3) (watch v4) ~f:(fun y2 y3 y4 ->
+                   bind2 (watch v3) (watch v4) ~f:(fun z3 z4 ->
+                     bind (watch v4) ~f:(fun w4 ->
+                       return (x1 + x2 + x3 + x4 + y2 + y3 + y4 + z3 + z4 + w4))))))
           in
           let check where =
             stabilize_ where;
@@ -1816,15 +1803,10 @@ struct
         let%expect_test _ =
           (* multiple occurences of a node in the fold. *)
           let x = Var.create_ [%here] 1 in
-          let f =
-            reduce_balanced_exn [| watch x; watch x |] ~f:Fn.id ~reduce:( + )
-          in
+          let f = reduce_balanced_exn [| watch x; watch x |] ~f:Fn.id ~reduce:( + ) in
           let o = observe f in
           let f2 =
-            reduce_balanced_exn
-              [| watch x; watch x; watch x |]
-              ~f:Fn.id
-              ~reduce:( + )
+            reduce_balanced_exn [| watch x; watch x; watch x |] ~f:Fn.id ~reduce:( + )
           in
           let o2 = observe f2 in
           stabilize_ [%here];
@@ -1876,9 +1858,7 @@ struct
           in
           Quickcheck.test
             (let open Quickcheck.Let_syntax in
-             let%map test_value =
-               List.gen_non_empty Test_value.quickcheck_generator
-             in
+             let%map test_value = List.gen_non_empty Test_value.quickcheck_generator in
              test_value)
             (* Trials limited because incremental tests can take time on the order of
                milliseconds each, due to the invariant checking. *)
@@ -2030,8 +2010,7 @@ struct
               ~init:0
               ~f:( + )
               ~update:
-                (Update
-                   (fun acc ~old_value ~new_value -> acc - old_value + new_value))
+                (Update (fun acc ~old_value ~new_value -> acc - old_value + new_value))
           in
           let r = observe fold in
           let print () =
@@ -2598,8 +2577,7 @@ struct
           let clock = Clock.create ~start:Time_ns.epoch () in
           require
             [%here]
-            (is_invalidated_on_bind_rhs (fun i ->
-               Clock.step_function clock ~init:i []))
+            (is_invalidated_on_bind_rhs (fun i -> Clock.step_function clock ~init:i []))
         ;;
 
         let%expect_test _ =
@@ -2794,8 +2772,7 @@ struct
           [%expect {| 2 |}]
         ;;
 
-        let%expect_test "incremental step function; advance time and change function"
-          =
+        let%expect_test "incremental step function; advance time and change function" =
           let clock = Clock.create ~start:Time_ns.epoch () in
           let x = Var.create (relative_step_function clock ~init:13 [ 1, 14 ]) in
           let o = observe (Clock.incremental_step_function clock (watch x)) in
@@ -2811,8 +2788,8 @@ struct
           disallow_future_use o
         ;;
 
-        let%expect_test "incremental step function; change to const and then \
-                         advance time"
+        let%expect_test "incremental step function; change to const and then advance \
+                         time"
           =
           let clock = Clock.create ~start:Time_ns.epoch () in
           let x = Var.create (relative_step_function clock ~init:13 [ 1, 14 ]) in
@@ -2838,8 +2815,7 @@ struct
           let t =
             Clock.incremental_step_function
               clock
-              (if_ (watch b) ~then_:(const 0) ~else_:invalid
-               >>| Step_function.constant)
+              (if_ (watch b) ~then_:(const 0) ~else_:invalid >>| Step_function.constant)
           in
           let o = observe t in
           let show () = print_s [%sexp (value o : int)] in
@@ -4269,8 +4245,7 @@ struct
                     map t ~f:(fun rhs ->
                       let rhs_dep = E.Dependency.create rhs in
                       E.Node.add_dependency join rhs_dep;
-                      Option.iter !prev_rhs ~f:(fun v ->
-                        E.Node.remove_dependency join v);
+                      Option.iter !prev_rhs ~f:(fun v -> E.Node.remove_dependency join v);
                       prev_rhs := Some rhs_dep)
                   in
                   E.Node.add_dependency join (E.Dependency.create lhs_change);
@@ -4435,12 +4410,9 @@ struct
               [%test_result: int String.Map.t] (value observer) ~expect:from_scratch
             in
             let result =
-              map_filter_mapi
-                ~on_event:push
-                (Var.watch var)
-                ~f:(fun _key value_incr ->
-                  map2 value_incr (Var.watch increment) ~f:(fun i j ->
-                    if (i + j) mod 10 = 0 then None else Some (i + j)))
+              map_filter_mapi ~on_event:push (Var.watch var) ~f:(fun _key value_incr ->
+                map2 value_incr (Var.watch increment) ~f:(fun i j ->
+                  if (i + j) mod 10 = 0 then None else Some (i + j)))
             in
             let o = observe result in
             stabilize_ [%here];
@@ -4618,9 +4590,7 @@ struct
             let push, check = M.on_update_queue () in
             let var = Var.create 2 in
             let switch = Var.create true in
-            let input =
-              if_ (Var.watch switch) ~then_:(Var.watch var) ~else_:invalid
-            in
+            let input = if_ (Var.watch switch) ~then_:(Var.watch var) ~else_:invalid in
             let is_focused =
               Staged.unstage (staged_eq Int.hashable ~on_event:push input)
             in
@@ -4951,13 +4921,14 @@ end
 
 let%test_module "" =
   (module struct
+    let () =
+      List.iter [ true; false ] ~f:(fun bool ->
+        let module M =
+          Test (struct
+            let bind_lhs_change_should_invalidate_rhs = bool
+          end)
+        in
+        ())
     ;;
-    List.iter [ true; false ] ~f:(fun bool ->
-      let module M =
-        Test (struct
-          let bind_lhs_change_should_invalidate_rhs = bool
-        end)
-      in
-      ())
   end)
 ;;
