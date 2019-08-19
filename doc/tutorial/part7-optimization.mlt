@@ -88,7 +88,7 @@ module Incr_map = Incr_map.Make(Incr);;
 open Incr.Let_syntax;;
 
 #verbose true;;
-let _ = Incr.State.num_nodes_created Incr.State.t;;
+let _ = (Incr.State.num_nodes_created Incr.State.t : int);;
 [%%expect{|
 - : int = 0
 |}]
@@ -96,7 +96,7 @@ let i = Incr.Var.create 0 |> Incr.Var.watch |> Incr.map ~f:succ;;
 [%%expect {|
 val i : int Incr.t = <abstr>
 |}];;
-let _ = Incr.State.num_nodes_created Incr.State.t;;
+let _ = (Incr.State.num_nodes_created Incr.State.t : int);;
 [%%expect {|
 - : int = 2
 |}];;
@@ -405,7 +405,3 @@ drives stabilization.
 
 [[./part8-sharing.mlt][Part 8: Sharing]]
 |}]
-
-
-
-
