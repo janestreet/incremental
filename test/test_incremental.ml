@@ -1,4 +1,5 @@
 open! Core
+open Float.Robustly_comparable
 open! Import
 
 let sec = Time_ns.Span.of_sec
