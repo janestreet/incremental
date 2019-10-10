@@ -31,8 +31,6 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
   include Node
   module Node_update = On_update_handler.Node_update
 
-  type 'a incremental = 'a t
-
   let pack t = Packed.T t
   let const a = State.const state a
   let return = const

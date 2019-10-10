@@ -94,7 +94,6 @@ struct
       include (
       struct
         type nonrec 'a t = 'a t
-        type 'a incremental = 'a t
 
         module Infix = Infix
         module Before_or_after = Before_or_after

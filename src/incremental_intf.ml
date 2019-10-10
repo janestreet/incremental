@@ -406,7 +406,7 @@ module type S = sig
       ]} *)
   type 'a t [@@deriving sexp_of]
 
-  type 'a incremental = 'a t
+  type 'a incremental := 'a t
 
   include Invariant.S1 with type 'a t := 'a t
 
