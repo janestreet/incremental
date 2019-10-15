@@ -240,7 +240,7 @@ let shares_by_symbol orders =
   let orders_by_symbol = index_by_symbol orders in
   Incr_map.mapi orders_by_symbol ~f:(fun ~key:_ ~data -> shares data)
 [%%expect{|
-Line _, characters 64-68:
+Line _, characters _-_:
 Error: This expression has type
          Order.t Core.Map.M(Order.Id).t =
            (Order.Id.t, Order.t, Order.Id.comparator_witness) Map.t

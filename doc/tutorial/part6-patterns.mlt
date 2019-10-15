@@ -185,7 +185,7 @@ let view (model : Model.t Incr.t) =
   | Host_view hosts -> view_failed_hosts hosts
   | Service_view services -> view_failed_services services
 [%%expect{|
-Line _, characters 41-46:
+Line _, characters _-_:
 Error: This expression has type
          Host.t Core.Map.M(Hostname).t =
            (Hostname.t, Host.t, Hostname.comparator_witness) Map.t
