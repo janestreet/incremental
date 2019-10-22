@@ -1822,14 +1822,6 @@ let advance_clock t (clock : Clock.t) ~to_ =
     if debug then invariant t)
 ;;
 
-let now_dummy =
-  { Var.value = Time_ns.epoch
-  ; value_set_during_stabilization = Uopt.none
-  ; set_at = Stabilization_num.zero
-  ; watch = Node.create Top Invalid
-  }
-;;
-
 let create_clock t ~timing_wheel_config ~start =
   let timing_wheel = Timing_wheel.create ~config:timing_wheel_config ~start in
   let rec clock : Clock.t =
