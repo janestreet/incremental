@@ -244,7 +244,9 @@ Line _, characters _-_:
 Error: This expression has type
          Order.t Core.Map.M(Order.Id).t =
            (Order.Id.t, Order.t, Order.Id.comparator_witness) Map.t
-       but an expression was expected of type ('a, Order.t, 'b) Map.t Incr.t
+       but an expression was expected of type
+         ('a, Order.t, 'b) Map.t Incr.t =
+           (('a, Order.t, 'b) Map.t, Incr.state_witness) Incremental.t
 |}]
 
 [%%org {|

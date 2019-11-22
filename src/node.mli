@@ -60,7 +60,7 @@ with module Packed := Types.Node.Packed
 
 include Invariant.S1 with type 'a t := 'a t
 
-val create : Scope.t -> 'a Kind.t -> 'a t
+val create : Types.State.t -> Scope.t -> 'a Kind.t -> 'a t
 
 (** One should only set the kind of a node using [set_kind] -- using [t.kind <-] will
     violate invariants. *)
@@ -135,7 +135,6 @@ val run_on_update_handlers
   -> now:Stabilization_num.t
   -> unit
 
-val keep_node_creation_backtrace : bool ref
 val user_info : _ t -> Info.t option
 val set_user_info : _ t -> Info.t option -> unit
 

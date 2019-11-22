@@ -11,7 +11,7 @@ open! Core_kernel
 open! Import
 open Types
 
-type t [@@deriving sexp_of]
+type t = Types.Adjust_heights_heap.t [@@deriving sexp_of]
 
 include Invariant.S with type t := t
 

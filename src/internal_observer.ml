@@ -46,6 +46,8 @@ type 'a t = 'a Types.Internal_observer.t =
 
 type 'a internal_observer = 'a t [@@deriving sexp_of]
 
+let incr_state t = t.observing.state
+
 let use_is_allowed t =
   match t.state with
   | Created | In_use -> true

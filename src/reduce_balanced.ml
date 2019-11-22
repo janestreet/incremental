@@ -16,7 +16,6 @@ let create state children ~f ~reduce =
     in
     for i = 0 to len - 1 do
       Expert1.Node.add_dependency
-        state
         node
         (Expert1.Dependency.create children.(i) ~on_change:(fun a ->
            Balanced_reducer.set_exn reducer i (f a);

@@ -8,7 +8,7 @@ open Core_kernel
 open Import
 open Types.Kind
 
-type status =
+type status = Types.Status.t =
   | Stabilizing
   | Running_on_update_handlers
   | Not_stabilizing
@@ -18,7 +18,8 @@ type status =
 module Node_update = On_update_handler.Node_update
 
 module Run_on_update_handlers = struct
-  type t = T : 'a Node.t * 'a Node_update.t -> t [@@deriving sexp_of]
+  type t = Types.Run_on_update_handlers.t = T : 'a Node.t * 'a Node_update.t -> t
+  [@@deriving sexp_of]
 
   let invariant (T (node, _node_update) as t) =
     Invariant.invariant [%here] t [%sexp_of: t] (fun () -> Node.invariant ignore node)
@@ -27,7 +28,7 @@ end
 
 module Only_in_debug = struct
   (* Extra state kept only when [debug] for the purpose of writing assertions. *)
-  type t =
+  type t = Types.Only_in_debug.t =
     { mutable currently_running_node : Node.Packed.t option
     ; mutable expert_nodes_created_by_current_node : Node.Packed.t list
     }
@@ -46,10 +47,11 @@ module Only_in_debug = struct
 end
 
 module Packed_weak_hashtbl = struct
-  type t = T : (_, _) Weak_hashtbl.t -> t [@@deriving sexp_of]
+  type t = Types.Packed_weak_hashtbl.t = T : (_, _) Weak_hashtbl.t -> t
+  [@@deriving sexp_of]
 end
 
-type t =
+type t = Types.State.t =
   { mutable status : status
   ; bind_lhs_change_should_invalidate_rhs : bool
   ; (* [stabilization_num] starts at zero, and is incremented at the end of each
@@ -115,6 +117,7 @@ type t =
   ; run_on_update_handlers : Run_on_update_handlers.t Stack.t
   ; mutable only_in_debug : Only_in_debug.t
   ; weak_hashtbls : Packed_weak_hashtbl.t Thread_safe_queue.t
+  ; mutable keep_node_creation_backtrace : bool
   ; (* Stats.  These are all incremented at the appropriate place, and never decremented. *)
     mutable num_nodes_became_necessary : int
   ; mutable num_nodes_became_unnecessary : int
@@ -156,6 +159,8 @@ module Clock = struct
           (check (fun fired_alarm_values -> assert (Uopt.is_none fired_alarm_values)))
         ~timing_wheel:(check (Timing_wheel.invariant Alarm_value.invariant)))
   ;;
+
+  let incr_state t = Var.incr_state t.now
 end
 
 let now (clock : Clock.t) = clock.now.value
@@ -305,6 +310,7 @@ let invariant t =
           (check (Stack.invariant Run_on_update_handlers.invariant))
         ~only_in_debug:(check Only_in_debug.invariant)
         ~weak_hashtbls:ignore
+        ~keep_node_creation_backtrace:ignore
         ~num_nodes_became_necessary:ignore
         ~num_nodes_became_unnecessary:ignore
         ~num_nodes_changed:ignore
@@ -341,7 +347,8 @@ let ensure_not_stabilizing t ~name ~allow_in_update_handler =
       [%sexp_of: Backtrace.t]
 ;;
 
-let set_height t node height =
+let set_height (node : _ Node.t) height =
+  let t = node.state in
   Adjust_heights_heap.set_height t.adjust_heights_heap node height
 ;;
 
@@ -351,35 +358,36 @@ let set_max_height_allowed t height =
   Recompute_heap.set_max_height_allowed t.recompute_heap height
 ;;
 
-let handle_after_stabilization : type a. t -> a Node.t -> unit =
-  fun t node ->
+let handle_after_stabilization : type a. a Node.t -> unit =
+  fun node ->
   if not node.is_in_handle_after_stabilization
   then (
+    let t = node.state in
     node.is_in_handle_after_stabilization <- true;
     Stack.push t.handle_after_stabilization (T node))
 ;;
 
-let rec remove_children : type a. t -> a Node.t -> unit =
-  fun t parent ->
+let rec remove_children : type a. a Node.t -> unit =
+  fun parent ->
   Node.iteri_children parent ~f:(fun child_index (T child) ->
-    remove_child t ~child ~parent ~child_index)
+    remove_child ~child ~parent ~child_index)
 
-and remove_child
-  : type a b. t -> child:b Node.t -> parent:a Node.t -> child_index:int -> unit
+and remove_child : type a b. child:b Node.t -> parent:a Node.t -> child_index:int -> unit
   =
-  fun t ~child ~parent ~child_index ->
+  fun ~child ~parent ~child_index ->
   Node.remove_parent ~child ~parent ~child_index;
-  check_if_unnecessary t child
+  check_if_unnecessary child
 
-and check_if_unnecessary : type a. t -> a Node.t -> unit =
-  fun t node -> if not (Node.is_necessary node) then became_unnecessary t node
+and check_if_unnecessary : type a. a Node.t -> unit =
+  fun node -> if not (Node.is_necessary node) then became_unnecessary node
 
-and became_unnecessary : type a. t -> a Node.t -> unit =
-  fun t node ->
+and became_unnecessary : type a. a Node.t -> unit =
+  fun node ->
+  let t = node.state in
   t.num_nodes_became_unnecessary <- t.num_nodes_became_unnecessary + 1;
-  if node.num_on_update_handlers > 0 then handle_after_stabilization t node;
+  if node.num_on_update_handlers > 0 then handle_after_stabilization node;
   node.height <- -1;
-  remove_children t node;
+  remove_children node;
   (match node.kind with
    | Unordered_array_fold u -> Unordered_array_fold.force_full_compute u
    | Expert p -> Expert.observability_change p ~is_now_observable:false
@@ -418,11 +426,12 @@ let remove_alarm (clock : Clock.t) alarm =
    are unnecessary (nodes can be made necessary without going through their containing
    binds). *)
 
-let rec invalidate_node : type a. t -> a Node.t -> unit =
-  fun t node ->
+let rec invalidate_node : type a. a Node.t -> unit =
+  fun node ->
   if Node.is_valid node
   then (
-    if node.num_on_update_handlers > 0 then handle_after_stabilization t node;
+    let t = node.state in
+    if node.num_on_update_handlers > 0 then handle_after_stabilization node;
     node.value_opt <- Uopt.none;
     if debug then assert (Uopt.is_none node.old_value_opt);
     node.changed_at <- t.stabilization_num;
@@ -430,7 +439,7 @@ let rec invalidate_node : type a. t -> a Node.t -> unit =
     t.num_nodes_invalidated <- t.num_nodes_invalidated + 1;
     if Node.is_necessary node
     then (
-      remove_children t node;
+      remove_children node;
       (* The node doesn't have children anymore, so we can lower its height as much as
          possible, to one greater than the scope it was created in.  Also, because we
          are lowering the height, we don't need to adjust any of its ancestors' heights.
@@ -444,7 +453,7 @@ let rec invalidate_node : type a. t -> a Node.t -> unit =
     (match node.kind with
      | At at -> remove_alarm at.clock at.alarm
      | At_intervals at_intervals -> remove_alarm at_intervals.clock at_intervals.alarm
-     | Bind_main bind -> invalidate_nodes_created_on_rhs t bind.all_nodes_created_on_rhs
+     | Bind_main bind -> invalidate_nodes_created_on_rhs bind.all_nodes_created_on_rhs
      | Step_function { alarm; clock; _ } -> remove_alarm clock alarm
      | _ -> ());
     Node.set_kind node Invalid;
@@ -460,13 +469,13 @@ let rec invalidate_node : type a. t -> a Node.t -> unit =
     if debug then assert (not (Node.needs_to_be_computed node));
     if Node.is_in_recompute_heap node then Recompute_heap.remove t.recompute_heap node)
 
-and invalidate_nodes_created_on_rhs t node =
+and invalidate_nodes_created_on_rhs node =
   let r = ref node in
   while Uopt.is_some !r do
     let (T node_on_rhs) = Uopt.unsafe_value !r in
     r := node_on_rhs.next_node_in_same_scope;
     node_on_rhs.next_node_in_same_scope <- Uopt.none;
-    invalidate_node t node_on_rhs
+    invalidate_node node_on_rhs
   done
 ;;
 
@@ -494,7 +503,7 @@ let propagate_invalidity t =
     if Node.is_valid node
     then
       if Node.should_be_invalidated node
-      then invalidate_node t node
+      then invalidate_node node
       else (
         (* [Node.needs_to_be_computed node] is true because
            - node is necessary. This is because children can only point to necessary
@@ -536,20 +545,21 @@ let propagate_invalidity t =
    are accurate.  There is no guarantee about the relative heights of [child] and [parent]
    though. *)
 let rec add_parent_without_adjusting_heights
-  : type a b. t -> child:a Node.t -> parent:b Node.t -> child_index:int -> unit
+  : type a b. child:a Node.t -> parent:b Node.t -> child_index:int -> unit
   =
-  fun t ~child ~parent ~child_index ->
+  fun ~child ~parent ~child_index ->
   if debug then assert (Node.is_necessary parent);
+  let t = child.state in
   let was_necessary = Node.is_necessary child in
   Node.add_parent ~child ~parent ~child_index;
   if not (Node.is_valid child) then Stack.push t.propagate_invalidity (T parent);
-  if not was_necessary then became_necessary t child;
+  if not was_necessary then became_necessary child;
   match parent.kind with
   | Expert e -> Expert.run_edge_callback e ~child_index
   | _ -> ()
 
-and became_necessary : type a. t -> a Node.t -> unit =
-  fun t node ->
+and became_necessary : type a. a Node.t -> unit =
+  fun node ->
   (* [Scope.is_necessary node.created_in] is true (assuming the scope itself is valid)
      because [Node.iter_children] below first visits the lhs-change of bind nodes and
      then the rhs. *)
@@ -559,19 +569,20 @@ and became_necessary : type a. t -> a Node.t -> unit =
       "Trying to make a node necessary whose defining bind is not necessary"
       node
       [%sexp_of: _ Node.t];
+  let t = node.state in
   t.num_nodes_became_necessary <- t.num_nodes_became_necessary + 1;
-  if node.num_on_update_handlers > 0 then handle_after_stabilization t node;
+  if node.num_on_update_handlers > 0 then handle_after_stabilization node;
   (* Since [node] became necessary, to restore the invariant, we need to:
 
      - add parent pointers to [node] from its children.
      - set [node]'s height.
      - add [node] to the recompute heap, if necessary. *)
-  set_height t node (Scope.height node.created_in + 1);
+  set_height node (Scope.height node.created_in + 1);
   Node.iteri_children node ~f:(fun child_index (T child) ->
-    add_parent_without_adjusting_heights t ~child ~parent:node ~child_index;
+    add_parent_without_adjusting_heights ~child ~parent:node ~child_index;
     (* Now that child is necessary, it should have a valid height. *)
     if debug then assert (child.height >= 0);
-    if child.height >= node.height then set_height t node (child.height + 1));
+    if child.height >= node.height then set_height node (child.height + 1));
   (* Now that the height is correct, maybe add [node] to the recompute heap.  [node]
      just became necessary, so it can't have been in the recompute heap.  Since [node]
      is necessary, we should add it to the recompute heap iff it is stale. *)
@@ -583,19 +594,20 @@ and became_necessary : type a. t -> a Node.t -> unit =
   | _ -> ()
 ;;
 
-let became_necessary t node =
-  became_necessary t node;
-  propagate_invalidity t
+let became_necessary node =
+  became_necessary node;
+  propagate_invalidity node.state
 ;;
 
-let add_parent t ~child ~parent ~child_index =
+let add_parent ~child ~parent ~child_index =
   if debug then assert (Node.is_necessary parent);
+  let t = parent.state in
   (* In the case when the edge being added creates a cycle, it is possible for the
      recursion in [add_parent_without_adjusting_heights] to reach [parent] as a descendant
      of [child].  In that case, the recursion terminates, because [Node.is_necessary
      parent].  We then return here and subsequently detect the cycle in
      [adjust_heights]. *)
-  add_parent_without_adjusting_heights t ~child ~parent ~child_index;
+  add_parent_without_adjusting_heights ~child ~parent ~child_index;
   (* We adjust heights so that we ensure there are no cycles before calling
      [propagate_invalidity]. *)
   if child.height >= parent.height
@@ -635,16 +647,15 @@ let within_scope t scope ~f =
 
 let change_child
   : type a b.
-    t
-    -> parent:a Node.t
+    parent:a Node.t
     -> old_child:b Node.t Uopt.t
     -> new_child:b Node.t
     -> child_index:int
     -> unit
   =
-  fun t ~parent ~old_child ~new_child ~child_index ->
+  fun ~parent ~old_child ~new_child ~child_index ->
   if Uopt.is_none old_child
-  then add_parent t ~child:new_child ~parent ~child_index
+  then add_parent ~child:new_child ~parent ~child_index
   else (
     let old_child = Uopt.unsafe_value old_child in
     if not (phys_equal old_child new_child)
@@ -656,11 +667,11 @@ let change_child
          mistakenly think it is unnecessary and transition it to necessary (which would
          add duplicate edges and break things horribly). *)
       old_child.force_necessary <- true;
-      add_parent t ~child:new_child ~parent ~child_index;
+      add_parent ~child:new_child ~parent ~child_index;
       old_child.force_necessary <- false;
       (* We [check_if_unnecessary] after [add_parent], so that we don't unnecessarily
          transition nodes from necessary to unnecessary and then back again. *)
-      check_if_unnecessary t old_child))
+      check_if_unnecessary old_child))
 ;;
 
 let add_alarm clock ~at alarm_value =
@@ -668,8 +679,9 @@ let add_alarm clock ~at alarm_value =
   Timing_wheel.add clock.timing_wheel ~at alarm_value
 ;;
 
-let rec recompute : type a. t -> a Node.t -> unit =
-  fun t (node : a Node.t) ->
+let rec recompute : type a. a Node.t -> unit =
+  fun node ->
+  let t = node.state in
   if debug
   then (
     t.only_in_debug.currently_running_node <- Some (T node);
@@ -677,13 +689,13 @@ let rec recompute : type a. t -> a Node.t -> unit =
   t.num_nodes_recomputed <- t.num_nodes_recomputed + 1;
   node.recomputed_at <- t.stabilization_num;
   match node.kind with
-  | Array_fold array_fold -> maybe_change_value t node (Array_fold.compute array_fold)
+  | Array_fold array_fold -> maybe_change_value node (Array_fold.compute array_fold)
   | At { at; clock; _ } ->
     (* It is a bug if we try to compute an [At] node after [at].  [advance_clock] was
        supposed to convert it to a [Const] at the appropriate time. *)
     if debug then assert (Time_ns.( > ) at (now clock));
-    maybe_change_value t node Before
-  | At_intervals _ -> maybe_change_value t node ()
+    maybe_change_value node Before
+  | At_intervals _ -> maybe_change_value node ()
   | Bind_lhs_change
       ({ main
        ; f
@@ -703,7 +715,6 @@ let rec recompute : type a. t -> a Node.t -> unit =
        saying that [needs_to_be_computed bind_main] in [propagate_invalidity] *)
     node.changed_at <- t.stabilization_num;
     change_child
-      t
       ~parent:main
       ~old_child:old_rhs
       ~new_child:rhs
@@ -716,7 +727,7 @@ let rec recompute : type a. t -> a Node.t -> unit =
          so by invalidating afterwards, we will not waste time adding them to the
          recompute heap and then removing them. *)
       if t.bind_lhs_change_should_invalidate_rhs
-      then invalidate_nodes_created_on_rhs t old_all_nodes_created_on_rhs
+      then invalidate_nodes_created_on_rhs old_all_nodes_created_on_rhs
       else
         rescope_nodes_created_on_rhs
           t
@@ -726,31 +737,30 @@ let rec recompute : type a. t -> a Node.t -> unit =
     (* [node] was valid at the start of the [Bind_lhs_change] branch, and invalidation
        only visits higher nodes, so [node] is still valid. *)
     if debug then assert (Node.is_valid node);
-    maybe_change_value t node ()
-  | Bind_main { rhs; _ } -> copy_child t ~parent:node ~child:(Uopt.value_exn rhs)
-  | Const a -> maybe_change_value t node a
+    maybe_change_value node ()
+  | Bind_main { rhs; _ } -> copy_child ~parent:node ~child:(Uopt.value_exn rhs)
+  | Const a -> maybe_change_value node a
   | Freeze { child; only_freeze_when; _ } ->
     let value = Node.value_exn child in
     if only_freeze_when value
     then (
-      remove_children t node;
+      remove_children node;
       Node.set_kind node (Const value);
-      if Node.is_necessary node then set_height t node 0 else became_unnecessary t node);
-    maybe_change_value t node value
+      if Node.is_necessary node then set_height node 0 else became_unnecessary node);
+    maybe_change_value node value
   | If_test_change ({ main; current_branch; test; then_; else_; _ } as if_then_else) ->
     let desired_branch = if Node.value_exn test then then_ else else_ in
     if_then_else.current_branch <- Uopt.some desired_branch;
     (* see the comment in Bind_lhs_change *)
     node.changed_at <- t.stabilization_num;
     change_child
-      t
       ~parent:main
       ~old_child:current_branch
       ~new_child:desired_branch
       ~child_index:Kind.if_branch_child_index;
-    maybe_change_value t node ()
+    maybe_change_value node ()
   | If_then_else { current_branch; _ } ->
-    copy_child t ~parent:node ~child:(Uopt.value_exn current_branch)
+    copy_child ~parent:node ~child:(Uopt.value_exn current_branch)
   | Invalid ->
     (* We never have invalid nodes in the recompute heap; they are never stale. *)
     assert false
@@ -760,20 +770,19 @@ let rec recompute : type a. t -> a Node.t -> unit =
     (* see the comment in Bind_lhs_change *)
     node.changed_at <- t.stabilization_num;
     change_child
-      t
       ~parent:main
       ~old_child:old_rhs
       ~new_child:rhs
       ~child_index:Kind.join_rhs_child_index;
-    maybe_change_value t node ()
-  | Join_main { rhs; _ } -> copy_child t ~parent:node ~child:(Uopt.value_exn rhs)
-  | Map (f, n1) -> maybe_change_value t node (f (Node.value_exn n1))
+    maybe_change_value node ()
+  | Join_main { rhs; _ } -> copy_child ~parent:node ~child:(Uopt.value_exn rhs)
+  | Map (f, n1) -> maybe_change_value node (f (Node.value_exn n1))
   | Snapshot { at; before; clock; _ } ->
     (* It is a bug if we try to compute a [Snapshot] and the alarm should have fired.
        [advance_clock] was supposed to convert it to a [Freeze] at the appropriate
        time. *)
     if debug then assert (Time_ns.( > ) at (now clock));
-    maybe_change_value t node before
+    maybe_change_value node before
   | Step_function ({ child; clock; _ } as step_function_node) ->
     if Uopt.is_some child
     then (
@@ -792,34 +801,31 @@ let rec recompute : type a. t -> a Node.t -> unit =
            the entire step function. *)
         if Node.is_const child
         then (
-          remove_children t node;
+          remove_children node;
           step_function_node.child <- Uopt.none;
-          set_height t node (Scope.height node.created_in + 1))));
+          set_height node (Scope.height node.created_in + 1))));
     Step_function_node.advance step_function_node ~to_:(now clock);
     let step_function_value = Uopt.value_exn step_function_node.value in
     (match Sequence.hd step_function_node.upcoming_steps with
      | None -> if Uopt.is_none child then Node.set_kind node (Const step_function_value)
      | Some (at, _) ->
        step_function_node.alarm <- add_alarm clock ~at step_function_node.alarm_value);
-    maybe_change_value t node step_function_value
-  | Unordered_array_fold u -> maybe_change_value t node (Unordered_array_fold.compute u)
+    maybe_change_value node step_function_value
+  | Unordered_array_fold u -> maybe_change_value node (Unordered_array_fold.compute u)
   | Uninitialized -> assert false
-  | Var var -> maybe_change_value t node var.value
+  | Var var -> maybe_change_value node var.value
   | Map2 (f, n1, n2) ->
-    maybe_change_value t node (f (Node.value_exn n1) (Node.value_exn n2))
+    maybe_change_value node (f (Node.value_exn n1) (Node.value_exn n2))
   | Map3 (f, n1, n2, n3) ->
     maybe_change_value
-      t
       node
       (f (Node.value_exn n1) (Node.value_exn n2) (Node.value_exn n3))
   | Map4 (f, n1, n2, n3, n4) ->
     maybe_change_value
-      t
       node
       (f (Node.value_exn n1) (Node.value_exn n2) (Node.value_exn n3) (Node.value_exn n4))
   | Map5 (f, n1, n2, n3, n4, n5) ->
     maybe_change_value
-      t
       node
       (f
          (Node.value_exn n1)
@@ -829,7 +835,6 @@ let rec recompute : type a. t -> a Node.t -> unit =
          (Node.value_exn n5))
   | Map6 (f, n1, n2, n3, n4, n5, n6) ->
     maybe_change_value
-      t
       node
       (f
          (Node.value_exn n1)
@@ -840,7 +845,6 @@ let rec recompute : type a. t -> a Node.t -> unit =
          (Node.value_exn n6))
   | Map7 (f, n1, n2, n3, n4, n5, n6, n7) ->
     maybe_change_value
-      t
       node
       (f
          (Node.value_exn n1)
@@ -852,7 +856,6 @@ let rec recompute : type a. t -> a Node.t -> unit =
          (Node.value_exn n7))
   | Map8 (f, n1, n2, n3, n4, n5, n6, n7, n8) ->
     maybe_change_value
-      t
       node
       (f
          (Node.value_exn n1)
@@ -865,7 +868,6 @@ let rec recompute : type a. t -> a Node.t -> unit =
          (Node.value_exn n8))
   | Map9 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9) ->
     maybe_change_value
-      t
       node
       (f
          (Node.value_exn n1)
@@ -879,7 +881,6 @@ let rec recompute : type a. t -> a Node.t -> unit =
          (Node.value_exn n9))
   | Map10 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10) ->
     maybe_change_value
-      t
       node
       (f
          (Node.value_exn n1)
@@ -894,7 +895,6 @@ let rec recompute : type a. t -> a Node.t -> unit =
          (Node.value_exn n10))
   | Map11 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11) ->
     maybe_change_value
-      t
       node
       (f
          (Node.value_exn n1)
@@ -910,7 +910,6 @@ let rec recompute : type a. t -> a Node.t -> unit =
          (Node.value_exn n11))
   | Map12 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12) ->
     maybe_change_value
-      t
       node
       (f
          (Node.value_exn n1)
@@ -927,7 +926,6 @@ let rec recompute : type a. t -> a Node.t -> unit =
          (Node.value_exn n12))
   | Map13 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13) ->
     maybe_change_value
-      t
       node
       (f
          (Node.value_exn n1)
@@ -945,7 +943,6 @@ let rec recompute : type a. t -> a Node.t -> unit =
          (Node.value_exn n13))
   | Map14 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14) ->
     maybe_change_value
-      t
       node
       (f
          (Node.value_exn n1)
@@ -964,7 +961,6 @@ let rec recompute : type a. t -> a Node.t -> unit =
          (Node.value_exn n14))
   | Map15 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15) ->
     maybe_change_value
-      t
       node
       (f
          (Node.value_exn n1)
@@ -985,20 +981,21 @@ let rec recompute : type a. t -> a Node.t -> unit =
   | Expert expert ->
     (match Expert.before_main_computation expert with
      | `Invalid ->
-       invalidate_node t node;
+       invalidate_node node;
        propagate_invalidity t
-     | `Ok -> maybe_change_value t node (expert.f ()))
+     | `Ok -> maybe_change_value node (expert.f ()))
 
-and copy_child : type a. t -> parent:a Node.t -> child:a Node.t -> unit =
-  fun t ~parent ~child ->
+and copy_child : type a. parent:a Node.t -> child:a Node.t -> unit =
+  fun ~parent ~child ->
   if Node.is_valid child
-  then maybe_change_value t parent (Node.value_exn child)
+  then maybe_change_value parent (Node.value_exn child)
   else (
-    invalidate_node t parent;
-    propagate_invalidity t)
+    invalidate_node parent;
+    propagate_invalidity parent.state)
 
-and maybe_change_value : type a. t -> a Node.t -> a -> unit =
-  fun t (node : _ Node.t) new_value ->
+and maybe_change_value : type a. a Node.t -> a -> unit =
+  fun node new_value ->
+  let t = node.state in
   let old_value_opt = node.value_opt in
   if Uopt.is_none old_value_opt
   || not
@@ -1013,7 +1010,7 @@ and maybe_change_value : type a. t -> a Node.t -> a -> unit =
     if node.num_on_update_handlers > 0
     then (
       node.old_value_opt <- old_value_opt;
-      handle_after_stabilization t node);
+      handle_after_stabilization node);
     if node.num_parents >= 1
     then (
       for parent_index = 1 to node.num_parents - 1 do
@@ -1115,7 +1112,7 @@ and maybe_change_value : type a. t -> a Node.t -> a -> unit =
         then (
           t.num_nodes_recomputed_directly_because_one_child
           <- t.num_nodes_recomputed_directly_because_one_child + 1;
-          recompute t parent)
+          recompute parent)
         else if parent.height <= Recompute_heap.min_height t.recompute_heap
         then (
           (* If [parent.height] is [<=] the height of all nodes in the recompute heap
@@ -1124,7 +1121,7 @@ and maybe_change_value : type a. t -> a Node.t -> a -> unit =
              recompute heap. *)
           t.num_nodes_recomputed_directly_because_min_height
           <- t.num_nodes_recomputed_directly_because_min_height + 1;
-          recompute t parent)
+          recompute parent)
         else (
           if debug then assert (Node.needs_to_be_computed parent);
           if debug then assert (not (Node.is_in_recompute_heap parent));
@@ -1143,7 +1140,7 @@ let recompute_everything_that_is_necessary t =
         "node unexpectedly does not need to be computed"
         node
         [%sexp_of: _ Node.t];
-    recompute t node
+    recompute node
   done;
   if debug
   then (
@@ -1167,11 +1164,12 @@ let unlink_disallowed_observers t =
     if Internal_observer.same internal_observer all_observers
     then t.all_observers <- internal_observer.next_in_all;
     Internal_observer.unlink internal_observer;
-    check_if_unnecessary t internal_observer.observing
+    check_if_unnecessary internal_observer.observing
   done
 ;;
 
-let disallow_future_use t (internal_observer : _ Internal_observer.t) =
+let disallow_future_use internal_observer =
+  let t = Internal_observer.incr_state internal_observer in
   match internal_observer.state with
   | Disallowed | Unlinked -> ()
   | Created ->
@@ -1188,7 +1186,7 @@ let disallow_finalized_observers t =
   while Thread_safe_queue.length t.finalized_observers > 0 do
     let (T internal_observer) = Thread_safe_queue.dequeue_exn t.finalized_observers in
     if List.is_empty internal_observer.on_update_handlers
-    then disallow_future_use t internal_observer
+    then disallow_future_use internal_observer
   done
 ;;
 
@@ -1198,7 +1196,8 @@ let observer_finalizer t =
     Thread_safe_queue.enqueue t.finalized_observers (T internal_observer))
 ;;
 
-let create_observer ?(should_finalize = true) t observing =
+let create_observer ?(should_finalize = true) (observing : _ Node.t) =
+  let t = observing.state in
   let internal_observer : _ Internal_observer.t =
     { state = Created
     ; observing
@@ -1248,13 +1247,14 @@ let add_new_observers t =
       (* By adding [internal_observer] to [observing.observers], we may have added
          on-update handlers to [observing].  We need to handle [observing] after this
          stabilization to give those handlers a chance to run. *)
-      handle_after_stabilization t observing;
+      handle_after_stabilization observing;
       if debug then assert (Node.is_necessary observing);
-      if not was_necessary then became_necessary t observing
+      if not was_necessary then became_necessary observing
   done
 ;;
 
-let observer_value_exn t observer =
+let observer_value_exn observer =
+  let t = Observer.incr_state observer in
   match t.status with
   | Not_stabilizing | Running_on_update_handlers -> Observer.value_exn observer
   | Stabilize_previously_raised raised_exn ->
@@ -1269,22 +1269,25 @@ let observer_value_exn t observer =
       [%sexp_of: _ Observer.t]
 ;;
 
-let observer_value t observer =
-  try Ok (observer_value_exn t observer) with
+let observer_value observer =
+  try Ok (observer_value_exn observer) with
   | exn -> Error (Error.of_exn exn)
 ;;
 
-let node_on_update (type a) t (node : a Node.t) ~f =
+let node_on_update (type a) (node : a Node.t) ~f =
+  let t = node.state in
   Node.on_update node (On_update_handler.create f ~at:t.stabilization_num);
-  handle_after_stabilization t node
+  handle_after_stabilization node
 ;;
 
-let observer_on_update_exn (type a) t (observer : a Observer.t) ~f =
+let observer_on_update_exn observer ~f =
+  let t = Observer.incr_state observer in
   Observer.on_update_exn observer (On_update_handler.create f ~at:t.stabilization_num);
-  handle_after_stabilization t (Observer.observing observer)
+  handle_after_stabilization (Observer.observing observer)
 ;;
 
-let set_var_while_not_stabilizing t (var : _ Var.t) value =
+let set_var_while_not_stabilizing var value =
+  let t = Var.incr_state var in
   t.num_var_sets <- t.num_var_sets + 1;
   var.value <- value;
   if Stabilization_num.compare var.set_at t.stabilization_num < 0
@@ -1296,10 +1299,11 @@ let set_var_while_not_stabilizing t (var : _ Var.t) value =
     then Recompute_heap.add t.recompute_heap watch)
 ;;
 
-let set_var t var value =
+let set_var var value =
+  let t = Var.incr_state var in
   match t.status with
   | Running_on_update_handlers | Not_stabilizing ->
-    set_var_while_not_stabilizing t var value
+    set_var_while_not_stabilizing var value
   | Stabilize_previously_raised raised_exn ->
     failwiths
       "cannot set var -- stabilization previously raised"
@@ -1338,7 +1342,7 @@ let stabilize t =
       let (T var) = Stack.pop_exn t.set_during_stabilization in
       let value = Uopt.value_exn var.value_set_during_stabilization in
       var.value_set_during_stabilization <- Uopt.none;
-      set_var_while_not_stabilizing t var value
+      set_var_while_not_stabilizing var value
     done;
     while not (Stack.is_empty t.handle_after_stabilization) do
       let (T node) = Stack.pop_exn t.handle_after_stabilization in
@@ -1374,13 +1378,13 @@ let stabilize t =
 
 let create_node_in t created_in kind =
   t.num_nodes_created <- t.num_nodes_created + 1;
-  Node.create created_in kind
+  Node.create t created_in kind
 ;;
 
 let create_node t kind = create_node_in t t.current_scope kind
 let create_node_top t kind = create_node_in t Scope.top kind
 
-let create_var ?(use_current_scope = false) t value =
+let create_var t ?(use_current_scope = false) value =
   let scope = if use_current_scope then t.current_scope else Scope.top in
   let watch = create_node_in t scope Uninitialized in
   let var =
@@ -1397,45 +1401,58 @@ let create_var ?(use_current_scope = false) t value =
 (* A [const] value could come from the right-hand side of an outer bind.  So, we create a
    [const] node in the current scope, not in [Scope.top]. *)
 let const t a = create_node t (Const a)
-let map t n ~f = create_node t (Map (f, n))
-let map2 t n1 n2 ~f = create_node t (Map2 (f, n1, n2))
-let map3 t n1 n2 n3 ~f = create_node t (Map3 (f, n1, n2, n3))
-let map4 t n1 n2 n3 n4 ~f = create_node t (Map4 (f, n1, n2, n3, n4))
-let map5 t n1 n2 n3 n4 n5 ~f = create_node t (Map5 (f, n1, n2, n3, n4, n5))
-let map6 t n1 n2 n3 n4 n5 n6 ~f = create_node t (Map6 (f, n1, n2, n3, n4, n5, n6))
-let map7 t n1 n2 n3 n4 n5 n6 n7 ~f = create_node t (Map7 (f, n1, n2, n3, n4, n5, n6, n7))
+let map (n : _ Node.t) ~f = create_node n.state (Map (f, n))
+let map2 (n1 : _ Node.t) n2 ~f = create_node n1.state (Map2 (f, n1, n2))
+let map3 (n1 : _ Node.t) n2 n3 ~f = create_node n1.state (Map3 (f, n1, n2, n3))
+let map4 (n1 : _ Node.t) n2 n3 n4 ~f = create_node n1.state (Map4 (f, n1, n2, n3, n4))
 
-let map8 t n1 n2 n3 n4 n5 n6 n7 n8 ~f =
-  create_node t (Map8 (f, n1, n2, n3, n4, n5, n6, n7, n8))
+let map5 (n1 : _ Node.t) n2 n3 n4 n5 ~f =
+  create_node n1.state (Map5 (f, n1, n2, n3, n4, n5))
 ;;
 
-let map9 t n1 n2 n3 n4 n5 n6 n7 n8 n9 ~f =
-  create_node t (Map9 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9))
+let map6 (n1 : _ Node.t) n2 n3 n4 n5 n6 ~f =
+  create_node n1.state (Map6 (f, n1, n2, n3, n4, n5, n6))
 ;;
 
-let map10 t n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 ~f =
-  create_node t (Map10 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10))
+let map7 (n1 : _ Node.t) n2 n3 n4 n5 n6 n7 ~f =
+  create_node n1.state (Map7 (f, n1, n2, n3, n4, n5, n6, n7))
 ;;
 
-let map11 t n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 ~f =
-  create_node t (Map11 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11))
+let map8 (n1 : _ Node.t) n2 n3 n4 n5 n6 n7 n8 ~f =
+  create_node n1.state (Map8 (f, n1, n2, n3, n4, n5, n6, n7, n8))
 ;;
 
-let map12 t n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 ~f =
-  create_node t (Map12 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12))
+let map9 (n1 : _ Node.t) n2 n3 n4 n5 n6 n7 n8 n9 ~f =
+  create_node n1.state (Map9 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9))
 ;;
 
-let map13 t n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 ~f =
-  create_node t (Map13 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13))
+let map10 (n1 : _ Node.t) n2 n3 n4 n5 n6 n7 n8 n9 n10 ~f =
+  create_node n1.state (Map10 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10))
 ;;
 
-let map14 t n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 n14 ~f =
-  create_node t (Map14 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14))
+let map11 (n1 : _ Node.t) n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 ~f =
+  create_node n1.state (Map11 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11))
 ;;
 
-let map15 t n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 n14 n15 ~f =
+let map12 (n1 : _ Node.t) n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 ~f =
+  create_node n1.state (Map12 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12))
+;;
+
+let map13 (n1 : _ Node.t) n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 ~f =
   create_node
-    t
+    n1.state
+    (Map13 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13))
+;;
+
+let map14 (n1 : _ Node.t) n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 n14 ~f =
+  create_node
+    n1.state
+    (Map14 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14))
+;;
+
+let map15 (n1 : _ Node.t) n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 n14 n15 ~f =
+  create_node
+    n1.state
     (Map15 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15))
 ;;
 
@@ -1446,21 +1463,21 @@ let preserve_cutoff ~(input : _ Node.t) ~output =
        Stabilization_num.equal input.changed_at output.changed_at))
 ;;
 
-let depend_on t input ~depend_on =
-  let output = map2 t input depend_on ~f:(fun a _ -> a) in
+let depend_on input ~depend_on =
+  let output = map2 input depend_on ~f:(fun a _ -> a) in
   preserve_cutoff ~input ~output;
   output
 ;;
 
-let necessary_if_alive t input =
+let necessary_if_alive input =
   (* If [output] is alive, then [observer] is alive, then [input] is necessary.  If
      [output] is unnecessary, then [output] is not a parent of [input], and thus
      [output]'s liveness is dependent solely on user code.  And in particular, if [output]
      dies, then [observer] will be finalized, and then upon the next stabilization,
      [input] will become unnecessary (at least with respect to [output]). *)
-  let observer = create_observer t input in
+  let observer = create_observer input in
   let output =
-    map t input ~f:(fun a ->
+    map input ~f:(fun a ->
       Gc.keep_alive observer;
       a)
   in
@@ -1468,7 +1485,8 @@ let necessary_if_alive t input =
   output
 ;;
 
-let bind t lhs ~f =
+let bind (lhs : _ Node.t) ~f =
+  let t = lhs.state in
   let lhs_change = create_node t Uninitialized in
   let main = create_node t Uninitialized in
   let bind =
@@ -1492,25 +1510,24 @@ let bind t lhs ~f =
   main
 ;;
 
-let bind2 t n1 n2 ~f =
-  bind t (map2 t n1 n2 ~f:(fun v1 v2 -> v1, v2)) ~f:(fun (v1, v2) -> f v1 v2)
+let bind2 n1 n2 ~f =
+  bind (map2 n1 n2 ~f:(fun v1 v2 -> v1, v2)) ~f:(fun (v1, v2) -> f v1 v2)
 ;;
 
-let bind3 t n1 n2 n3 ~f =
+let bind3 n1 n2 n3 ~f =
   bind
-    t
-    (map3 t n1 n2 n3 ~f:(fun v1 v2 v3 -> v1, v2, v3))
+    (map3 n1 n2 n3 ~f:(fun v1 v2 v3 -> v1, v2, v3))
     ~f:(fun (v1, v2, v3) -> f v1 v2 v3)
 ;;
 
-let bind4 t n1 n2 n3 n4 ~f =
+let bind4 n1 n2 n3 n4 ~f =
   bind
-    t
-    (map4 t n1 n2 n3 n4 ~f:(fun v1 v2 v3 v4 -> v1, v2, v3, v4))
+    (map4 n1 n2 n3 n4 ~f:(fun v1 v2 v3 v4 -> v1, v2, v3, v4))
     ~f:(fun (v1, v2, v3, v4) -> f v1 v2 v3 v4)
 ;;
 
-let join t lhs =
+let join (lhs : _ Node.t) =
+  let t = lhs.state in
   let lhs_change = create_node t Uninitialized in
   let main = create_node t Uninitialized in
   let join = { Join.lhs; lhs_change; rhs = Uopt.none; main } in
@@ -1520,7 +1537,8 @@ let join t lhs =
   main
 ;;
 
-let if_ t test ~then_ ~else_ =
+let if_ (test : _ Node.t) ~then_ ~else_ =
+  let t = test.state in
   let test_change = create_node t Uninitialized in
   let main = create_node t Uninitialized in
   let if_then_else =
@@ -1588,8 +1606,8 @@ let all t ts = array_fold t (Array.of_list_rev ts) ~init:[] ~f:(fun ac a -> a ::
 module Unordered_array_fold_update = Unordered_array_fold.Update
 
 let unordered_array_fold
-      ?(full_compute_every_n_changes = Int.max_value)
       t
+      ?(full_compute_every_n_changes = Int.max_value)
       children
       ~init
       ~f
@@ -1618,7 +1636,7 @@ let unordered_array_fold
     main)
 ;;
 
-let opt_unordered_array_fold ?full_compute_every_n_changes t ts ~init ~f ~f_inverse =
+let opt_unordered_array_fold t ?full_compute_every_n_changes ts ~init ~f ~f_inverse =
   let f (accum, num_invalid) x =
     match x with
     | None -> accum, num_invalid + 1
@@ -1630,7 +1648,6 @@ let opt_unordered_array_fold ?full_compute_every_n_changes t ts ~init ~f ~f_inve
     | Some x -> f_inverse accum x, num_invalid
   in
   map
-    t
     (unordered_array_fold
        t
        ts
@@ -1644,7 +1661,6 @@ let opt_unordered_array_fold ?full_compute_every_n_changes t ts ~init ~f ~f_inve
 let at_least_k_of t nodes ~k =
   let bool_to_int b = if b then 1 else 0 in
   map
-    t
     ~f:(fun i -> i >= k)
     (unordered_array_fold
        t
@@ -1657,7 +1673,7 @@ let at_least_k_of t nodes ~k =
 let exists t nodes = at_least_k_of t nodes ~k:1
 let for_all t nodes = at_least_k_of t nodes ~k:(Array.length nodes)
 
-let sum ?full_compute_every_n_changes t nodes ~zero ~add ~sub =
+let sum t ?full_compute_every_n_changes nodes ~zero ~add ~sub =
   unordered_array_fold
     t
     nodes
@@ -1667,7 +1683,7 @@ let sum ?full_compute_every_n_changes t nodes ~zero ~add ~sub =
     ?full_compute_every_n_changes
 ;;
 
-let opt_sum ?full_compute_every_n_changes t nodes ~zero ~add ~sub =
+let opt_sum t ?full_compute_every_n_changes nodes ~zero ~add ~sub =
   opt_unordered_array_fold
     t
     nodes
@@ -1689,23 +1705,25 @@ let sum_float t nodes =
     ~full_compute_every_n_changes:(Array.length nodes)
 ;;
 
-let set_freeze t (node : _ Node.t) ~child ~only_freeze_when =
+let set_freeze (node : _ Node.t) ~child ~only_freeze_when =
   if debug then assert (Scope.is_top node.created_in);
   (* By making [node.kind] be [Freeze], we are making [Node.is_necessary node]. *)
   let was_necessary = Node.is_necessary node in
   Node.set_kind node (Freeze { main = node; child; only_freeze_when });
   if was_necessary
-  then add_parent t ~child ~parent:node ~child_index:Kind.freeze_child_index
-  else became_necessary t node
+  then add_parent ~child ~parent:node ~child_index:Kind.freeze_child_index
+  else became_necessary node
 ;;
 
-let freeze t child ~only_freeze_when =
+let freeze (child : _ Node.t) ~only_freeze_when =
+  let t = child.state in
   let node = create_node_top t Uninitialized in
-  set_freeze t node ~child ~only_freeze_when;
+  set_freeze node ~child ~only_freeze_when;
   node
 ;;
 
-let at t clock time =
+let at clock time =
+  let t = Clock.incr_state clock in
   if Time_ns.( <= ) time (now clock)
   then const t Before_or_after.After
   else (
@@ -1716,7 +1734,7 @@ let at t clock time =
     main)
 ;;
 
-let after t clock span = at t clock (Time_ns.add (now clock) span)
+let after clock span = at clock (Time_ns.add (now clock) span)
 
 let next_interval_alarm_strict (clock : Clock.t) ~base ~interval =
   let after = now clock in
@@ -1725,7 +1743,8 @@ let next_interval_alarm_strict (clock : Clock.t) ~base ~interval =
   at
 ;;
 
-let at_intervals t (clock : Clock.t) interval =
+let at_intervals (clock : Clock.t) interval =
+  let t = Clock.incr_state clock in
   if Time_ns.Span.( < ) interval (Timing_wheel.alarm_precision clock.timing_wheel)
   then
     failwiths "at_intervals got too small interval" interval [%sexp_of: Time_ns.Span.t];
@@ -1744,12 +1763,13 @@ let at_intervals t (clock : Clock.t) interval =
   main
 ;;
 
-let snapshot t clock value_at ~at ~before =
+let snapshot clock value_at ~at ~before =
+  let t = Clock.incr_state clock in
   if Time_ns.( <= ) at (now clock)
   then
     if Time_ns.( < ) at (now clock)
     then Or_error.error "cannot take snapshot in the past" at [%sexp_of: Time_ns.t]
-    else Ok (freeze t value_at ~only_freeze_when:(Fn.const true))
+    else Ok (freeze value_at ~only_freeze_when:(Fn.const true))
   else (
     let main = create_node_top t Uninitialized in
     let snapshot = { Snapshot.main; at; before; value_at; clock } in
@@ -1761,7 +1781,8 @@ let snapshot t clock value_at ~at ~before =
     Ok main)
 ;;
 
-let incremental_step_function t clock child =
+let incremental_step_function clock child =
+  let t = Clock.incr_state clock in
   let main = create_node t Uninitialized in
   let step_function_node =
     { Step_function_node.main
@@ -1779,19 +1800,21 @@ let incremental_step_function t clock child =
   main
 ;;
 
-let make_stale t (node : _ Node.t) =
+let make_stale (node : _ Node.t) =
+  let t = node.state in
   node.recomputed_at <- Stabilization_num.none;
   (* force the node to be stale *)
   if Node.needs_to_be_computed node && not (Node.is_in_recompute_heap node)
   then Recompute_heap.add t.recompute_heap node
 ;;
 
-let advance_clock t (clock : Clock.t) ~to_ =
+let advance_clock (clock : Clock.t) ~to_ =
+  let t = Clock.incr_state clock in
   ensure_not_stabilizing t ~name:"advance_clock" ~allow_in_update_handler:true;
   if debug then invariant t;
   if Time_ns.( > ) to_ (now clock)
   then (
-    set_var_while_not_stabilizing t clock.now to_;
+    set_var_while_not_stabilizing clock.now to_;
     Timing_wheel.advance_clock clock.timing_wheel ~to_ ~handle_fired:clock.handle_fired;
     Timing_wheel.fire_past_alarms clock.timing_wheel ~handle_fired:clock.handle_fired;
     while Uopt.is_some clock.fired_alarm_values do
@@ -1803,7 +1826,7 @@ let advance_clock t (clock : Clock.t) ~to_ =
         if Node.is_valid main
         then (
           Node.set_kind main (Const After);
-          make_stale t main)
+          make_stale main)
       | At_intervals ({ main; base; interval; _ } as at_intervals) ->
         if Node.is_valid main
         then (
@@ -1812,12 +1835,12 @@ let advance_clock t (clock : Clock.t) ~to_ =
                clock
                ~at:(next_interval_alarm_strict clock ~base ~interval)
                alarm_value;
-          make_stale t main)
+          make_stale main)
       | Snapshot { main; value_at; _ } ->
         if debug then assert (Node.is_valid main);
-        set_freeze t main ~child:value_at ~only_freeze_when:(fun _ -> true);
-        make_stale t main
-      | Step_function { main; _ } -> if Node.is_valid main then make_stale t main
+        set_freeze main ~child:value_at ~only_freeze_when:(fun _ -> true);
+        make_stale main
+      | Step_function { main; _ } -> if Node.is_valid main then make_stale main
     done;
     if debug then invariant t)
 ;;
@@ -1860,6 +1883,7 @@ let create (module Config : Config.Incremental_config) ~max_height_allowed =
     ; run_on_update_handlers = Stack.create ()
     ; only_in_debug = Only_in_debug.create ()
     ; weak_hashtbls = Thread_safe_queue.create ()
+    ; keep_node_creation_backtrace = false
     ; num_nodes_became_necessary = 0
     ; num_nodes_became_unnecessary = 0
     ; num_nodes_changed = 0
@@ -1951,7 +1975,8 @@ module Expert = struct
         , ~~(current.kind : _ Kind.t)]
   ;;
 
-  let make_stale state node =
+  let make_stale (node : _ Node.t) =
+    let state = node.state in
     let e_opt = expert_kind_of_node node in
     if Uopt.is_some e_opt
     then (
@@ -1964,13 +1989,15 @@ module Expert = struct
         then Recompute_heap.add state.recompute_heap node)
   ;;
 
-  let invalidate state node =
+  let invalidate (node : _ Node.t) =
+    let state = node.state in
     if debug then assert_currently_running_node_is_child state node "invalidate";
-    invalidate_node state node;
+    invalidate_node node;
     propagate_invalidity state
   ;;
 
-  let add_dependency state node (dep : _ Expert.edge) =
+  let add_dependency (node : _ Node.t) (dep : _ Expert.edge) =
+    let state = node.state in
     let e_opt = expert_kind_of_node node in
     if Uopt.is_some e_opt
     then (
@@ -1987,13 +2014,14 @@ module Expert = struct
       let new_child_index = Expert.add_child_edge e (E dep) in
       if Node.is_necessary node
       then (
-        add_parent state ~child:dep.child ~parent:node ~child_index:new_child_index;
+        add_parent ~child:dep.child ~parent:node ~child_index:new_child_index;
         if debug then assert (Node.needs_to_be_computed node);
         if not (Node.is_in_recompute_heap node)
         then Recompute_heap.add state.recompute_heap node))
   ;;
 
-  let remove_dependency state node (edge : _ Expert.edge) =
+  let remove_dependency (node : _ Node.t) (edge : _ Expert.edge) =
+    let state = node.state in
     let e_opt = expert_kind_of_node node in
     if Uopt.is_some e_opt
     then (
@@ -2016,7 +2044,7 @@ module Expert = struct
         Expert.swap_children e ~child_index1:edge_index ~child_index2:last_edge_index;
         if debug then Node.invariant ignore node);
       Expert.remove_last_child_edge_exn e;
-      remove_child state ~child:edge.child ~parent:node ~child_index:last_edge_index;
+      remove_child ~child:edge.child ~parent:node ~child_index:last_edge_index;
       if debug then assert (Node.needs_to_be_computed node);
       if not (Node.is_in_recompute_heap node)
       then Recompute_heap.add state.recompute_heap node;

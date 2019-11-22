@@ -8,6 +8,7 @@ open Node
 type 'a t = 'a Types.Node.t =
   { (* [id] is a unique id for the node. *)
     id : Node_id.t
+  ; state : (Types.State.t[@sexp.opaque])
   ; (* The fields from [recomputed_at] to [created_in] are grouped together and are in the
        same order as they are used by [State.recompute] This has a positive performance
        impact due to cache effects.  Don't change the order of these nodes without
@@ -282,6 +283,7 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
     let check f = Invariant.check_field t f in
     Fields.iter
       ~id:(check Node_id.invariant)
+      ~state:ignore
       ~recomputed_at:(check Stabilization_num.invariant)
       ~value_opt:
         (check (fun value_opt ->
@@ -463,17 +465,16 @@ let run_on_update_handlers t node_update ~now =
   done
 ;;
 
-let keep_node_creation_backtrace = ref false
-
 let set_kind t kind =
   t.kind <- kind;
   t.my_parent_index_in_child_at_index
   <- Array.create ~len:(Kind.initial_num_children kind) (-1)
 ;;
 
-let create created_in kind =
+let create state created_in kind =
   let t =
     { id = Node_id.next ()
+    ; state
     ; recomputed_at = Stabilization_num.none
     ; value_opt = Uopt.none
     ; kind
@@ -503,7 +504,7 @@ let create created_in kind =
     ; force_necessary = false
     ; user_info = None
     ; creation_backtrace =
-        (if !keep_node_creation_backtrace then Some (Backtrace.get ()) else None)
+        (if state.keep_node_creation_backtrace then Some (Backtrace.get ()) else None)
     }
   in
   Scope.add_node created_in t;

@@ -8,7 +8,7 @@
 open! Core_kernel
 open! Import
 
-type t [@@deriving sexp_of]
+type t = Types.Recompute_heap.t [@@deriving sexp_of]
 
 include Invariant.S with type t := t
 

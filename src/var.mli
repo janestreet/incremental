@@ -13,7 +13,8 @@ include Invariant.S1 with type 'a t := 'a t
 include Sexp_of.S1 with type 'a t := 'a t
 
 module Packed : sig
-  type t = T : _ Types.Var.t -> t [@@unboxed] [@@deriving sexp_of]
+  type t = Types.Var.Packed.t = T : _ Types.Var.t -> t [@@unboxed] [@@deriving sexp_of]
 end
 
 val latest_value : 'a t -> 'a
+val incr_state : _ t -> Types.State.t

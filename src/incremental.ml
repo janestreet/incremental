@@ -8,71 +8,66 @@ module type Incremental_config = Config.Incremental_config
 
 module Config = Config
 
-module Make_with_config (Incremental_config : Incremental_config) () = struct
-  module Incremental_config = Incremental_config
+let default_max_height_allowed = 128
+
+module Generic = struct
   module Cutoff = Cutoff
   module Step_function = Step_function
 
   module State = struct
     include State
 
-    let t = create (module Incremental_config) ~max_height_allowed:128
-  end
+    module type S = sig
+      type state_witness [@@deriving sexp_of]
 
-  let state = State.t
+      val t : t
+    end
+
+    let create_internal = create
+
+    let create ?(max_height_allowed = default_max_height_allowed) () : (module S) =
+      (module struct
+        type state_witness [@@deriving sexp_of]
+
+        let t = create (module Config.Default ()) ~max_height_allowed
+      end)
+    ;;
+  end
 
   module Scope = struct
     include Scope
 
-    let current () = state.current_scope
-    let within t ~f = State.within_scope state t ~f
+    let current (state : State.t) () = state.current_scope
+    let within state t ~f = State.within_scope state t ~f
   end
 
   include Node
   module Node_update = On_update_handler.Node_update
 
+  let state t = t.state
   let pack t = Packed.T t
-  let const a = State.const state a
+  let const state a = State.const state a
   let return = const
-  let observe ?should_finalize t = State.create_observer state t ?should_finalize
-  let map t1 ~f = State.map state t1 ~f
-  let map2 t1 t2 ~f = State.map2 state t1 t2 ~f
-  let map3 t1 t2 t3 ~f = State.map3 state t1 t2 t3 ~f
-  let map4 t1 t2 t3 t4 ~f = State.map4 state t1 t2 t3 t4 ~f
-  let map5 t1 t2 t3 t4 t5 ~f = State.map5 state t1 t2 t3 t4 t5 ~f
-  let map6 t1 t2 t3 t4 t5 t6 ~f = State.map6 state t1 t2 t3 t4 t5 t6 ~f
-  let map7 t1 t2 t3 t4 t5 t6 t7 ~f = State.map7 state t1 t2 t3 t4 t5 t6 t7 ~f
-  let map8 t1 t2 t3 t4 t5 t6 t7 t8 ~f = State.map8 state t1 t2 t3 t4 t5 t6 t7 t8 ~f
-  let map9 t1 t2 t3 t4 t5 t6 t7 t8 t9 ~f = State.map9 state t1 t2 t3 t4 t5 t6 t7 t8 t9 ~f
-
-  let map10 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 ~f =
-    State.map10 state t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 ~f
-  ;;
-
-  let map11 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 ~f =
-    State.map11 state t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 ~f
-  ;;
-
-  let map12 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 ~f =
-    State.map12 state t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 ~f
-  ;;
-
-  let map13 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 ~f =
-    State.map13 state t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 ~f
-  ;;
-
-  let map14 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 t14 ~f =
-    State.map14 state t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 t14 ~f
-  ;;
-
-  let map15 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 t14 t15 ~f =
-    State.map15 state t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 t12 t13 t14 t15 ~f
-  ;;
-
-  let bind t ~f = State.bind state t ~f
-  let bind2 t1 t2 ~f = State.bind2 state t1 t2 ~f
-  let bind3 t1 t2 t3 ~f = State.bind3 state t1 t2 t3 ~f
-  let bind4 t1 t2 t3 t4 ~f = State.bind4 state t1 t2 t3 t4 ~f
+  let observe = State.create_observer
+  let map = State.map
+  let map2 = State.map2
+  let map3 = State.map3
+  let map4 = State.map4
+  let map5 = State.map5
+  let map6 = State.map6
+  let map7 = State.map7
+  let map8 = State.map8
+  let map9 = State.map9
+  let map10 = State.map10
+  let map11 = State.map11
+  let map12 = State.map12
+  let map13 = State.map13
+  let map14 = State.map14
+  let map15 = State.map15
+  let bind = State.bind
+  let bind2 = State.bind2
+  let bind3 = State.bind3
+  let bind4 = State.bind4
 
   module Infix = struct
     let ( >>| ) t f = map t ~f
@@ -81,59 +76,37 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
 
   include Infix
 
-  let join t = State.join state t
-  let if_ test ~then_ ~else_ = State.if_ state test ~then_ ~else_
-  let lazy_from_fun f = State.lazy_from_fun state ~f
+  let join = State.join
+  let if_ = State.if_
+  let lazy_from_fun state f = State.lazy_from_fun state ~f
   let default_hash_table_initial_size = State.default_hash_table_initial_size
+  let memoize_fun_by_key = State.memoize_fun_by_key
 
-  let memoize_fun_by_key ?initial_size hashable project_key f =
-    State.memoize_fun_by_key ?initial_size state hashable project_key f
+  let memoize_fun ?initial_size state hashable f =
+    memoize_fun_by_key state ?initial_size hashable Fn.id f
   ;;
 
-  let memoize_fun ?initial_size hashable f =
-    memoize_fun_by_key ?initial_size hashable Fn.id f
-  ;;
-
-  let array_fold ts ~init ~f = State.array_fold state ts ~init ~f
-  let reduce_balanced ts ~f ~reduce = Reduce_balanced.create state ts ~f ~reduce
+  let array_fold state ts ~init ~f = State.array_fold state ts ~init ~f
+  let reduce_balanced state ts ~f ~reduce = Reduce_balanced.create state ts ~f ~reduce
 
   module Unordered_array_fold_update = State.Unordered_array_fold_update
 
-  let unordered_array_fold ?full_compute_every_n_changes ts ~init ~f ~update =
-    State.unordered_array_fold state ts ~init ~f ~update ?full_compute_every_n_changes
-  ;;
-
-  let opt_unordered_array_fold ?full_compute_every_n_changes ts ~init ~f ~f_inverse =
-    State.opt_unordered_array_fold
-      state
-      ts
-      ~init
-      ~f
-      ~f_inverse
-      ?full_compute_every_n_changes
-  ;;
-
-  let all ts = State.all state ts
-  let exists ts = State.exists state ts
-  let for_all ts = State.for_all state ts
+  let unordered_array_fold = State.unordered_array_fold
+  let opt_unordered_array_fold = State.opt_unordered_array_fold
+  let all = State.all
+  let exists = State.exists
+  let for_all = State.for_all
   let both t1 t2 = map2 t1 t2 ~f:Tuple2.create
-
-  let sum ?full_compute_every_n_changes ts ~zero ~add ~sub =
-    State.sum state ?full_compute_every_n_changes ts ~zero ~add ~sub
-  ;;
-
-  let opt_sum ?full_compute_every_n_changes ts ~zero ~add ~sub =
-    State.opt_sum state ?full_compute_every_n_changes ts ~zero ~add ~sub
-  ;;
-
-  let sum_int ts = State.sum_int state ts
-  let sum_float ts = State.sum_float state ts
+  let sum = State.sum
+  let opt_sum = State.opt_sum
+  let sum_int = State.sum_int
+  let sum_float = State.sum_float
 
   module Var = struct
     include Var
 
-    let create ?use_current_scope value = State.create_var ?use_current_scope state value
-    let set t value = State.set_var state t value
+    let create = State.create_var
+    let set = State.set_var
     let value t = t.value
     let watch t = t.watch
 
@@ -154,7 +127,7 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
     end
 
     let on_update_exn t ~(f : _ Update.t -> unit) =
-      State.observer_on_update_exn state t ~f:(function
+      State.observer_on_update_exn t ~f:(function
         | Necessary a -> f (Initialized a)
         | Changed (a1, a2) -> f (Changed (a1, a2))
         | Invalidated -> f Invalidated
@@ -166,9 +139,9 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
             [%sexp_of: _ t])
     ;;
 
-    let disallow_future_use t = State.disallow_future_use state !t
-    let value t = State.observer_value state t
-    let value_exn t = State.observer_value_exn state t
+    let disallow_future_use t = State.disallow_future_use !t
+    let value = State.observer_value
+    let value_exn = State.observer_value_exn
 
     (* We override [sexp_of_t] to just show the value, rather than the internal
        representation. *)
@@ -199,7 +172,7 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
         ()
     ;;
 
-    let create ?(timing_wheel_config = default_timing_wheel_config) ~start () =
+    let create state ?(timing_wheel_config = default_timing_wheel_config) ~start () =
       (* Make sure [start] is rounded to the nearest microsecond.  Otherwise, if you
          feed [Clock.now ()] to a time function, it can be rounded down to a time in
          the past, causing errors. *)
@@ -214,33 +187,32 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
     let timing_wheel_length = State.timing_wheel_length
     let now = State.now
     let watch_now t = t.now.watch
-    let at t time = State.at state t time
-    let after t span = State.after state t span
-    let at_intervals t span = State.at_intervals state t span
-    let advance_clock t ~to_ = State.advance_clock state t ~to_
+    let at = State.at
+    let after = State.after
+    let at_intervals = State.at_intervals
+    let advance_clock = State.advance_clock
     let advance_clock_by t span = advance_clock t ~to_:(Time_ns.add (now t) span)
-
-    let incremental_step_function t step_function =
-      State.incremental_step_function state t step_function
-    ;;
+    let incremental_step_function = State.incremental_step_function
 
     let step_function t ~init steps =
-      incremental_step_function t (const (Step_function.create_exn ~init ~steps))
+      incremental_step_function
+        t
+        (const (incr_state t) (Step_function.create_exn ~init ~steps))
     ;;
 
-    let snapshot t incr ~at ~before = State.snapshot state t incr ~at ~before
+    let snapshot = State.snapshot
   end
 
-  let freeze ?(when_ = fun _ -> true) t = State.freeze state t ~only_freeze_when:when_
-  let depend_on t ~depend_on = State.depend_on state t ~depend_on
-  let necessary_if_alive input = State.necessary_if_alive state input
+  let freeze ?(when_ = fun _ -> true) t = State.freeze t ~only_freeze_when:when_
+  let depend_on t ~depend_on = State.depend_on t ~depend_on
+  let necessary_if_alive = State.necessary_if_alive
 
   module Update = On_update_handler.Node_update
 
-  let on_update t ~f = State.node_on_update state t ~f
-  let stabilize () = State.stabilize state
-  let am_stabilizing () = State.am_stabilizing state
-  let save_dot file = State.save_dot state file
+  let on_update = State.node_on_update
+  let stabilize state = State.stabilize state
+  let am_stabilizing state = State.am_stabilizing state
+  let save_dot = State.save_dot
 
   (* We override [sexp_of_t] to show just the value, rather than the internal
      representation.  We only show the value if it is necessary and valid. *)
@@ -254,26 +226,7 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
     else unsafe_value t |> [%sexp_of: a]
   ;;
 
-  module Expert = struct
-    module Dependency = struct
-      include Expert1.Dependency
-
-      let value t = value State.t t
-    end
-
-    module Node = struct
-      include Expert1.Node
-
-      let create ?on_observability_change f =
-        Expert1.Node.create State.t ?on_observability_change f
-      ;;
-
-      let make_stale t = Expert1.Node.make_stale state t
-      let invalidate t = Expert1.Node.invalidate State.t t
-      let add_dependency t edge = Expert1.Node.add_dependency State.t t edge
-      let remove_dependency t edge = Expert1.Node.remove_dependency State.t t edge
-    end
-  end
+  module Expert = Expert1
 
   module Let_syntax = struct
     let return = return
@@ -291,16 +244,222 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
     end
   end
 
+  let weak_memoize_fun_by_key = State.weak_memoize_fun_by_key
+
+  let weak_memoize_fun ?initial_size state hashable f =
+    weak_memoize_fun_by_key ?initial_size state hashable Fn.id f
+  ;;
+end
+
+module Make_with_config (Incremental_config : Incremental_config) () = struct
+  type state_witness [@@deriving sexp_of]
+
+  include Generic
+
+  module State = struct
+    include State
+
+    let t = create_internal (module Incremental_config) ~max_height_allowed:128
+  end
+
+  module Clock = struct
+    include Clock
+
+    let create ?timing_wheel_config ~start () =
+      create ?timing_wheel_config State.t ~start ()
+    ;;
+  end
+
+  module Expert = struct
+    include Expert
+
+    module Node = struct
+      include Node
+
+      let create ?on_observability_change f = create State.t ?on_observability_change f
+    end
+  end
+
+  module Let_syntax = struct
+    include Let_syntax
+
+    let return a = return State.t a
+  end
+
+  module Scope = struct
+    include Scope
+
+    let current () = current State.t ()
+    let within t ~f = within State.t t ~f
+  end
+
+  module Var = struct
+    include Var
+
+    let create ?use_current_scope value = create ?use_current_scope State.t value
+  end
+
+  let const a = const State.t a
+  let return a = return State.t a
+  let all ts = all State.t ts
+  let exists ts = exists State.t ts
+  let for_all ts = for_all State.t ts
+  let lazy_from_fun state f = State.lazy_from_fun state ~f
+
+  let memoize_fun_by_key ?initial_size hashable project_key f =
+    memoize_fun_by_key ?initial_size State.t hashable project_key f
+  ;;
+
+  let memoize_fun ?initial_size hashable f = memoize_fun ?initial_size State.t hashable f
+  let array_fold ts ~init ~f = array_fold State.t ts ~init ~f
+  let reduce_balanced ts ~f ~reduce = reduce_balanced State.t ts ~f ~reduce
+
+  let unordered_array_fold ?full_compute_every_n_changes ts ~init ~f ~update =
+    unordered_array_fold State.t ts ~init ~f ~update ?full_compute_every_n_changes
+  ;;
+
+  let opt_unordered_array_fold ?full_compute_every_n_changes ts ~init ~f ~f_inverse =
+    opt_unordered_array_fold ?full_compute_every_n_changes State.t ts ~init ~f ~f_inverse
+  ;;
+
+  let sum ?full_compute_every_n_changes ts ~zero ~add ~sub =
+    sum ?full_compute_every_n_changes State.t ts ~zero ~add ~sub
+  ;;
+
+  let opt_sum ?full_compute_every_n_changes ts ~zero ~add ~sub =
+    opt_sum ?full_compute_every_n_changes State.t ts ~zero ~add ~sub
+  ;;
+
+  let sum_int ts = sum_int State.t ts
+  let sum_float ts = sum_float State.t ts
+  let stabilize () = stabilize State.t
+  let am_stabilizing () = am_stabilizing State.t
+  let save_dot file = save_dot State.t file
+  let lazy_from_fun f = lazy_from_fun State.t f
+
   let weak_memoize_fun_by_key ?initial_size hashable project_key f =
-    State.weak_memoize_fun_by_key ?initial_size state hashable project_key f
+    weak_memoize_fun_by_key ?initial_size State.t hashable project_key f
   ;;
 
   let weak_memoize_fun ?initial_size hashable f =
-    weak_memoize_fun_by_key ?initial_size hashable Fn.id f
+    weak_memoize_fun ?initial_size State.t hashable f
   ;;
 end
 
 module Make () = Make_with_config (Config.Default ()) ()
+include Generic
+
+module Add_witness0 (M : sig
+    type t [@@deriving sexp_of]
+
+    include Invariant.S with type t := t
+  end) : sig
+  type 'w t = M.t [@@deriving sexp_of]
+
+  include Invariant.S1 with type 'a t := 'a t
+end = struct
+  type 'w t = M.t
+
+  let invariant _ t = M.invariant t
+  let sexp_of_t _ t = M.sexp_of_t t
+end
+
+module Add_witness1 (M : sig
+    type 'a t [@@deriving sexp_of]
+
+    include Invariant.S1 with type 'a t := 'a t
+  end) : sig
+  type ('a, 'w) t = 'a M.t [@@deriving sexp_of]
+
+  include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
+end = struct
+  type ('a, 'w) t = 'a M.t
+
+  let invariant invariant_a _ t = M.invariant invariant_a t
+  let sexp_of_t sexp_of_a _ t = M.sexp_of_t sexp_of_a t
+end
+
+module Clock = struct
+  include Clock
+  include Add_witness0 (Clock)
+end
+
+module Expert = struct
+  include Expert
+
+  module Dependency = struct
+    include Dependency
+
+    include Add_witness1 (struct
+        include Dependency
+
+        let invariant _ _ = ()
+      end)
+  end
+
+  module Node = struct
+    include Node
+
+    include Add_witness1 (struct
+        include Node
+
+        let invariant _ _ = ()
+      end)
+  end
+end
+
+module Node = struct
+  include Node
+  include Add_witness1 (Node)
+end
+
+type ('a, 'w) t = ('a, 'w) Node.t [@@deriving sexp_of]
+type ('a, 'w) incremental = ('a, 'w) t
+
+let invariant = Node.invariant
+
+module Observer = struct
+  include Observer
+  include Add_witness1 (Observer)
+end
+
+module Scope = struct
+  include Scope
+  include Add_witness0 (Scope)
+end
+
+module State = struct
+  include State
+  include Add_witness0 (State)
+end
+
+module Var = struct
+  include Var
+  include Add_witness1 (Var)
+end
+
+module type S = sig
+  type state_witness [@@deriving sexp_of]
+
+  include
+    S_gen
+    with type 'a t = ('a, state_witness) incremental
+    with type Before_or_after.t = Before_or_after.t
+    with type Clock.t = state_witness Clock.t
+    with type 'a Cutoff.t = 'a Cutoff.t
+    with type 'a Expert.Dependency.t = ('a, state_witness) Expert.Dependency.t
+    with type 'a Expert.Node.t = ('a, state_witness) Expert.Node.t
+    with type 'a Observer.t = ('a, state_witness) Observer.t
+    with type 'a Observer.Update.t = 'a Observer.Update.t
+    with type Packed.t = Packed.t
+    with type Scope.t = state_witness Scope.t
+    with type State.t = state_witness State.t
+    with type State.Stats.t = State.Stats.t
+    with type ('a, 'b) Unordered_array_fold_update.t =
+           ('a, 'b) Unordered_array_fold_update.t
+    with type 'a Update.t = 'a Update.t
+    with type 'a Var.t = ('a, state_witness) Var.t
+end
 
 module Private = struct
   let debug = debug

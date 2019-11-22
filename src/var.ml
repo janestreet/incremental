@@ -33,9 +33,11 @@ let invariant invariant_a t =
            | _ -> assert false)))
 ;;
 
+let incr_state t = t.watch.state
+
 module Packed = struct
   type 'a var = 'a t [@@deriving sexp_of]
-  type t = T : _ var -> t [@@unboxed] [@@deriving sexp_of]
+  type t = Types.Var.Packed.t = T : _ var -> t [@@unboxed] [@@deriving sexp_of]
 end
 
 let latest_value t =

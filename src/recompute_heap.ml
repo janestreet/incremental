@@ -16,7 +16,7 @@ module Nodes_by_height = struct
   ;;
 end
 
-type t =
+type t = Types.Recompute_heap.t =
   { mutable length : int
   ; mutable height_lower_bound : int
   ; mutable nodes_by_height : Nodes_by_height.t

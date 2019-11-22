@@ -17,6 +17,7 @@ val use_is_allowed : _ t -> bool
 val value_exn : 'a t -> 'a
 val on_update_exn : 'a t -> 'a On_update_handler.t -> unit
 val unlink : _ t -> unit
+val incr_state : _ t -> Types.State.t
 
 module Packed : sig
   type t = Types.Internal_observer.Packed.t = T : _ Types.Internal_observer.t -> t

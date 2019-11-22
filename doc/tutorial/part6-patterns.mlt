@@ -190,7 +190,8 @@ Error: This expression has type
          Host.t Core.Map.M(Hostname).t =
            (Hostname.t, Host.t, Hostname.comparator_witness) Map.t
        but an expression was expected of type
-         (Hostname.t, Host.t, 'a) Map.t Incr.t
+         (Hostname.t, Host.t, 'a) Map.t Incr.t =
+           ((Hostname.t, Host.t, 'a) Map.t, Incr.state_witness) Incremental.t
 |}]
 
 [%%org {|

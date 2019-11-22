@@ -37,7 +37,7 @@ module Nodes_by_height = struct
   ;;
 end
 
-type t =
+type t = Types.Adjust_heights_heap.t =
   { mutable length : int
   ; mutable height_lower_bound : int
   ; mutable max_height_seen : int

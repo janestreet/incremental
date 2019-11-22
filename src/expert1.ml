@@ -6,7 +6,8 @@ module Dependency = struct
 
   let create ?(on_change = ignore) child : _ t = { child; on_change; index = Uopt.none }
 
-  let value state (t : _ t) =
+  let value (t : _ t) =
+    let state = t.child.state in
     if debug
     then
       State.Expert.assert_currently_running_node_is_parent

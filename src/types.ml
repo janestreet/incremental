@@ -11,7 +11,17 @@
 open Core_kernel
 open Import
 
-module rec Alarm : sig
+module rec Adjust_heights_heap : sig
+  type t =
+    { mutable length : int
+    ; mutable height_lower_bound : int
+    ; mutable max_height_seen : int
+    ; mutable nodes_by_height : Node.Packed.t Uopt.t array
+    }
+end =
+  Adjust_heights_heap
+
+and Alarm : sig
   type t = Alarm_value.t Timing_wheel.Alarm.t
 end =
   Alarm
@@ -408,6 +418,7 @@ end =
 and Node : sig
   type 'a t =
     { id : Node_id.t
+    ; state : State.t
     ; mutable recomputed_at : Stabilization_num.t
     ; mutable value_opt : 'a Uopt.t
     ; mutable kind : 'a Kind.t
@@ -507,6 +518,33 @@ and Observer : sig
 end =
   Observer
 
+and Only_in_debug : sig
+  type t =
+    { mutable currently_running_node : Node.Packed.t option
+    ; mutable expert_nodes_created_by_current_node : Node.Packed.t list
+    }
+end =
+  Only_in_debug
+
+and Packed_weak_hashtbl : sig
+  type t = T : (_, _) Weak_hashtbl.t -> t
+end =
+  Packed_weak_hashtbl
+
+and Recompute_heap : sig
+  type t =
+    { mutable length : int
+    ; mutable height_lower_bound : int
+    ; mutable nodes_by_height : Node.Packed.t Uopt.t array
+    }
+end =
+  Recompute_heap
+
+and Run_on_update_handlers : sig
+  type t = T : 'a Node.t * 'a On_update_handler.Node_update.t -> t
+end =
+  Run_on_update_handlers
+
 and Scope : sig
   type t =
     | Top
@@ -533,6 +571,48 @@ and Snapshot : sig
     }
 end =
   Snapshot
+
+and State : sig
+  type t =
+    { mutable status : Status.t
+    ; bind_lhs_change_should_invalidate_rhs : bool
+    ; mutable stabilization_num : Stabilization_num.t
+    ; mutable current_scope : Scope.t
+    ; recompute_heap : Recompute_heap.t
+    ; adjust_heights_heap : Adjust_heights_heap.t
+    ; propagate_invalidity : Node.Packed.t Stack.t
+    ; mutable num_active_observers : int
+    ; mutable all_observers : Internal_observer.Packed.t Uopt.t
+    ; finalized_observers : Internal_observer.Packed.t Thread_safe_queue.t
+    ; new_observers : Internal_observer.Packed.t Stack.t
+    ; disallowed_observers : Internal_observer.Packed.t Stack.t
+    ; set_during_stabilization : Var.Packed.t Stack.t
+    ; handle_after_stabilization : Node.Packed.t Stack.t
+    ; run_on_update_handlers : Run_on_update_handlers.t Stack.t
+    ; mutable only_in_debug : Only_in_debug.t
+    ; weak_hashtbls : Packed_weak_hashtbl.t Thread_safe_queue.t
+    ; mutable keep_node_creation_backtrace : bool
+    ; mutable num_nodes_became_necessary : int
+    ; mutable num_nodes_became_unnecessary : int
+    ; mutable num_nodes_changed : int
+    ; mutable num_nodes_created : int
+    ; mutable num_nodes_invalidated : int
+    ; mutable num_nodes_recomputed : int
+    ; mutable num_nodes_recomputed_directly_because_one_child : int
+    ; mutable num_nodes_recomputed_directly_because_min_height : int
+    ; mutable num_var_sets : int
+    }
+end =
+  State
+
+and Status : sig
+  type t =
+    | Stabilizing
+    | Running_on_update_handlers
+    | Not_stabilizing
+    | Stabilize_previously_raised of Raised_exn.t
+end =
+  Status
 
 and Step_function_node : sig
   type 'a t =
@@ -569,5 +649,11 @@ and Var : sig
     ; mutable set_at : Stabilization_num.t
     ; watch : 'a Node.t
     }
+
+  type 'a var := 'a t
+
+  module Packed : sig
+    type t = T : _ var -> t [@@unboxed]
+  end
 end =
   Var

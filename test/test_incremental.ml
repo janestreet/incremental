@@ -93,6 +93,7 @@ struct
 
       include (
       struct
+        type nonrec state_witness = state_witness [@@deriving sexp_of]
         type nonrec 'a t = 'a t
 
         module Infix = Infix
@@ -101,7 +102,6 @@ struct
 
         let invariant = invariant
         let stabilize = stabilize
-        let keep_node_creation_backtrace = keep_node_creation_backtrace
 
         (* used in lots of tests *)
         let observe = observe
@@ -210,6 +210,8 @@ struct
             [%test_result: int] (num_active_observers t) ~expect:n
           ;;
 
+          let keep_node_creation_backtrace = keep_node_creation_backtrace
+          let set_keep_node_creation_backtrace = set_keep_node_creation_backtrace
           let num_nodes_became_necessary = num_nodes_became_necessary
           let num_nodes_became_unnecessary = num_nodes_became_unnecessary
           let num_nodes_changed = num_nodes_changed

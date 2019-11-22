@@ -7,7 +7,7 @@ module Dependency : sig
   type 'a t [@@deriving sexp_of]
 
   val create : ?on_change:('a -> unit) -> 'a Node.t -> 'a t
-  val value : State.t -> 'a t -> 'a
+  val value : 'a t -> 'a
 end
 
 module Node : sig
@@ -20,8 +20,8 @@ module Node : sig
     -> 'a t
 
   val watch : 'a t -> 'a Node.t
-  val make_stale : State.t -> _ t -> unit
-  val invalidate : State.t -> _ t -> unit
-  val add_dependency : State.t -> _ t -> _ Dependency.t -> unit
-  val remove_dependency : State.t -> _ t -> _ Dependency.t -> unit
+  val make_stale : _ t -> unit
+  val invalidate : _ t -> unit
+  val add_dependency : _ t -> _ Dependency.t -> unit
+  val remove_dependency : _ t -> _ Dependency.t -> unit
 end
