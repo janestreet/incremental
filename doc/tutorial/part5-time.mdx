@@ -1,0 +1,174 @@
+---
+title: Incremental tutorial, Part 5; Time
+uuid: d69f6292-1d6c-3769-6882-7e4b6d2f41a5
+---
+
+The goal of Incremental is to let you write code that looks a lot like
+a naive, all-at-once implementation, but that behaves more like a
+hand-tuned incremental version.  But this can be a tricky thing to do,
+particularly for computations that depend on the current time in a
+serious way.
+
+Let's look at a concrete example: computing staleness.  We'll assume
+we have a collection of services that are configured to start and stop
+at particular times, and we want to compute the set of servers that
+should be down, but are in fact still running.
+
+First, let's start by modeling out some types for this example.
+
+```ocaml non-deterministic
+# open Core
+# module Service_id : Identifiable = String
+module Service_id : Core.Identifiable
+# module Service_status = struct
+    type t =
+      { id : Service_id.t
+      ; start_time: Time_ns.t
+      ; stop_time: Time_ns.t option
+      ; is_running: bool
+      } [@@deriving fields]
+  end
+```
+
+Now, let's try to write a function that computes the set of services
+that should have stopped, but that appear to be running nonetheless.
+Here's an all-at-once implementation:
+
+```ocaml
+# let should_have_stopped services ~grace_period ~now =
+    Map.filter services ~f:(fun (si:Service_status.t) ->
+      match si.stop_time with
+      | None -> false
+      | Some stop_time ->
+        let threshold = Time_ns.add stop_time grace_period in
+        si.is_running && Time_ns.(>) now threshold)
+val should_have_stopped :
+  ('a, Service_status.t, 'b) Map.t ->
+  grace_period:Time_ns.Span.t ->
+  now:Time_ns.t -> ('a, Service_status.t, 'b) Map.t = <fun>
+```
+
+Now, let's try to create an incremental version of this, where the map
+of service infos and the now are both passed in as incrementals.
+First, let's set up incremental.
+
+```ocaml non-deterministic
+# module Incr = Incremental.Make ()
+# module Incr_map = Incr_map.Make(Incr)
+# open Incr.Let_syntax
+```
+
+And now, we can define the incremental version.
+
+```ocaml
+# let should_have_stopped services ~grace_period ~now =
+    Incr_map.filter_mapi' services ~f:(fun ~key:_ ~data:(si:Service_status.t Incr.t) ->
+      let%map si = si and now = now in
+      match si.stop_time with
+      | None -> None
+      | Some stop_time ->
+        let threshold = Time_ns.add stop_time grace_period in
+        if si.is_running && Time_ns.(>) now threshold then Some si else None)
+val should_have_stopped :
+  ('a, Service_status.t, 'b) Map.t Incr.t ->
+  grace_period:Time_ns.Span.t ->
+  now:Time_ns.t Incr.t -> ('a, Service_status.t, 'b) Map.t Incr.t = <fun>
+```
+
+This looks incremental, but it isn't, really.  True, when the map of
+status changes, you only have to do work for the specific service
+statuses that have been updated.  But when the time changes, every
+incremental in the map refires.  And time changes a lot!
+
+`Incremental`'s built-in support for time-based computations can help.
+To use it, we first need to get our hands on an Incremental clock,
+which is an imperative data structure that you can feed the current
+time to.
+
+```ocaml
+# let clock =
+    Incr.Clock.create ()
+      ~start:(Time_ns.of_string "2019-01-01 00:00:00")
+val clock : Incr.Clock.t = <abstr>
+```
+
+You can ask a clock for an incremental that gives you the current
+time:
+
+```ocaml
+# let now = Incr.Clock.watch_now clock
+val now : Time_ns.t Incr.t = <abstr>
+```
+
+But that's hard to use efficiently, since `now` is always changing.  A
+better thing to use is `Incr.Clock.at`, which creates an incremental
+whose value flips from `Before` to `After` when a particular threshold
+time is hit.  Thus, you can write:
+
+```ocaml
+# let before_or_after =
+    Incr.observe
+      (Incr.Clock.at clock (Time_ns.of_string "2019-01-01 11:00:00"))
+val before_or_after : Incr.Before_or_after.t Incr.Observer.t = <abstr>
+```
+
+As you can see below, the value of this incremental starts out as
+`Before`:
+
+```ocaml
+# let show () =
+    Incr.stabilize ();
+    print_s [%sexp (Incr.Observer.value_exn before_or_after : Incr.Before_or_after.t)];;
+val show : unit -> unit = <fun>
+# let () = show ()
+Before
+```
+
+But if we advance the time, we'll see it change to `After`.
+
+```ocaml
+# let () =
+    Incr.Clock.advance_clock clock
+      ~to_:(Time_ns.of_string "2019-01-01 11:00:01");
+    show ()
+After
+```
+
+There's an efficient implementation of this under the covers.  Instead
+of each `Incr.Clock.at` having to be updated every time the clock is
+advanced, we store the time at which the `Incr.Clock.at` needs to
+change in a `Timing_wheel.t`, which is an efficient, time-sorted
+queue.  That way, updating each incremental returned by
+`Incr.Clock.at` is really inexpensive.
+
+Let's see how we can use `Incr.Clock.at` to make a more efficient
+implementation of `should_have_stopped`.
+
+```ocaml
+# let should_have_stopped clock services ~grace_period =
+    Incr_map.filter_mapi' services ~f:(fun ~key:_ ~data:(si:Service_status.t Incr.t) ->
+      let%bind si = si in
+      match si.is_running, si.stop_time with
+      | false, _ | _, None -> return None
+      | _, Some stop_time ->
+        match%map Incr.Clock.at clock (Time_ns.add stop_time grace_period) with
+        | Before -> None
+        | After -> Some si)
+val should_have_stopped :
+  Incr.Clock.t ->
+  ('a, Service_status.t, 'b) Map.t Incr.t ->
+  grace_period:Time_ns.Span.t -> ('a, Service_status.t, 'b) Map.t Incr.t =
+  <fun>
+```
+
+Note the use of `bind` and `return` here. Despite our earlier
+exhortations to be careful about using these functions, these uses are
+reasonable because we're only doing a small amount of work on the
+right-hand side of the bind.
+
+And the overall computation has good incremental performance relative
+to time changes.  In particular, the `Incr.Clock.at` nodes don't
+update every time the clock advances, but only when the clock crosses
+the appropriate time threshold.
+
+[Part 6: Patterns](./part6-patterns.mdx)

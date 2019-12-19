@@ -1,5 +1,7 @@
-[%%org {|
-#+TITLE: An Introduction to Incremental
+---
+title: An Introduction to Incremental
+uuid: 152c4567-d154-34af-e0cc-7f2025685152
+---
 
 Incremental is a tool for optimizing the /incremental performance/ of
 your code. In other words, incremental makes it easier to build
@@ -19,27 +21,24 @@ the most out of it.
 
 The tutorial is broken up into parts:
 
-- [[./part1-preliminaries.mlt][Preliminaries]] covers what Incremental
+- [Preliminaries](./part1-preliminaries.mdx) covers what Incremental
   is for, and walks through the basics.
-- [[./part2-dynamic.mlt][Dynamic computations with bind]] shows you
-  how to use ~bind~ to build computations whose structure changes
+- [Dynamic computations with bind](./part2-dynamic.mdx) shows you
+  how to use `bind` to build computations whose structure changes
   dynamically over time.
-- [[./part3-map.mlt][Incr\_map]] shows you how to use the ~Incr_map~
-  libraries to build efficient computations on ~Map.t~'s.
-- [[./part4-pitfalls.mlt][Pitfalls]] highlights some of the mistakes
+- [Incr_map](./part3-map.mdx) shows you how to use the `Incr_map`
+  libraries to build efficient computations on `Map.t`'s.
+- [Pitfalls](./part4-pitfalls.mdx) highlights some of the mistakes
   people typically make when first using Incremental.
-- [[./part5-time.mlt][Time]] demonstrates Incremental's support for
+- [Time](./part5-time.mdx) demonstrates Incremental's support for
   building computations over time.
-- [[./part6-patterns.mlt][Patterns]] covers ~ppx_pattern_bind~,
+- [Patterns](./part6-patterns.mdx) covers `ppx_pattern_bind`,
   which provides specialized support for doing incremental
   computations involving pattern matches.
-- [[./part7-optimization.mlt][Performance and optimization]] has some
+- [Performance and optimization](./part7-optimization.mdx) has some
   notes on how to think about performance of your incremental
   programs.
-- [[./part8-sharing.mlt][Sharing]] shows you how to optimize your
+- [Sharing](./part8-sharing.mdx) shows you how to optimize your
   incremental programs further by sharing sub-computations among
   different parts of your computation.
-
-|}]
-
 

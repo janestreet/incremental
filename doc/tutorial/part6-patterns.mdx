@@ -1,0 +1,280 @@
+---
+title: Incremental tutorial, Part 6; Patterns
+uuid: 0601aebb-4291-38ce-0344-66c845d17812
+---
+
+As we've already seen, using Incremental with pattern matching can
+have some unexpected consequences.  For example, if you use record
+patterns to deconstruct a given value, you might end up with more
+dependencies than you expected.  Here's an example demonstrating this
+from [part 1](./part1-preliminaries.mdx).
+
+```ocaml non-deterministic
+open Core
+module Incr = Incremental.Make ()
+module Incr_map = Incr_map.Make (Incr);;
+open Incr.Let_syntax;;
+
+type z =
+  { a: int list
+  ; b: (int * int)
+  }
+[@@deriving fields]
+```
+
+```ocaml
+# let sumproduct z =
+    let a_prod =
+      let%map { a; _ } = z in
+      List.fold ~init:1 ~f:( * ) a
+    in
+    let b_prod =
+      let%map {b = (b1,b2); _ } = z in
+      b1 * b2
+    in
+    let%map a_prod = a_prod and b_prod = b_prod in
+    a_prod + b_prod
+val sumproduct : z Incr.t -> int Incr.t = <fun>
+```
+
+In the above code, it looks like the computation of `a_prod` and
+`b_prod` are independent, and so modifying just `a` should only cause
+`a_prod` to be recomputed, and modifying just `b` should only cause
+`b_prod` to be recomputed.
+
+But in reality, both computations depend on `z`, which means that
+whenever `z` changes, they'll both be rerun.
+
+We can make this better by introducing an intermediate incremental
+that includes just the value that `a_prod` requires (i.e., `a`), and
+having `a_prod` depend just on that (and similarly for `b_prod` and
+`b`).  Here's what that code looks like:
+
+```ocaml
+# let sumproduct z =
+    let a_prod =
+      let%map a = z >>| a in
+      List.fold ~init:1 ~f:( * ) a
+    in
+    let b_prod =
+      let%map (b1,b2) = z >>| b in
+      b1 * b2
+    in
+    let%map a_prod = a_prod and b_prod = b_prod in
+    a_prod + b_prod
+val sumproduct : z Incr.t -> int Incr.t = <fun>
+```
+
+This is a common enough idiom that it's useful to have some direct
+support for it in the case of pattern matching.  We have that support
+in the form of a syntax extension called `ppx_pattern_bind`.  Using
+`ppx_pattern_bind`, we can write:
+
+```ocaml
+# let sumproduct z =
+    let a_prod =
+      let%pattern_map { a; _ } = z in
+      List.fold ~init:1 ~f:( * ) a
+    in
+    let b_prod =
+      let%pattern_map {b = (b1,b2); _ } = z in
+      b1 * b2
+    in
+    let%map a_prod = a_prod and b_prod = b_prod in
+    a_prod + b_prod
+val sumproduct : z Incr.t -> int Incr.t = <fun>
+```
+
+Now, the dependencies are as they should be, with `a_prod` only firing
+when `a` changes, and `b_prod` only firing when `b1` or `b2` changes.
+That's because `%pattern_map` automatically constructs the necessary
+projection function to extract the variables in question from the
+pattern, and then adds the appropriate intermediate incrementals based
+on those projection functions.
+
+This is pretty convenient when it comes to product types, like tuples
+and records; but it really shines when you start dealing with sum
+types, e.g., variants.
+
+Consider the following somewhat contrived example.  Imagine that we
+have a text-based UI that can be in one of two different states;
+either it's showing a set of hosts, or its showing a collection of
+services, and in either case, we want to generate a textual
+representation of the subset of those services that are in a failed
+state.
+
+First, let's put together some types.
+
+```ocaml
+# module Status = struct
+    type t = | Healthy
+             | Failed of { as_of : Time_ns.t }
+  end
+module Status : sig type t = Healthy | Failed of { as_of : Time_ns.t; } end
+# module Hostname : Identifiable = String
+module Hostname : Core.Identifiable
+# module Host = struct
+    type t = { addr: Unix.Inet_addr.t
+             ; status : Status.t
+             }
+  end
+module Host : sig type t = { addr : Unix.inet_addr; status : Status.t; } end
+# module Service = struct
+    module Id : Identifiable = String
+    type t = { host : Hostname.t
+             ; status : Status.t
+             }
+  end
+module Service :
+  sig
+    module Id : Core.Identifiable
+    type t = { host : Hostname.t; status : Status.t; }
+  end
+# module Model = struct
+    type t = | Host_view of Host.t Map.M(Hostname).t
+             | Service_view of Service.t Map.M(Service.Id).t
+  end
+module Model :
+  sig
+    type t =
+        Host_view of Host.t Core.Map.M(Hostname).t
+      | Service_view of Service.t Core.Map.M(Service.Id).t
+  end
+```
+
+Now, let's write out some plausible looking incremental code for
+generating the view of failed hosts or services.  First, let's write
+incremental view functions that handle the host view and service view
+separately.
+
+```ocaml
+# let view_failed (type a) (module M : Stringable with type t = a) get_status map =
+    let failed =
+      Incr_map.filter_mapi map ~f:(fun ~key:_ ~data ->
+        match (get_status data : Status.t) with
+        | Healthy -> None
+        | Failed _ -> Some data)
+    in
+    let%map failed = failed in
+    Map.keys failed
+    |> List.map ~f:M.to_string
+    |> String.concat ~sep:"\n"
+val view_failed :
+  (module Core.Stringable with type t = 'a) ->
+  ('b -> Status.t) -> ('a, 'b, 'c) Map.t Incr.t -> string Incr.t = <fun>
+# let view_failed_hosts hosts =
+    view_failed (module Hostname) (fun (host:Host.t) -> host.status) hosts
+val view_failed_hosts :
+  (Hostname.t, Host.t, 'a) Map.t Incr.t -> string Incr.t = <fun>
+# let view_failed_services services =
+    view_failed (module Service.Id) (fun (service:Service.t) -> service.status) services
+val view_failed_services :
+  (Service.Id.t, Service.t, 'a) Map.t Incr.t -> string Incr.t = <fun>
+```
+
+Now, the question comes of how we weave them together.  Here's a first attempt.
+
+```ocaml
+# let view (model : Model.t Incr.t) =
+    match%map model with
+    | Host_view hosts -> view_failed_hosts hosts
+    | Service_view services -> view_failed_services services
+Line 3, characters 44-49:
+Error: This expression has type
+         Host.t Core.Map.M(Hostname).t =
+           (Hostname.t, Host.t, Hostname.comparator_witness) Map.t
+       but an expression was expected of type
+         (Hostname.t, Host.t, 'a) Map.t Incr.t =
+           ((Hostname.t, Host.t, 'a) Map.t, Incr.state_witness) Incremental.t
+```
+
+But this doesn't type-check, because once we do the pattern match, we
+no longer have an incremental value to feed to `view_failed_hosts` and
+`view_failed_services`.  In particular, now `hosts` and `services` are
+ordinary, non-incremental values.  Even if we try to fix this by
+using `return` to convert those values into incremental, it still
+doesn't do the right thing.
+
+```ocaml
+# let view (model : Model.t Incr.t) =
+    match%map model with
+    | Host_view hosts -> view_failed_hosts (return hosts)
+    | Service_view services -> view_failed_services (return services)
+val view : Model.t Incr.t -> string Incr.t Incr.t = <fun>
+```
+
+In particular, it has the wrong return type, having an extra level of
+incrementality.  We can fix this by using bind instead of map.
+
+```ocaml
+# let view (model : Model.t Incr.t) =
+    match%bind model with
+    | Host_view hosts -> view_failed_hosts (return hosts)
+    | Service_view services -> view_failed_services (return services)
+val view : Model.t Incr.t -> string Incr.t = <fun>
+```
+
+But while this has the right type, it has the entirely wrong
+incremental performance.  In particular, every time the model changes,
+the entire computation is redone from scratch.  That's the case even
+if the actual change is very small; say, a single entry added into the
+`hosts` view.
+
+Happily, `ppx_pattern_bind` can help us here as well.  We can rewrite
+the above example as follows.
+
+```ocaml
+# let view (model : Model.t Incr.t) =
+    match%pattern_bind model with
+    | Host_view hosts -> view_failed_hosts hosts
+    | Service_view services -> view_failed_services services
+val view : Model.t Incr.t -> string Incr.t = <fun>
+```
+
+Note that the variables `hosts` and `services` that were bound as
+ordinary variables on the left-hand side of the arrow are treated as
+incremental variables on the right hand side.
+
+And now, the incremental performance is good.  The idea here is that
+the full computation is only rerun in when we switch between cases
+(e.g., from `Host_view` to `Service_view`), but when we stay within
+the same case of the pattern match, we are effectively mapping over an
+incremental of the data contained therein.
+
+To get a better sense of how this actually works, let's think about
+what the above example actually desugars into.  It's something like
+the following.
+
+```ocaml
+# type model_kind = Host_view | Service_view;;
+type model_kind = Host_view | Service_view
+# let view (model : Model.t Incr.t) =
+    let model_kind : model_kind Incr.t =
+      match%map model with
+      | Host_view _ -> Host_view
+      | Service_view _ -> Service_view
+    in
+    match%bind model_kind with
+    | Host_view ->
+      let hosts =
+        match%map model with
+        | Host_view x -> x
+        | Service_view _ -> assert false
+      in
+      view_failed_hosts hosts
+    | Service_view ->
+      let services =
+        match%map model with
+        | Service_view x -> x
+        | Host_view _ -> assert false
+      in
+      view_failed_services services
+val view : Model.t Incr.t -> string Incr.t = <fun>
+```
+
+This makes the performance behavior a little more explicit. The code
+is effectively binding on the constructor tag alone first, and then
+doing a map over the data thus obtained.
+
+[Part 7: Performance and optimization](./part7-optimization.mdx)
+

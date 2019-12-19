@@ -1,5 +1,7 @@
-[%%org {|
-#+TITLE: Incremental tutorial, Part 8: Sharing sub-computations
+---
+title: Incremental tutorial, Part 8; Sharing sub-computations
+uuid: e0b380ed-10e7-3e02-8790-ee55a193d747
+---
 
 When building a complex incremental computation, you'll often find
 that there are intermediate computations that are useful for multiple
@@ -20,7 +22,7 @@ requires access to the filtered and sorted view of the data.  As such,
 we have two very different computations that want to share the same
 sub-computation.
 
-* Sharing with incremental denormalization
+# Sharing with incremental denormalization
 
 The need to share computations doesn't only come up in user
 interfaces.  It can come up in almost any context where you want to
@@ -31,40 +33,36 @@ This is effectively what happens in databases, where the database is
 responsible for incrementally maintaining indices and views that are
 derived from your core data model.  In this example, we'll show how
 some concepts from databases, particularly the notion of a
-/normalized/ vs a /denormalized/ representation come into play.
+*normalized* vs a *denormalized* representation come into play.
 
 First, let's introduce some types for representing orders and
 executions.
-|}]
 
-open Core
+```ocaml non-deterministic
+# open Core
+# module Dir = struct
+    type t = Buy | Sell
+  end
+# module Symbol : Identifiable = String
+# module Order = struct
+    module Id : Identifiable = String
+    type t = { price: float
+             ; size : int
+             ; symbol: Symbol.t
+             ; order_id : Id.t
+             ; dir: Dir.t
+             }
+  end
+# module Exec = struct
+    module Id : Identifiable = String
+    type t = { id: Id.t
+             ; price: float
+             ; size: int
+             ; oid: Order.Id.t
+             }
+  end
+```
 
-module Dir = struct
-  type t = Buy | Sell
-end
-
-module Symbol : Identifiable = String
-
-module Order = struct
-  module Id : Identifiable = String
-  type t = { price: float
-           ; size : int
-           ; symbol: Symbol.t
-           ; order_id : Id.t
-           ; dir: Dir.t
-           }
-end
-
-module Exec = struct
-  module Id : Identifiable = String
-  type t = { id: Id.t
-           ; price: float
-           ; size: int
-           ; oid: Order.Id.t
-           }
-end
-
-[%%org {|
 Our goal is to compute two things:
 
 - the open interest of the orders (i.e., the sum over all orders of
@@ -74,83 +72,79 @@ Our goal is to compute two things:
 We'll assume that the input to our computation is the set of open
 orders indexed by order id and executions indexed by execution id.
 We'll reify this in our model type below:
-|}]
 
-#verbose false;;
-module Model = struct
-  type t =
-    { orders : Order.t Map.M(Order.Id).t
-    ; execs : Exec.t Map.M(Exec.Id).t
-    }
-  [@@deriving fields]
-end
-
+```ocaml non-deterministic
+# module Model = struct
+    type t =
+      { orders : Order.t Map.M(Order.Id).t
+      ; execs : Exec.t Map.M(Exec.Id).t
+      }
+    [@@deriving fields]
+  end
+```
 
 [%%org {|
 
 Both calculations will require associating execs with orders, so let's
 start by writing a function to do just that.  We're also going to need
-the ~index_by~ operation we introduced in [[./part3-map.mlt][Part 3]],
+the `index_by` operation we introduced in [Part 3](./part3-map.mdx),
 so we'll recapitulate that here.
 |}]
 
 
-module Incr = Incremental.Make ()
-module Incr_map = Incr_map.Make (Incr)
-open Incr.Let_syntax;;
+```ocaml non-deterministic
+# module Incr = Incremental.Make ()
+# module Incr_map = Incr_map.Make (Incr)
+# open Incr.Let_syntax;;
+```
 
-#verbose true;;
-let index_by inner_comparator outer_comparator map get_outer_index =
-  let add ~key ~data acc =
-    let idx = get_outer_index data in
-    Map.update acc idx ~f:(function
-      | None -> Map.empty inner_comparator
-      | Some inner_map -> Map.set inner_map ~key ~data)
-  in
-  let remove ~key ~data acc =
-    let idx = get_outer_index data in
-    Map.update acc idx ~f:(function
-      | None -> assert false
-      | Some inner_map -> Map.remove inner_map key)
-  in
-  Incr_map.unordered_fold
-    map
-    ~init:(Map.empty outer_comparator)
-    ~add
-    ~update:(fun ~key ~old_data:_ ~new_data:data -> add ~key ~data)
-    ~remove
-[%%expect {|
+```ocaml
+# let index_by inner_comparator outer_comparator map get_outer_index =
+    let add ~key ~data acc =
+      let idx = get_outer_index data in
+      Map.update acc idx ~f:(function
+        | None -> Map.empty inner_comparator
+        | Some inner_map -> Map.set inner_map ~key ~data)
+    in
+    let remove ~key ~data acc =
+      let idx = get_outer_index data in
+      Map.update acc idx ~f:(function
+        | None -> assert false
+        | Some inner_map -> Map.remove inner_map key)
+    in
+    Incr_map.unordered_fold
+      map
+      ~init:(Map.empty outer_comparator)
+      ~add
+      ~update:(fun ~key ~old_data:_ ~new_data:data -> add ~key ~data)
+      ~remove
 val index_by :
   ('a, 'b) Map.comparator ->
   ('c, 'd) Map.comparator ->
   ('a, 'e, 'f) Map.t Incr.t ->
   ('e -> 'c) -> ('c, ('a, 'e, 'b) Map.t, 'd) Map.t Incr.t = <fun>
-|}];;
 
-let orders_and_execs model =
-  let execs_by_oid =
-    index_by
-      (module Exec.Id)
-      (module Order.Id)
-      (model >>| Model.execs)
-      (fun (exec : Exec.t) -> exec.oid)
-  in
-  Incr_map.merge (model >>| Model.orders) execs_by_oid ~f:(fun ~key:_ change ->
-    match change with
-    | `Left order -> Some (Some order, Map.empty (module Exec.Id))
-    | `Right execs -> Some (None, execs)
-    | `Both (order, execs) -> Some (Some order, execs))
-;;
-[%%expect {|
+# let orders_and_execs model =
+    let execs_by_oid =
+      index_by
+        (module Exec.Id)
+        (module Order.Id)
+        (model >>| Model.execs)
+        (fun (exec : Exec.t) -> exec.oid)
+    in
+    Incr_map.merge (model >>| Model.orders) execs_by_oid ~f:(fun ~key:_ change ->
+      match change with
+      | `Left order -> Some (Some order, Map.empty (module Exec.Id))
+      | `Right execs -> Some (None, execs)
+      | `Both (order, execs) -> Some (Some order, execs))
 val orders_and_execs :
   Model.t Incr.t ->
   (Order.Id.t,
    Order.t option * (Exec.Id.t, Exec.t, Exec.Id.comparator_witness) Map.t,
    Order.Id.comparator_witness)
   Map.t Incr.t = <fun>
-|}];;
+```
 
-[%%org {|
 Note that in writing the above code, we had to acknowledge the fact
 that the data model allows for there to be executions with no
 corresponding orders.
@@ -158,88 +152,81 @@ corresponding orders.
 Now, let's go ahead and compute the open interest.  Here, we'll simply
 assume that executions with no orders have no associated open
 interest.
-|}]
 
-let open_interest model =
-  let orders_and_execs = orders_and_execs model in
-  let open_by_oid =
-    Incr_map.mapi' orders_and_execs ~f:(fun ~key:_ ~data:order_and_execs ->
-      let total_exec_size =
-        let change op ~key:_ ~data:(exec : Exec.t) acc = op acc exec.size in
-        Incr_map.unordered_fold
-          (order_and_execs >>| snd)
-          ~init:0
-          ~add:(change ( + ))
-          ~remove:(change ( - ))
-      in
-      let%map total_exec_size = total_exec_size
-      and maybe_order = order_and_execs >>| fst in
-      match maybe_order with
-      | None -> 0.
-      | Some order ->
-        (* Assume all prices are in the same currency.
-           Not a good idea in real life. *)
-        order.price *. Float.of_int (order.size - total_exec_size))
-  in
-  let change op ~key:_ ~data:x acc = op acc x in
-  Incr_map.unordered_fold open_by_oid ~add:(change ( +. )) ~remove:(change ( -. ))
-;;
-[%%expect {|
+```ocaml
+# let open_interest model =
+    let orders_and_execs = orders_and_execs model in
+    let open_by_oid =
+      Incr_map.mapi' orders_and_execs ~f:(fun ~key:_ ~data:order_and_execs ->
+        let total_exec_size =
+          let change op ~key:_ ~data:(exec : Exec.t) acc = op acc exec.size in
+          Incr_map.unordered_fold
+            (order_and_execs >>| snd)
+            ~init:0
+            ~add:(change ( + ))
+            ~remove:(change ( - ))
+        in
+        let%map total_exec_size = total_exec_size
+        and maybe_order = order_and_execs >>| fst in
+        match maybe_order with
+        | None -> 0.
+        | Some order ->
+          (* Assume all prices are in the same currency.
+             Not a good idea in real life. *)
+          order.price *. Float.of_int (order.size - total_exec_size))
+    in
+    let change op ~key:_ ~data:x acc = op acc x in
+    Incr_map.unordered_fold open_by_oid ~add:(change ( +. )) ~remove:(change ( -. ))
 val open_interest : Model.t Incr.t -> init:float -> float Incr.t = <fun>
-|}];;
+```
 
-[%%org {|
 And the following function will compute the number of shares executed
-per symbol, leaning on the same ~orders_and_execs~ function.
-|}]
+per symbol, leaning on the same `orders_and_execs` function.
 
-let executed_shares_by_symbol model =
-  let symbols_and_num_execs =
-    orders_and_execs model
-    |> Incr_map.filter_mapi ~f:(fun ~key:_ ~data:(maybe_order, execs) ->
-      match maybe_order with
-      | None ->
-        (* drop execs with no order.  In real life, we should report an error. *)
-        None
-      | Some order -> Some (order.symbol, Map.length execs))
-  in
-  let change op ~key:_ ~data:(symbol, num_execs) acc =
-    Map.update acc symbol ~f:(fun old_num ->
-      op (Option.value ~default:0 old_num) num_execs)
-  in
-  Incr_map.unordered_fold
-    symbols_and_num_execs
-    ~init:(Map.empty (module Symbol))
-    ~add:(change ( + ))
-    ~remove:(change ( - ))
-;;
-[%%expect {|
+```ocaml
+# let executed_shares_by_symbol model =
+    let symbols_and_num_execs =
+      orders_and_execs model
+      |> Incr_map.filter_mapi ~f:(fun ~key:_ ~data:(maybe_order, execs) ->
+        match maybe_order with
+        | None ->
+          (* drop execs with no order.  In real life, we should report an error. *)
+          None
+        | Some order -> Some (order.symbol, Map.length execs))
+    in
+    let change op ~key:_ ~data:(symbol, num_execs) acc =
+      Map.update acc symbol ~f:(fun old_num ->
+        op (Option.value ~default:0 old_num) num_execs)
+    in
+    Incr_map.unordered_fold
+      symbols_and_num_execs
+      ~init:(Map.empty (module Symbol))
+      ~add:(change ( + ))
+      ~remove:(change ( - ))
 val executed_shares_by_symbol :
   Model.t Incr.t -> (Symbol.t, int, Symbol.comparator_witness) Map.t Incr.t =
   <fun>
-|}];;
+```
 
-[%%org {|
 The problem is that, if we need to run both of these computations
 concurrently, we're effectively going to duplicate the
-~orders_and_execs~ computation.
+`orders_and_execs` computation.
 
-We can fix this by just computing ~orders_and_execs~ once, and pass it
+We can fix this by just computing `orders_and_execs` once, and pass it
 to both functions.  One idiom for doing this is to create a type that
 contains a version of your data that is /denormalized/, to steal a
 term from the database world.  i.e., we might have a type like this:
-|}]
 
-#verbose false;;
-module Enriched_model = struct
-  type t =
-    { orders_and_execs :
-        (Order.t option * Exec.t Map.M(Exec.Id).t) Map.M(Order.Id).t
-    ; execs : Exec.t Map.M(Exec.Id).t
-    } [@@deriving fields]
-end;;
-#verbose true;;
-[%%org {|
+```ocaml non-deterministic
+# module Enriched_model = struct
+    type t =
+      { orders_and_execs :
+          (Order.t option * Exec.t Map.M(Exec.Id).t) Map.M(Order.Id).t
+      ; execs : Exec.t Map.M(Exec.Id).t
+      } [@@deriving fields]
+  end
+```
+
 This way of representing the data contains redundancies, since
 executions are represented twice: once indexed by order id, and once
 indexed by execution id.  This kind of representation can be more
@@ -254,24 +241,21 @@ directly (and incrementally) from a normalized model without such
 redundancies, then we get much of the benefit of both worlds.
 
 Here's a function that does just that.
-|}]
 
-let derive_enriched_model model =
-  let%map orders_and_execs = orders_and_execs model
-  and execs = model >>| Model.execs in
-  { Enriched_model.orders_and_execs; execs }
-;;
-[%%expect{|
+```ocaml
+# let derive_enriched_model model =
+    let%map orders_and_execs = orders_and_execs model
+    and execs = model >>| Model.execs in
+    { Enriched_model.orders_and_execs; execs }
 val derive_enriched_model : Model.t Incr.t -> Enriched_model.t Incr.t = <fun>
-|}]
+```
 
-[%%org {|
-Now, it's straightforward to rewrite ~open_interest~ and
-~executed_shares_by_symbol~ to take the ~Enriched_model.t~ as their
+Now, it's straightforward to rewrite `open_interest` and
+`executed_shares_by_symbol` to take the `Enriched_model.t` as their
 input, at which point they don't need to separately recompute
-~orders_and_execs~.
+`orders_and_execs`.
 
-* Sharing with memoization
+# Sharing with memoization
 
 Denormalization is one way of sharing computations, but it's not the
 only one.  Denormalization works well when there's a bounded number of
@@ -287,17 +271,14 @@ When this happens, a good approach is memoization.  Incremental has a
 number of built-in memoization functions, but we're going to just look
 at how to use one of them:
 
-|}]
-
-let _ = Incr.weak_memoize_fun_by_key
-[%%expect {|
+```ocaml
+# let _ = Incr.weak_memoize_fun_by_key
 - : ?initial_size:int ->
     'a Base.Hashtbl.Key.t ->
     ('b -> 'a) -> ('b -> 'c Heap_block.t) -> ('b -> 'c Heap_block.t) Staged.t
 = <fun>
-|}];;
+```
 
-[%%org {|
 The way this works is you give it a unary function whose input is
 hashable and whose output is a heap block.  It will then give you a
 new function with the same signature, but that always returns the same
@@ -319,93 +300,83 @@ receive on a given trade.)
 
 This first function computes the cashflow given a direction and a map
 of executions.
-|}]
 
-let cashflow dir execs =
-  let%map sign =
-    match%map (dir : Dir.t Incr.t) with
-    | Buy -> -1.
-    | Sell -> 1.
-  and cash =
-    let change op ~key:_ ~data:(exec : Exec.t) acc =
-      op acc (exec.price *. Float.of_int exec.size)
+```ocaml
+# let cashflow dir execs =
+    let%map sign =
+      match%map (dir : Dir.t Incr.t) with
+      | Buy -> -1.
+      | Sell -> 1.
+    and cash =
+      let change op ~key:_ ~data:(exec : Exec.t) acc =
+        op acc (exec.price *. Float.of_int exec.size)
+      in
+      Incr_map.unordered_fold execs ~init:0. ~add:(change ( +. )) ~remove:(change ( -. ))
     in
-    Incr_map.unordered_fold execs ~init:0. ~add:(change ( +. )) ~remove:(change ( -. ))
-  in
-  sign *. cash
-;;
-[%%expect {|
+    sign *. cash
 val cashflow : Dir.t Incr.t -> ('a, Exec.t, 'b) Map.t Incr.t -> float Incr.t =
   <fun>
-|}];;
+```
 
-[%%org {|
 This next function takes an enriched model and a symbol, and filters
 down to the symbol in question, and then computes the cashflow for each
 order for that symbol, and finally sums those cashflows all together.
-|}]
 
-let per_symbol_cashflow (m : Enriched_model.t Incr.t) symbol =
-  let cashflow_by_oid =
-    Incr_map.filter_mapi
-      (m >>| Enriched_model.orders_and_execs)
-      ~f:(fun ~key:_ ~data:(maybe_order, execs) ->
-        match maybe_order with
-        | None -> None (* we ignore execs without symbols, which isn't really right *)
-        | Some order ->
-          if Symbol.( = ) symbol order.symbol then Some (order, execs) else None)
-    |> Incr_map.mapi' ~f:(fun ~key:_ ~data ->
-      let%pattern_bind { dir; _ }, execs = data in
-      cashflow dir execs)
-  in
-  let change op ~key:_ ~data acc = op acc data in
-  Incr_map.unordered_fold
-    cashflow_by_oid
-    ~init:0.
-    ~add:(change ( +. ))
-    ~remove:(change ( -. ))
-;;
-[%%expect {|
+```ocaml
+# let per_symbol_cashflow (m : Enriched_model.t Incr.t) symbol =
+    let cashflow_by_oid =
+      Incr_map.filter_mapi
+        (m >>| Enriched_model.orders_and_execs)
+        ~f:(fun ~key:_ ~data:(maybe_order, execs) ->
+          match maybe_order with
+          | None -> None (* we ignore execs without symbols, which isn't really right *)
+          | Some order ->
+            if Symbol.( = ) symbol order.symbol then Some (order, execs) else None)
+      |> Incr_map.mapi' ~f:(fun ~key:_ ~data ->
+        let%pattern_bind { dir; _ }, execs = data in
+        cashflow dir execs)
+    in
+    let change op ~key:_ ~data acc = op acc data in
+    Incr_map.unordered_fold
+      cashflow_by_oid
+      ~init:0.
+      ~add:(change ( +. ))
+      ~remove:(change ( -. ))
 val per_symbol_cashflow : Enriched_model.t Incr.t -> Symbol.t -> float Incr.t =
   <fun>
-|}];;
+```
 
-
-[%%org {|
-Now, if you just naively call ~per_symbol_cashflow~ multiple times
+Now, if you just naively call `per_symbol_cashflow` multiple times
 with the same symbol, it will do all that work multiple times.  But we
-can use ~weak_memoize_fun_by_key~ to create a version of the function
+can use `weak_memoize_fun_by_key` to create a version of the function
 that always returns the same incremental value for the same symbol.
 
 We're going to package this together in a module, so that the enriched
 model in question is tied together with the function for computing
 per-symbol cashflows.
-|}]
 
+```ocaml
+# module Model_with_memo = struct
+    type t =
+      { model : Enriched_model.t Incr.t
+      ; per_symbol_cashflow : Symbol.t -> float Incr.t
+      }
 
-module Model_with_memo = struct
-  type t =
-    { model : Enriched_model.t Incr.t
-    ; per_symbol_cashflow : Symbol.t -> float Incr.t
-    }
-
-  let create model =
-    let per_symbol_cashflow =
-      Incr.weak_memoize_fun
-        (module Symbol)
-        (fun symbol ->
-           (* This will never fail, because an incremental is guaranteed to be a heap
-              block *)
-           Heap_block.create_exn (per_symbol_cashflow model symbol))
-      |> unstage
-    in
-    (* We use this coercion to get the type-system to forget that we're returning a heap
-       block. *)
-    let per_symbol_cashflow = (per_symbol_cashflow :> Symbol.t -> float Incr.t) in
-    { model; per_symbol_cashflow }
-  ;;
-end
-[%%expect{|
+    let create model =
+      let per_symbol_cashflow =
+        Incr.weak_memoize_fun
+          (module Symbol)
+          (fun symbol ->
+             (* This will never fail, because an incremental is guaranteed to be a heap
+                block *)
+             Heap_block.create_exn (per_symbol_cashflow model symbol))
+        |> unstage
+      in
+      (* We use this coercion to get the type-system to forget that we're returning a heap
+         block. *)
+      let per_symbol_cashflow = (per_symbol_cashflow :> Symbol.t -> float Incr.t) in
+      { model; per_symbol_cashflow }
+  end
 module Model_with_memo :
   sig
     type t = {
@@ -414,10 +385,8 @@ module Model_with_memo :
     }
     val create : Enriched_model.t Incr.t -> t
   end
-|}]
+```
 
-[%%org {|
 One thing to note is that weak pointers basically don't work in
 JavaScript, so if you run this kind of code in the browser you'll find
 that it leaks memory.
-|}]

@@ -1,36 +1,38 @@
-[%%org {|
-#+TITLE: Incremental tutorial, Part 1: Preliminaries
+---
+title: Incremental tutorial, Part 1; Preliminaries
+uuid: ec56fe96-2962-3867-a159-1a0e10387003
+---
 
-* What is Incremental for?
+# What is Incremental for?
 
 At its core, Incremental is an optimization tool. If you're not trying
 to solve a performance problem, you probably shouldn't be using it.
 In particular, Incremental is really good at letting you write code
 that is easy to read and understand, while at the same time having
-good /incremental performance/, i.e., performance in the presence of
+good *incremental performance*, i.e., performance in the presence of
 small updates to your input data.
 
 Incremental has some constraints that are worth understanding.
 
-- *It requires that you write your code in a functional style.* That
+- **It requires that you write your code in a functional style.** That
   means that it can be easier to add Incremental to a codebase that's
   already written in a functional style.
 
-- *It's likely to make the from-scratch cost of your computation
-  worse.* That's for two reasons: first, writing in a functional style
+- **It's likely to make the from-scratch cost of your computation
+  worse.** That's for two reasons: first, writing in a functional style
   is typically slower than the best available imperative solution.
   Also, Incremental itself has some overhead.
 
-- *It works best if the information you're using fits in memory*.
+- **It works best if the information you're using fits in memory**.
   There's no built-in support for dealing with on-disk stores, though
   you can combine incremental with other techniques for fetching data
   from disk when necessary.
 
-- *Incremental is fast, but it isn't super fast*. In particular, it's
+- **Incremental is fast, but it isn't super fast**. In particular, it's
   largely not compatible with zero-alloc approaches. It excels at
   providing pretty-good performance with a small amount of effort.
 
-* The computational model
+# The computational model
 
 Incremental operates a lot like a build system: it lets you organize
 your computation as a graph with explicit dependencies, and it caches
@@ -48,7 +50,7 @@ In practice, you always need all three. You initialize a variable just
 like you would a ref; you create an incremental from it, which can be
 used in as many different incremental computations you can dream up;
 as your data changes, you update the value of your variable with
-~Incr.Var.set~; and then those changes propagate through your
+`Incr.Var.set`; and then those changes propagate through your
 incremental computations to the observers, one for each computation
 that you want to use the output from.
 
@@ -57,59 +59,56 @@ instantiate the Incremental library. Incremental keeps the state of
 the overall computation graph as module-level imperative state, so you
 want to be able to mint disjoint incremental worlds that can't
 interfere with each other.  We do that by applying a functor.
-|}]
 
-open Core
-module Incr = Incremental.Make ()
 
-[%%org {|
+```ocaml
+# open Core
+# module Incr = Incremental.Make ()
+module Incr : Incremental.S
+```
 
-Now we can use ~Incr.Var.create~ to declare a few variables. You can
+Now we can use `Incr.Var.create` to declare a few variables. You can
 think of Incremental's variables as imperative ref cells that
 constitute the input to the rest of the computation.
-|}]
 
-#verbose true;;
-let (x_v,y_v,z_v) = Incr.Var.(create 3., create 0.5, create 1.5)
-[%%expect {|
+
+```ocaml
+# let (x_v,y_v,z_v) = Incr.Var.(create 3., create 0.5, create 1.5)
 val x_v : float Incr.Var.t = <abstr>
 val y_v : float Incr.Var.t = <abstr>
 val z_v : float Incr.Var.t = <abstr>
-|}];;
+```
 
-[%%org {|
+
 To be able to compute with these incremental variables, we need to
 grab the incremental variables corresponding to those values, using
-~Incr.Var.watch~.
-|}]
+`Incr.Var.watch`.
 
-let (x,y,z) = Incr.Var.(watch x_v, watch y_v, watch z_v)
-[%%expect {|
+
+```ocaml
+# let (x,y,z) = Incr.Var.(watch x_v, watch y_v, watch z_v)
 val x : float Incr.t = <abstr>
 val y : float Incr.t = <abstr>
 val z : float Incr.t = <abstr>
-|}];;
+```
 
-[%%org {|
-Now, let's sum these up with a couple applications of the ~map2~
+Now, let's sum these up with a couple applications of the `map2`
 operator.
-|}]
 
+```
 let sum =
   Incr.map2
     z
-    (Incr.map2 x y ~f:(fun x y -> x +. y))
-    ~f:(fun z x_and_y -> z +. x_and_y);;
-[%%expect {|
+    (Incr.map2 x y `f:(fun x y -> x +. y))
+    `f:(fun z x_and_y -> z +. x_and_y);;
 val sum : float Incr.t = <abstr>
-|}];;
+```
 
-[%%org {|
 In order to reason about performance, it's helpful to think about the
 graph that a given incremental computation implies.  Here's the
 graph implied by the above computation.
 
-#+BEGIN_SRC picture
+```
   +---+
   | x |-.
   +---+  \   +---------+
@@ -119,168 +118,155 @@ graph implied by the above computation.
   +---+                       | sum  |
   | z |---------------------->+------+
   +---+
-#+END_SRC
+```
 
 
 We can also rewrite this using let syntax, as follows.
-|}]
 
-open Incr.Let_syntax
-
-let sum =
-  let%map x_and_y =
-    let%map x = x and y = y in
-    x +. y
-  and z = z in
-  z +. x_and_y
-[%%expect {|
+```ocaml
+# open Incr.Let_syntax
+# let sum =
+    let%map x_and_y =
+      let%map x = x and y = y in
+      x +. y
+    and z = z in
+    z +. x_and_y
 val sum : float Incr.t = <abstr>
-|}];;
+```
 
-[%%org {|
-Note the use of ~and~, which produces the moral equivalent of ~map2~.
+Note the use of `and`, which produces the moral equivalent of `map2`.
 
 In order to read the value out, we have to create an observer, at
 which point we can grab the current value.  Before reading the value,
 however, we need to call /stabilize/, which makes sure that the output
 of the computation is up-to-date.
-|}]
 
-let sum_o = Incr.observe sum
-[%%expect {|
+```ocaml
+# let sum_o = Incr.observe sum
 val sum_o : float Incr.Observer.t = <abstr>
-|}];;
+```
 
-let show x =
-  Incr.stabilize ();
-  print_s [%sexp (Incr.Observer.value_exn x : float)];;
-[%%expect {|
+```ocaml
+# let show x =
+    Incr.stabilize ();
+    print_s [%sexp (Incr.Observer.value_exn x : float)];;
 val show : float Incr.Observer.t -> unit = <fun>
-|}];;
+```
 
-let () =
-  show sum_o;
-[%%expect {|
+```ocaml
+# let () =
+    show sum_o;
 5
-|}];;
+```
 
-[%%org {|
 The function for getting the value from an observer is called
-~value_exn~ because it will throw in the case that the observer in
+`value_exn` because it will throw in the case that the observer in
 question has not been made valid by a stabilize.
 
 We can of course update the value by changing the inputs, i.e., the
 variables.  Incremental variables are really closer to refs, so it's
 useful to adopt some of the same syntactic conventions, which we do
 below.
-|}]
 
-let (:=) = Incr.Var.set
-let (!) = Incr.Var.value
 
-[%%expect{|
+```ocaml
+# let (:=) = Incr.Var.set
 val ( := ) : 'a Incr.Var.t -> 'a -> unit = <fun>
+# let (!) = Incr.Var.value
 val ( ! ) : 'a Incr.Var.t -> 'a = <fun>
-|}]
+```
 
-[%%org {|
 Now we can see how updating one of the inputs affects the value of
-~sum_o~.
-|}]
+`sum_o`.
 
-let () =
-  z_v := 100.;
-  show sum_o;
-[%%expect{|
+```ocaml
+# let () =
+    z_v := 100.;
+    show sum_o;
 103.5
-|}]
+```
 
-[%%org {|
 This only required the redoing of a single addition; the addition of
-~x~ and ~y~ was cached from the original.  Obviously, this isn't too
+`x` and `y` was cached from the original.  Obviously, this isn't too
 exciting on its own: there's not really much computation that you're
 saving here. In fact, the overhead of using Incremental in the first
 place is way more than the cost of the underlying math.
 
 Indeed, it would probably be a little more efficient to have written
-~sum~ as:
-|}]
+`sum` as:
 
-let sum =
-  let%map x = x and y = y and z = z in
-  x +. y +. z
-;;
-[%%expect {|
+
+```ocaml
+# let sum =
+    let%map x = x and y = y and z = z in
+    x +. y +. z
+  ;;
 val sum : float Incr.t = <abstr>
-|}];;
+```
 
 
-[%%org {|
 That's less incremental, since modifying any of the inputs causes the
 entire computation to be redone.  But in this case, the
 incrementalization isn't buying us anything.  Indeed, given that the
 overhead of Incremental is larger than the entire cost of the actual
 computation, it would be cheaper to not use Incremental at all.
 
-* A bigger example
+# A bigger example
 
 Let's look at an example where Incremental actually helps performance.
 Instead of just summing up three numbers, we'll create an incremental
 computation that can sum up an arbitrarily long list of integers.
 Here's some code to do just that.
 
-|}]
-
-let incr_list_sum l =
-  match List.reduce_balanced l ~f:(Incr.map2 ~f:( +. )) with
-  | None -> return 0.
-  | Some x -> x
-[%%expect {|
+```ocaml
+# let incr_list_sum l =
+    match List.reduce_balanced l ~f:(Incr.map2 ~f:( +. )) with
+    | None -> return 0.
+    | Some x -> x
 val incr_list_sum : float Incr.t list -> float Incr.t = <fun>
-|}];;
+```
 
-[%%org {|
-Here, we're using ~List.reduce_balanced~, which is a function that
+Here, we're using `List.reduce_balanced`, which is a function that
 will combine elements of a list in a balanced, binary tree.  Because
-the function we provide to ~List.reduce_balanced~ is based on
-~Incr.map2~, this builds a binary tree of Incremental nodes.
+the function we provide to `List.reduce_balanced` is based on
+`Incr.map2`, this builds a binary tree of Incremental nodes.
 
-Now let's wire this up to some actual inputs.
-|}]
+Now let's wire this up to some actual inputs.  First, we create the
+array of inputs.
 
-#verbose false;;
-let inputs = Array.init 100_000 ~f:(fun _ -> Incr.Var.create 0.);;
-#verbose true;;
-let sum =
-  List.map ~f:Incr.Var.watch (Array.to_list inputs)
-  |> incr_list_sum
-  |> Incr.observe
-[%%expect {|
+```ocaml non-deterministic
+# let inputs = Array.init 100_000 ~f:(fun _ -> Incr.Var.create 0.);;
+val inputs : float Incr.Var.t array = [|<abstr>; <abstr>; ...|]
+```
+
+And then, hook them up into a sum.
+
+```ocaml
+# let sum =
+    List.map ~f:Incr.Var.watch (Array.to_list inputs)
+    |> incr_list_sum
+    |> Incr.observe
 val sum : float Incr.Observer.t = <abstr>
-|}];;
-let () = show sum
-[%%expect {|
+# let () = show sum
 0
-|}];;
-let () =
-  let incr i x = inputs.(i) := !(inputs.(i)) +. x in
-  incr 100 1.6;
-  incr 72 0.2;
-  incr 105 0.4;
-  show sum
-[%%expect {|
+# let () =
+    let incr i x = inputs.(i) := !(inputs.(i)) +. x in
+    incr 100 1.6;
+    incr 72 0.2;
+    incr 105 0.4;
+    show sum
 2.2
-|}];;
+```
 
-[%%org {|
 Here are the results of benchmarking this against an all-at-once
 implementation.
 
-
-| Name | Time/Run       | Percentage |
-|------+----------------+------------|
-| tree | ~3_557.77ns~   |      1.07% |
-| ord  | ~333_760.67ns~ |    100.00% |
+```
+| Name | Time/Run     | Percentage |
+|------+--------------+------------|
+| tree | 3_557.77ns   |      1.07% |
+| ord  | 333_760.67ns |    100.00% |
+```
 
 Here, the tree-like implementation runs 100x faster than the
 all-at-once version.  That ratio shows you both that Incremental
@@ -288,10 +274,12 @@ achieves real gains, and that it has real overhead.  Indeed, if we run
 this with 100 nodes instead of 100000, we'll get results that look
 like this.
 
-| Name | Time/Run   | Percentage |
-|------+------------+------------|
-| tree | ~550.97ns~ |    100.00% |
-| ord  | ~391.41ns~ |     71.04% |
+```
+| Name | Time/Run | Percentage |
+|------+----------+------------|
+| tree | 550.97ns |    100.00% |
+| ord  | 391.41ns |     71.04% |
+```
 
 For this example, the break-even is at something like 100 nodes.
 
@@ -301,7 +289,7 @@ case, since addition is such a cheap operation to begin with.  The
 larger the amount of work you get to skip, the more Incremental can
 help.
 
-* Projections and cutoffs
+# Projections and cutoffs
 
 Another useful trick when building an incremental computation is to
 break up a complex data-type by projecting out individual components
@@ -310,43 +298,38 @@ components directly.
 
 Here's a trivial example of how this approach works.  Let's start with
 a data type with two components.
-|}]
 
-#verbose false;;
-type z =
-  { a: int list
-  ; b: (int * int)
-  }
-[@@deriving fields]
-  #verbose true;;
+```ocaml non-deterministic
+# type z =
+    { a: int list
+    ; b: (int * int)
+    }
+  [@@deriving fields]
+```
 
-[%%org {|
 Now, we're going to write a function that multiplies together the
-integers in ~a~ and ~b~ respectively, and then sums them up.
-|}]
+integers in `a` and `b` respectively, and then sums them up.
 
-let sumproduct z =
-  let a_prod =
-    let%map a = z >>| a in
-    printf "a\n";
-    List.fold ~init:1 ~f:( * ) a
-  in
-  let b_prod =
-    let%map (b1,b2) = z >>| b in
-    printf "b\n";
-    b1 * b2
-  in
-  let%map a_prod = a_prod and b_prod = b_prod in
-  a_prod + b_prod
-[%%expect{|
+```ocaml
+# let sumproduct z =
+    let a_prod =
+      let%map a = z >>| a in
+      printf "a\n";
+      List.fold ~init:1 ~f:( * ) a
+    in
+    let b_prod =
+      let%map (b1,b2) = z >>| b in
+      printf "b\n";
+      b1 * b2
+    in
+    let%map a_prod = a_prod and b_prod = b_prod in
+    a_prod + b_prod
 val sumproduct : z Incr.t -> int Incr.t = <fun>
-|}]
-
-[%%org {|
+```
 
 The shape of the implied graph is something like this:
 
-#+BEGIN_SRC picture
+```
             +---+   +--------+
          .->| a |-->| a_prod |-.
         /   +---+   +--------+  \
@@ -356,63 +339,57 @@ The shape of the implied graph is something like this:
         \   +---+   +--------+  /
          '->| b |-->| b_prod |-'
             +---+   +--------+
-#+END_SRC
+```
 
-This graph shape derives from the style in which ~sumproduct~ was
+This graph shape derives from the style in which `sumproduct` was
 written.  In particular, first we projected out the relevant component
 using map, and then we did a map on the result, with a pattern that
-looks like this: ~let%map a = z >>| a in ...~.  You can see the two nodes
+looks like this: `let%map a = z >>| a in ...`.  You can see the two nodes
 if you think about how this desugars.  In particular, the above
 pattern is the same as:
 
-#+BEGIN_SRC ocaml
-   let a_i = Incr.map z ~f:(fun x -> x.a) in
-   Incr.map a_i ~f:(fun a -> ...)
-#+END_SRC
+```ocaml skip
+   let a_i = Incr.map z `f:(fun x -> x.a) in
+   Incr.map a_i `f:(fun a -> ...)
+```
 
-The two invocations of ~Incr.map~ are now clearly visible.
+The two invocations of `Incr.map` are now clearly visible.
 
 If we actually wire this up and run it, we can see whether the upper
 path or lower path fires by looking at the printed output.
-|}]
 
-let z = Incr.Var.create { a = [3;2]; b = (1,4) }
-let result = Incr.observe (sumproduct (Incr.Var.watch z))
-let show () =
-  Incr.stabilize ();
-  printf "result: %d\n" (Incr.Observer.value_exn result)
-[%%expect {|
+```ocaml
+# let z = Incr.Var.create { a = [3;2]; b = (1,4) }
 val z : z Incr.Var.t = <abstr>
+# let result = Incr.observe (sumproduct (Incr.Var.watch z))
 val result : int Incr.Observer.t = <abstr>
+# let show () =
+    Incr.stabilize ();
+    printf "result: %d\n" (Incr.Observer.value_exn result)
 val show : unit -> unit = <fun>
-|}];;
+```
 
-[%%org {|
-When we call ~show~ for the first time, we'll see both sides of the
+When we call `show` for the first time, we'll see both sides of the
 computation get run.
-|}]
 
-let () = show ()
-[%%expect{|
+```ocaml
+# let () = show ()
 b
 a
 result: 10
-|}]
+```
 
-[%%org {|
 But now, if we just update one side, we'll see only the corresponding
 computation is run.
-|}]
 
-let () =
-  z := { !z with b = (1,1) };
-  show ()
-[%%expect{|
+```ocaml
+# let () =
+    z := { !z with b = (1,1) };
+    show ()
 b
 result: 7
-|}]
+```
 
-[%%org {|
 This happens because Incremental's change-propagation algorithm cuts
 off when the value of a given node doesn't change.  That said, the
 notion of "doesn't change" isn't necessarily what you expect.  In
@@ -422,108 +399,93 @@ exactly the same (for an immediate) or the same pointer (for
 heap-allocated objects), then propagation stops.
 
 The use of physical equality can have surprising results.  For
-example, if I set ~b~ again to the same value, the computation will
+example, if I set `b` again to the same value, the computation will
 again be rerun, since I'll be setting it to a newly allocated tuple.
-|}]
 
-let () =
-  z := { !z with b = (1,1) };
-  show ()
-[%%expect{|
+```ocaml
+# let () =
+    z := { !z with b = (1,1) };
+    show ()
 b
 result: 7
-|}]
+```
 
-[%%org {|
 However, if I make sure to use the same tuple multiple times in a row,
 then the computation only happens the first time.
-|}]
 
-let new_b = (3,2)
-[%%expect {|
+```ocaml
+# let new_b = (3,2)
 val new_b : int * int = (3, 2)
-|}];;
 
-let () =
-  z := { !z with b = new_b };
-  show ()
-[%%expect {|
+# let () =
+    z := { !z with b = new_b };
+    show ()
 b
 result: 12
-|}];;
 
-let () =
-  z := { !z with b = new_b };
-  show ()
-[%%expect {|
+# let () =
+    z := { !z with b = new_b };
+    show ()
 result: 12
-|}];;
+```
 
-[%%org {|
 This cutoff behavior is something one needs to be cognizant of.  Note
 that the style we used above of using functional updates guarantees
 physical equality in many circumstances.  But if it's important to
 make sure that a given incremental cuts off, it often makes sense to
 set a custom cutoff function, which you can do using this function:
-|}]
 
-let _ = Incr.set_cutoff
-[%%expect{|
+```ocaml
+# let _ = Incr.set_cutoff
 - : 'a Incr.t -> 'a Incr.Cutoff.t -> unit = <fun>
-|}]
+```
 
-[%%org {|
 And you can create a cutoff from a simple equality function.
-|}]
 
-let int_cutoff = Incr.Cutoff.of_equal Int.equal
-[%%expect {|
+```ocaml
+# let int_cutoff = Incr.Cutoff.of_equal Int.equal
 val int_cutoff : int Incr.Cutoff.t = <abstr>
-|}];;
+```
 
-[%%org {|
 Now let's see what happens if we don't create that intermediate map
 node by replacing this style
 
-#+BEGIN_SRC ocaml
+```ocaml skip
 let%map a = z >>| a in ...
-#+END_SRC ocaml
+```
 
 with something more direct, like:
 
-#+BEGIN_SRC ocaml
+```ocaml skip
 let%map { a; _ } = z in ...
-#+END_SRC
+```
 
-|}]
-
-let sumproduct z =
-  let a_prod =
-    let%map { a; _ } = z in
-    printf "a\n";
-    List.fold ~init:1 ~f:( * ) a
-  in
-  let b_prod =
-    let%map {b = (b1,b2); _ } = z in
-    printf "b\n";
-    b1 * b2
-  in
-  let%map a_prod = a_prod and b_prod = b_prod in
-  a_prod + b_prod
-[%%expect{|
+```ocaml
+# let sumproduct z =
+    let a_prod =
+      let%map { a; _ } = z in
+      printf "a\n";
+      List.fold ~init:1 ~f:( * ) a
+    in
+    let b_prod =
+      let%map {b = (b1,b2); _ } = z in
+      printf "b\n";
+      b1 * b2
+    in
+    let%map a_prod = a_prod and b_prod = b_prod in
+    a_prod + b_prod
 val sumproduct : z Incr.t -> int Incr.t = <fun>
-|}]
+```
 
-[%%org {|
 This function computes the same thing, but the graph is very
 different.  In particular, there's only one map node created per
-branch, and that one map node depends directly on ~z~, rather than
+branch, and that one map node depends directly on `z`, rather than
 depending on an intermediate node that has just the minimal
 information.
 
 The graph would look something like this.
 
-#+BEGIN_SRC picture
+```
             +--------+
          .->| a_prod |-.
         /   +--------+  \
@@ -533,54 +495,47 @@ The graph would look something like this.
         \   +--------+  /
          '->| b_prod |-'
             +--------+
-#+END_SRC
+```
 
-We don't have the ~a~ and ~b~ nodes to short-circuit the computation,
-so the computation of ~a_prod~ and ~b_prod~ will always happen
-whenever ~z~ changes.
+We don't have the `a` and `b` nodes to short-circuit the computation,
+so the computation of `a_prod` and `b_prod` will always happen
+whenever `z` changes.
 
 We can see that below.  First, let's set everything up with the new
-~sumproduct~ implementation.
-|}]
+`sumproduct` implementation.
 
-let z = Incr.Var.create { a = [3;2]; b = (1,4) }
-let result = Incr.observe (sumproduct (Incr.Var.watch z))
-let show () =
-  Incr.stabilize ();
-  printf "result: %d\n" (Incr.Observer.value_exn result)
-[%%expect {|
+```ocaml
+# let z = Incr.Var.create { a = [3;2]; b = (1,4) }
 val z : z Incr.Var.t = <abstr>
+# let result = Incr.observe (sumproduct (Incr.Var.watch z))
 val result : int Incr.Observer.t = <abstr>
+# let show () =
+    Incr.stabilize ();
+    printf "result: %d\n" (Incr.Observer.value_exn result)
 val show : unit -> unit = <fun>
-|}];;
-
-let () = show ()
-[%%expect {|
+# let () = show ()
 b
 a
 result: 10
-|}];;
+```
 
-[%%org {|
 The initial result is the same, but now let's look at what happens
-when we modify just ~b~.
-|}]
+when we modify just `b`.
 
-let () =
-  z := { !z with b = (1,1) };
-  show ()
-[%%expect{|
+```ocaml
+# let () =
+    z := { !z with b = (1,1) };
+    show ()
 a
 b
 result: 7
-|}]
+```
 
-[%%org {|
 As you can see, both computations fired, even though we only changed
-~b~.
+`b`.
 
 We'll talk more about how to think about the use of cutoffs and why
 they're important later on in the tutorial.
 
-[[./part2-dynamic.mlt][Part 2: Dynamic computations with bind]]
-|}]
+[Part 2: Dynamic computations with bind](./part2-dynamic.mdx)
+

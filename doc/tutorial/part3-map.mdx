@@ -1,15 +1,17 @@
-[%%org {|
-#+TITLE: Incremental tutorial, Part 3: Incr\_map
+---
+title: Incremental tutorial, Part 3; Incr_map
+uuid: 4bcfd8a2-72fa-30d3-e982-8aa839b27b27
+---
 
-In [[./part2-dynamic.mlt][Part 2]], we discussed how to use ~bind~ for
+In [Part 2](./part2-dynamic.mdx), we discussed how to use `bind` for
 building dynamic computations, as well as some of the downsides. In
 particular, bind-based dynamism tends to have poor incremental
 performance.
 
 Happily, there are companion libraries for Incremental that make it
 easier to deal with dynamic data sets in a more efficient way.  In
-particular, we'll discuss the ~Incr_map~ library, which lets you build
-efficient incremental computations on top of ~Map.t~'s.
+particular, we'll discuss the `Incr_map` library, which lets you build
+efficient incremental computations on top of `Map.t`'s.
 
 To see this, let's start by creating a computation on top of maps,
 first in direct style, and then see how we can improve its performance
@@ -17,57 +19,47 @@ by using Incremental.
 
 These examples will be around sets of orders.  Let's start with some
 types for describing orders.
-|}]
 
-open Core
+```ocaml non-deterministic
+# open Core
+# module Symbol : Identifiable = String
+# module Dir = struct
+    type t = Buy | Sell [@@deriving equal]
+  end
+# module Order = struct
+    module Id : Identifiable = String
+    type t =
+      { sym: Symbol.t
+      ; size: int
+      ; price: float
+      ; dir: Dir.t
+      ; id : Id.t
+      }
+  end
+```
 
-module Symbol : Identifiable = String
-
-module Dir = struct
-  type t = Buy | Sell [@@deriving equal]
-end
-
-module Order = struct
-  module Id : Identifiable = String
-  type t =
-    { sym: Symbol.t
-    ; size: int
-    ; price: float
-    ; dir: Dir.t
-    ; id : Id.t
-    }
-end
-
-[%%org {|
 The following function is a simple, all-at-once computation that takes
 a collection of orders, presented as a map indexed by order-id, and
 returns the total number of shares.
-|}]
 
-#verbose true;;
-let shares (orders : Order.t Map.M(Order.Id).t) =
-  Map.fold orders ~init:0 ~f:(fun ~key:_ ~data:o acc -> acc + o.size)
-[%%expect{|
+```ocaml
+# let shares (orders : Order.t Map.M(Order.Id).t) =
+    Map.fold orders ~init:0 ~f:(fun ~key:_ ~data:o acc -> acc + o.size)
 val shares : Order.t Core.Map.M(Order.Id).t -> int = <fun>
-|}]
+```
 
-[%%org {|
 Now, let's say we want to do this incrementally, so that if a new
 order is added to the map, we don't have to recompute everything.  We
-could simply use the ordinary Incremental ~map~ operator:
-|}]
+could simply use the ordinary Incremental `map` operator:
 
-#verbose false;;
-module Incr = Incremental.Make ()
-open Incr.Let_syntax;;
-#verbose true;;
-
-let shares orders = orders >>| shares
-[%%expect{|
+```ocaml
+# module Incr = Incremental.Make ()
+module Incr : Incremental.S
+# open Incr.Let_syntax
+# let shares orders = orders >>| shares
 val shares : Order.t Core.Map.M(Order.Id).t Incr.t -> int Incr.t = <fun>
-|}]
+```
 
-[%%org {|
 But that doesn't really help.  While this function is incremental in
 its type, the incremental performance is no better than the
 all-at-once computation we started with.  In particular, if the map of
@@ -76,59 +68,57 @@ scratch.
 
 In order to do better, we want to take advantage of the fact that
 maps, like many functional data structures, can be diffed efficiently.
-Indeed, we have a function called ~Map.symmetric_diff~ that does just
+Indeed, we have a function called `Map.symmetric_diff` that does just
 that.
-|}]
 
-let _ = Map.symmetric_diff;;
-[%%expect{|
+```ocaml
+# let _ = Map.symmetric_diff;;
 - : ('a, 'b, 'c) Map.t ->
     ('a, 'b, 'c) Map.t ->
     data_equal:('b -> 'b -> bool) ->
     ('a, 'b) Map.Symmetric_diff_element.t Sequence.t
 = <fun>
-|}]
+```
 
-[%%org {|
-But instead of using ~Map.symmetric_diff~ directly, we're going to use
-~Incr_map~, which builds up a bunch of useful operators taking
+But instead of using `Map.symmetric_diff` directly, we're going to use
+`Incr_map`, which builds up a bunch of useful operators taking
 advantage of the diffability of maps.  One such operator is
-~Incr_map.unordered_fold~.  Let's instantiate the ~Incr_map~ module,
-and show how we can compute our share counts using it.
-|}]
+`Incr_map.unordered_fold`.  Let's first instantiate the `Incr_map` module:
 
-#verbose false;;
-module Incr_map = Incr_map.Make(Incr);;
-#verbose true;;
-let shares orders =
-  let update_shares op ~key:_ ~data:(o:Order.t) shares =
-    op shares o.size
-  in
-  Incr_map.unordered_fold
-    orders
-    ~init:0
-    ~add:(update_shares (+))
-    ~remove:(update_shares (-))
-[%%expect{|
+```ocaml non-deterministic
+# module Incr_map = Incr_map.Make(Incr);;
+```
+
+and then show how we can compute our share counts using it:
+
+```ocaml
+# let shares orders =
+    let update_shares op ~key:_ ~data:(o:Order.t) shares =
+      op shares o.size
+    in
+    Incr_map.unordered_fold
+      orders
+      ~init:0
+      ~add:(update_shares (+))
+      ~remove:(update_shares (-))
 val shares : ('a, Order.t, 'b) Map.t Incr.t -> int Incr.t = <fun>
-|}]
+```
 
-[%%org {|
 This function now has reasonable incremental performance.  In
 particular, if you update a subset of the orders in the map, then
-~add~ and ~remove~ will be called once every time an element is added
+`add` and `remove` will be called once every time an element is added
 or removed.  If an element is modified, then they'll both be called,
-with ~remove~ followed by ~add~.  There's also an optional ~update~
+with `remove` followed by `add`.  There's also an optional `update`
 argument that you can provide if you want to provide more optimized
 behavior on a modify.
 
 The incremental graph here is actually very simple, it's just:
 
-#+BEGIN_SRC picture
+```
 +--------+     +-------------------+
 | orders |---->| shares-per-symbol |
 +--------+     +-------------------+
-#+END_SRC
+```
 
 The optimization here doesn't come from having a graph structure that
 tracks dependencies and allows us to only recompute the necessary
@@ -143,74 +133,68 @@ diff-based incrementality within a larger graph-based computation.
 One advantage of this approach is that it's nicely composable.  For
 example, if we want to compute the number of shares on the bid and
 offer side, we can do that by incrementally filtering the map first.
-|}]
 
-let filter_by_dir orders dir =
-  Incr_map.filter_mapi orders ~f:(fun ~key:_ ~data:(o:Order.t) ->
-    if Dir.equal dir o.dir then Some o else None)
-[%%expect {|
+
+```ocaml
+# let filter_by_dir orders dir =
+    Incr_map.filter_mapi orders ~f:(fun ~key:_ ~data:(o:Order.t) ->
+      if Dir.equal dir o.dir then Some o else None)
 val filter_by_dir :
   ('a, Order.t, 'b) Map.t Incr.t -> Dir.t -> ('a, Order.t, 'b) Map.t Incr.t =
   <fun>
-|}];;
-
-let shares_by_dir orders dir =
-  shares (filter_by_dir orders dir)
-[%%expect{|
+# let shares_by_dir orders dir =
+    shares (filter_by_dir orders dir)
 val shares_by_dir : ('a, Order.t, 'b) Map.t Incr.t -> Dir.t -> int Incr.t =
   <fun>
-|}]
+```
 
-[%%org {|
 The dependency graph of Incremental also serves as a means of keeping
 a bunch of incremental computations in sync.  You can create multiple
 different incremental computations on the same universe of inputs, and
-you're guaranteed that, once you call ~stabilize~, all of the
+you're guaranteed that, once you call `stabilize`, all of the
 computations will be in sync with each other.
 
 * Nested incrementality
 
-But ~Incr_map~ lets you do more than just string together a collection
+But `Incr_map` lets you do more than just string together a collection
 of diff-style computations within your computation graph. It also lets
 you build computations that richly integrate diff-style and
 graph-style incrementality.  This turns out to make the approach more
 composable.
 
-Here's an example. Let's say you want to take the ~shares~ function we
+Here's an example. Let's say you want to take the `shares` function we
 computed above, and now compute the number of shares per symbol.  We
 can start down this path by first converting our map of orders indexed
 by order-id into a two-level map, with the outer key being symbol, and
 the inner key being order id.
 
 This is actually a quite general idea, so let's write a general
-function, ~index_by~, to do it.
-|}]
+function, `index_by`, to do it.
 
-let index_by inner_comparator outer_comparator map get_outer_index =
-  let add ~key ~data acc =
-    let idx = get_outer_index data in
-    Map.update acc idx ~f:(function
-      | None -> Map.singleton inner_comparator key data
-      | Some inner_map -> Map.set inner_map ~key ~data)
-  in
-  let remove ~key ~data acc =
-    let idx = get_outer_index data in
-    Map.change acc idx ~f:(function
-      | None -> assert false
-      | Some inner_map ->
-        let inner_map = Map.remove inner_map key in
-        if Map.is_empty inner_map then None else Some inner_map)
-  in
-  Incr_map.unordered_fold map ~init:(Map.empty outer_comparator) ~add ~remove
-[%%expect{|
+```ocaml
+# let index_by inner_comparator outer_comparator map get_outer_index =
+    let add ~key ~data acc =
+      let idx = get_outer_index data in
+      Map.update acc idx ~f:(function
+        | None -> Map.singleton inner_comparator key data
+        | Some inner_map -> Map.set inner_map ~key ~data)
+    in
+    let remove ~key ~data acc =
+      let idx = get_outer_index data in
+      Map.change acc idx ~f:(function
+        | None -> assert false
+        | Some inner_map ->
+          let inner_map = Map.remove inner_map key in
+          if Map.is_empty inner_map then None else Some inner_map)
+    in
+    Incr_map.unordered_fold map ~init:(Map.empty outer_comparator) ~add ~remove
 val index_by :
   ('a, 'b) Map.comparator ->
   ('c, 'd) Map.comparator ->
   ('a, 'e, 'f) Map.t Incr.t ->
   ('e -> 'c) -> ('c, ('a, 'e, 'b) Map.t, 'd) Map.t Incr.t = <fun>
-|}]
+```
 
-[%%org {|
 The function takes the comparators for the inner and outer maps, an
 incremental map, and a function for extracting the value we want to
 use for the outer index.
@@ -218,56 +202,50 @@ use for the outer index.
 Using this, we can easily write a function that takes a map of orders
 and produces a two-level map, indexed by symbols on the outside and
 orders on the inside.
-|}]
 
-let index_by_symbol (orders : Order.t Map.M(Order.Id).t Incr.t)
-  : Order.t Map.M(Order.Id).t Map.M(Symbol).t Incr.t =
-  index_by (module Order.Id) (module Symbol) orders
-    (fun (o : Order.t) -> o.sym)
-[%%expect{|
+```ocaml
+# let index_by_symbol (orders : Order.t Map.M(Order.Id).t Incr.t)
+    : Order.t Map.M(Order.Id).t Map.M(Symbol).t Incr.t =
+    index_by (module Order.Id) (module Symbol) orders
+      (fun (o : Order.t) -> o.sym)
 val index_by_symbol :
   Order.t Core.Map.M(Order.Id).t Incr.t ->
   Order.t Core.Map.M(Order.Id).t Core.Map.M(Symbol).t Incr.t = <fun>
-|}]
+```
 
-[%%org {|
 Now, the rest seems easy: we already have a function for computing
 shares from a map of orders: we just need to incrementally map that
 over our outer, symbol map.  Here's an attempt to do just that.
-|}]
 
-let shares_by_symbol orders =
-  let orders_by_symbol = index_by_symbol orders in
-  Incr_map.mapi orders_by_symbol ~f:(fun ~key:_ ~data -> shares data)
-[%%expect{|
-Line _, characters _-_:
+```ocaml
+# let shares_by_symbol orders =
+    let orders_by_symbol = index_by_symbol orders in
+    Incr_map.mapi orders_by_symbol ~f:(fun ~key:_ ~data -> shares data)
+Line 3, characters 67-71:
 Error: This expression has type
          Order.t Core.Map.M(Order.Id).t =
            (Order.Id.t, Order.t, Order.Id.comparator_witness) Map.t
        but an expression was expected of type
          ('a, Order.t, 'b) Map.t Incr.t =
            (('a, Order.t, 'b) Map.t, Incr.state_witness) Incremental.t
-|}]
+```
 
-[%%org {|
-But this doesn't work! The problem is that ~Incr_map.mapi~ expects the
+But this doesn't work! The problem is that `Incr_map.mapi` expects the
 inner computation to be an ordinary all-at-once function, but we want
 the function to itself be incremental.
 
-Happily, ~Incr_map~ has another function, ~Incr_map.mapi'~ (you might
+Happily, `Incr_map` has another function, `Incr_map.mapi'` (you might
 pronounce that "mapi prime"), that does just that.
-|}]
 
-let shares_by_symbol orders =
-  let orders_by_symbol = index_by_symbol orders in
-  Incr_map.mapi' orders_by_symbol ~f:(fun ~key:_ ~data -> shares data)
-[%%expect{|
+```ocaml
+# let shares_by_symbol orders =
+    let orders_by_symbol = index_by_symbol orders in
+    Incr_map.mapi' orders_by_symbol ~f:(fun ~key:_ ~data -> shares data)
 val shares_by_symbol :
   Order.t Core.Map.M(Order.Id).t Incr.t ->
   (Symbol.t, int, Symbol.comparator_witness) Map.t Incr.t = <fun>
-|}]
+```
 
-[%%org {|
 While the ordinary and primed version of these functions are
 superficially very similar, they have very different Incremental
 graphs.  While the un-primed function just gives you a simple two-node
@@ -275,7 +253,7 @@ graph, the primed version builds a dynamic graph with a number of
 nodes that changes dynamically with the size of the map.  It would
 look something like this:
 
-#+BEGIN_SRC picture
+```
             +----+         +----+
          .->| e1 |--[ f ]->| e1'|-.
         /   +----+         +----+  \
@@ -288,17 +266,17 @@ look something like this:
        \    +----+         +----+  /
         '-->| en |--[ f ]->| en'|-'
             +----+         +----+
-#+END_SRC
+```
 
-i.e., you start with some map incremental, ~m~, and that gets broken
-down into a collection of incrementals, ~e1~ through ~en~, one per
+i.e., you start with some map incremental, `m`, and that gets broken
+down into a collection of incrementals, `e1` through `en`, one per
 entry in the map.  You then apply some other incremental
-transformation, as specified by the function ~f~, to produce ~e1'~
-through ~en'~, which are then reassembled into ~m'~.  If you modify
-the data under a given key in ~m~, it will only fire updates down the
+transformation, as specified by the function `f`, to produce `e1'`
+through `en'`, which are then reassembled into `m'`.  If you modify
+the data under a given key in `m`, it will only fire updates down the
 path corresponding to that entry in the map.
 
-Adding and removing keys from ~m~, on the other hand, corresponds to
+Adding and removing keys from `m`, on the other hand, corresponds to
 adding and removing entire paths through the graph.
 
 * Performance questions
@@ -306,48 +284,42 @@ adding and removing entire paths through the graph.
 It's worth stopping and thinking about the performance implications of
 this approach. In particular, you end up minting potentially a rather
 large number of incremental nodes, and incremental nodes themselves
-are pretty heavy.  A single ~Incr.t~ is a record with 27 fields, so
+are pretty heavy.  A single `Incr.t` is a record with 27 fields, so
 there's a solid 216 bytes just from that alone!  Plus, there's some
 extra overhead for firing through the incremental nodes.
 
 We could have built the function we described above with just a single
 unordered fold, no primed operators or nested incrementality in
 sight.  Here's what that would look like.
-|}]
 
-let shares_per_symbol_flat (orders : Order.t Map.M(Order.Id).t Incr.t) =
-  let update_sym_map op ~key:_ ~data:(o : Order.t) m =
-    Map.update m o.sym ~f:(function
-      | None -> o.size
-      | Some x -> op x o.size)
-  in
-  Incr_map.unordered_fold
-    orders
-    ~init:(Map.empty (module Symbol))
-    ~add:(update_sym_map ( + ))
-    ~remove:(update_sym_map ( - ))
-;;
-[%%expect{|
+```ocaml
+# let shares_per_symbol_flat (orders : Order.t Map.M(Order.Id).t Incr.t) =
+    let update_sym_map op ~key:_ ~data:(o : Order.t) m =
+      Map.update m o.sym ~f:(function
+        | None -> o.size
+        | Some x -> op x o.size)
+    in
+    Incr_map.unordered_fold
+      orders
+      ~init:(Map.empty (module Symbol))
+      ~add:(update_sym_map ( + ))
+      ~remove:(update_sym_map ( - ))
 val shares_per_symbol_flat :
   Order.t Core.Map.M(Order.Id).t Incr.t ->
   (Symbol.t, int, Symbol.comparator_witness) Map.t Incr.t = <fun>
-|}]
+```
 
-[%%org {|
 It's not as pretty, since you don't get to compose together your
 existing incremental computations.  But it does perform materially
 better.  Here's the result of running a benchmark containing both
 approaches.
-
 
 | Name   | Time/Run | mWd/Run | mjWd/Run | Prom/Run | Percentage |
 |--------+----------+---------+----------+----------+------------|
 | nested | 24.80us  | -1.77kw | -107.32w | -104.36w |    100.00% |
 | flat   | 10.31us  | 3.55kw  | 3.42w    | 3.42w    |     41.57% |
 
-
-
-You can find the code in ~lib/incr_map/bench/shares_per_symbol.ml~,
+You can find the code in `lib/incr_map/bench/shares_per_symbol.ml`,
 but the cost here is for stabilizing the computation after updating
 one entry in a million-order map.  (And ignore the allocation numbers
 here. I'm not sure why they're crazy.)
@@ -368,5 +340,5 @@ the the filtering happens earlier, before you need to use any of the
 primed operators.  As such, you can end up doing the expensive
 calculation on a small subset of the data.
 
-[[./part4-pitfalls.mlt][Part 4: Pitfalls]]
-|}]
+[Part 4: Pitfalls](./part4-pitfalls.mdx)
+

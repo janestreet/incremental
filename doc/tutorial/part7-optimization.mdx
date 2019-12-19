@@ -1,5 +1,7 @@
-[%%org {|
-#+TITLE: Incremental tutorial, Part 7: Performance and Optimization
+---
+title: Incremental tutorial, Part 7; Performance and Optimization
+uuid: 48fca332-ec9c-3e3d-345e-a818d9e5c405
+---
 
 The whole point of using Incremental is to optimize your program.
 This part of the tutorial will focus on providing you with some tools
@@ -13,14 +15,14 @@ computation.
 
 We'll start with talking about costs.
 
-* Costs
+# Costs
 
 We'll start by trying to give you some intuition for the time and
 space taken by different incremental operations.  These timings are
 all from native-code usages of Incremental.  The costs when compiled
 to JavaScript should be expected to be higher.
 
-*Incremental nodes are big.* One incremental node being a record of 27
+**Incremental nodes are big.** One incremental node being a record of 27
 fields, meaning that the record alone is 216 bytes, without even
 counting the things pointed to by an incremental node.
 
@@ -34,7 +36,7 @@ computations you might put inside of an incremental node.  This
 highlights why you shouldn't over-incrementalize; a very fine-grained
 incrementalization can end up slower than a coarse grained one.
 
-*Stabilizations, on the other hand, are nearly free.* A single
+**Stabilizations, on the other hand, are nearly free.** A single
 stabilization where there's nothing to be done takes under 100ns.  So
 in most applications, you don't have to worry about the cost of
 stabilizing too often.  (There are, however, some computational
@@ -45,21 +47,21 @@ Another thing worth thinking about when it comes to Incremental is
 which parts of the graph are actually going to be fired.  There are
 two key rules that are worth keeping in mind.
 
-- *Only dependents of incrementals which have changed can be fired.*
+- **Only dependents of incrementals which have changed can be fired.**
   By default, a node counts as having changed if its new value is
   physically different from its previous value, but this notion of
   change can be overridden by changing the cutoff of a node.
 
-- *Only nodes that are /necessary/ will fire.* A node is necessary if
+- **Only nodes that are *necessary* will fire.** A node is necessary if
   there's some observer that transitively depends on that node.
   Merely holding on to a copy of some incremental node is not enough
   to make it run; it also has to be connected to an observer.
 
-- *Specialized incremental data-structures further reduce firing*.
-  ~Incr_map.mapi'~ is one example of such a specialized data structure
+- **Specialized incremental data-structures further reduce firing**.
+  `Incr_map.mapi'` is one example of such a specialized data structure
   that we've seen.  Notably, there, which nodes fire is
   data-dependent, rather than being strictly about node-level
-  dependencies.  ~Incr.Clock~ and ~Incr_select~ provide similar
+  dependencies.  `Incr.Clock` and `Incr_select` provide similar
   functionality.
 
 Note that Incremental provides a kind of best-of-both-worlds between
@@ -74,235 +76,195 @@ incremental computation.
 With this cost model in hand, let's explore some techniques for
 improving the performance of incremental computations.
 
-* Watching incremental
+# Watching incremental
 
 Incremental has some built in tools for gathering metadata about
-incremental computations.  You'll find these functions in the ~State~
+incremental computations.  You'll find these functions in the `State`
 module.  For example, the following code shows you how to read out the
 number of Incremental nodes that have been created thus far.
-|}]
 
+```ocaml non-deterministic
 open Core
 module Incr = Incremental.Make ()
 module Incr_map = Incr_map.Make(Incr);;
 open Incr.Let_syntax;;
+```
 
-#verbose true;;
-let _ = (Incr.State.num_nodes_created Incr.State.t : int);;
-[%%expect{|
+```ocaml
+# let _ = (Incr.State.num_nodes_created Incr.State.t : int);;
 - : int = 0
-|}]
-let i = Incr.Var.create 0 |> Incr.Var.watch |> Incr.map ~f:succ;;
-[%%expect {|
+# let i = Incr.Var.create 0 |> Incr.Var.watch |> Incr.map ~f:succ;;
 val i : int Incr.t = <abstr>
-|}];;
-let _ = (Incr.State.num_nodes_created Incr.State.t : int);;
-[%%expect {|
+# let _ = (Incr.State.num_nodes_created Incr.State.t : int);;
 - : int = 2
-|}];;
+```
 
-[%%org {|
 Using these functions, we can create tool capturing and reporting
 statistics about how a given incremental computation is behaving.
-|}]
 
-module Stats : sig
-  val reporter : unit -> (unit -> unit) Staged.t
-end = struct
-  type t =
-    { created : int
-    ; recomputed : int
-    ; changed : int
-    }
-  [@@deriving sexp]
+```ocaml
+# module Stats : sig val reporter : unit -> (unit -> unit) Staged.t end = struct
+    type t =
+      { created : int
+      ; recomputed : int
+      ; changed : int
+      }
+    [@@deriving sexp]
 
-  let diff t1 t2 =
-    { created = t1.created - t2.created
-    ; recomputed = t1.recomputed - t2.recomputed
-    ; changed = t1.changed - t2.changed
-    }
-  ;;
+    let diff t1 t2 =
+      { created = t1.created - t2.created
+      ; recomputed = t1.recomputed - t2.recomputed
+      ; changed = t1.changed - t2.changed
+      }
 
-  let snap () =
-    { created = Incr.State.num_nodes_created Incr.State.t
-    ; recomputed = Incr.State.num_nodes_recomputed Incr.State.t
-    ; changed = Incr.State.num_nodes_changed Incr.State.t
-    }
-  ;;
+    let snap () =
+      { created = Incr.State.num_nodes_created Incr.State.t
+      ; recomputed = Incr.State.num_nodes_recomputed Incr.State.t
+      ; changed = Incr.State.num_nodes_changed Incr.State.t
+      }
 
-  let reporter () =
-    let open Expect_test_helpers_kernel in
-    let old_stats = ref (snap ()) in
-    let report () =
-      let stats = snap () in
-      print_s [%sexp (diff stats !old_stats : t)];
-      old_stats := stats
-    in
-    stage report
-  ;;
-end
-[%%expect {|
+    let reporter () =
+      let open Expect_test_helpers_kernel in
+      let old_stats = ref (snap ()) in
+      let report () =
+        let stats = snap () in
+        print_s [%sexp (diff stats !old_stats : t)];
+        old_stats := stats
+      in
+      stage report
+  end
 module Stats : sig val reporter : unit -> (unit -> unit) Staged.t end
-|}];;
+```
 
-[%%org {|
 We can create a stats reporter now and use it for printing out the
 number of created, changed and recomputed nodes.
-|}]
 
-let report = unstage (Stats.reporter ());;
-[%%expect {|
+```ocaml
+# let report = unstage (Stats.reporter ());;
 val report : unit -> unit = <fun>
-|}];;
-
-let () = report ()
-[%%expect {|
+# let () = report ()
 ((created    0)
  (recomputed 0)
  (changed    0))
-|}];;
+```
 
-[%%org {|
 Now, let's create a small incremental computation that takes a map
 full of integers and sums the squares together.
-|}]
 
-let (input,sum_sq) =
-  let input =
-    let m = Map.of_alist_exn (module Int) (List.init 1_000 ~f:(fun x -> (x,x))) in
-    Incr.Var.create m
-  in
-  let squares = Incr_map.mapi (Incr.Var.watch input) ~f:(fun ~key:_ ~data:x -> x * x) in
-  let sum_sq =
-    let change op ~key:_ ~data acc = op acc data in
-    Incr_map.unordered_fold squares ~init:0 ~add:(change (+)) ~remove:(change (-))
-  in
-  (input, Incr.observe sum_sq)
-
-[%%expect{|
+```ocaml
+# let (input,sum_sq) =
+    let input =
+      let m = Map.of_alist_exn (module Int) (List.init 1_000 ~f:(fun x -> (x,x))) in
+      Incr.Var.create m
+    in
+    let squares = Incr_map.mapi (Incr.Var.watch input) ~f:(fun ~key:_ ~data:x -> x * x) in
+    let sum_sq =
+      let change op ~key:_ ~data acc = op acc data in
+      Incr_map.unordered_fold squares ~init:0 ~add:(change (+)) ~remove:(change (-))
+    in
+    (input, Incr.observe sum_sq)
 val input : (int, int, Int.comparator_witness) Map.t Incr.Var.t = <abstr>
 val sum_sq : int Incr.Observer.t = <abstr>
-|}]
+```
 
-[%%org {|
 From reading this code, we can see three places where it looks like
 incremental nodes are created, and in each case, we can guess that
 just one node is created. But instead of guessing, let's run the
 reporter and see.
-|}]
 
-let () = report ()
-[%%expect {|
+```ocaml
+# let () = report ()
 ((created    3)
  (recomputed 0)
  (changed    0))
-|}];;
+```
 
-[%%org {|
 If we now modify the input, we should see all three nodes change.
-|}]
 
-let () =
-  Incr.Var.set input (Map.remove (Incr.Var.value input) 100);
-  Incr.stabilize ();
-  report ();
-[%%expect{|
+```ocaml
+# let () =
+    Incr.Var.set input (Map.remove (Incr.Var.value input) 100);
+    Incr.stabilize ();
+    report ();
 ((created    0)
  (recomputed 3)
  (changed    3))
-|}]
+```
 
-[%%org {|
 If we use the primed version of the function for the same computation,
 we'll see very different numbers.
-|}]
 
-let (input,sum_sq) =
-  let input =
-    let m = Map.of_alist_exn (module Int) (List.init 1_000 ~f:(fun x -> (x,x))) in
-    Incr.Var.create m
-  in
-  let squares = Incr_map.mapi' (Incr.Var.watch input) ~f:(fun ~key:_ ~data:x ->
-    let%map x = x in x + 1)
-  in
-  let change op ~key:_ ~data acc = op acc data in
-  let sum_sq =
-    Incr_map.unordered_fold squares ~init:0 ~add:(change (+)) ~remove:(change (-))
-    |> Incr.observe
-  in
-  (input,sum_sq)
-[%%expect {|
+```ocaml
+# let (input,sum_sq) =
+    let input =
+      let m = Map.of_alist_exn (module Int) (List.init 1_000 ~f:(fun x -> (x,x))) in
+      Incr.Var.create m
+    in
+    let squares = Incr_map.mapi' (Incr.Var.watch input) ~f:(fun ~key:_ ~data:x ->
+      let%map x = x in x + 1)
+    in
+    let change op ~key:_ ~data acc = op acc data in
+    let sum_sq =
+      Incr_map.unordered_fold squares ~init:0 ~add:(change (+)) ~remove:(change (-))
+      |> Incr.observe
+    in
+    (input,sum_sq)
 val input : (int, int, Int.comparator_witness) Map.t Incr.Var.t = <abstr>
 val sum_sq : int Incr.Observer.t = <abstr>
-|}];;
-
-let print () =
-  Incr.stabilize ();
-  print_s [%sexp (Incr.Observer.value_exn sum_sq : int)];
-  report ()
-[%%expect {|
+# let print () =
+    Incr.stabilize ();
+    print_s [%sexp (Incr.Observer.value_exn sum_sq : int)];
+    report ()
 val print : unit -> unit = <fun>
-|}];;
-
-let () = print ()
-[%%expect{|
+# let () = print ()
 500500
 ((created    2008)
  (recomputed 2008)
  (changed    2008))
-|}]
+```
 
-[%%org {|
 Here we can see that we're creating a bunch more incremental
 nodes. But, when we update just one node, we'll see a small number of
 recomputed and changed nodes, but no nodes created.
-|}]
 
-let change f =
-  Incr.Var.set input (f (Incr.Var.value input))
-
-let () =
-  change (fun m -> Map.set m ~key:100 ~data:101);
-  print ()
-[%%expect{|
+```ocaml
+# let change f =
+    Incr.Var.set input (f (Incr.Var.value input))
 val change :
   ((int, int, Int.comparator_witness) Map.t ->
    (int, int, Int.comparator_witness) Map.t) ->
   unit = <fun>
+# let () =
+    change (fun m -> Map.set m ~key:100 ~data:101);
+    print ()
 500501
 ((created    0)
  (recomputed 7)
  (changed    6))
-|}]
+```
 
-[%%org {|
 Now if we add a new key that wasn't in the map, we'll see nodes being
 created as well.
-|}]
 
-let () =
-  change (fun m -> (Map.set m ~key:1001 ~data:1001));
-  print ()
-[%%expect {|
+```ocaml
+# let () =
+    change (fun m -> (Map.set m ~key:1001 ~data:1001));
+    print ()
 501503
 ((created    2)
  (recomputed 7)
  (changed    6))
-|}];;
+```
 
-[%%org {|
 Grabbing statistics like this from incremental is useful because it
 helps you build up an intuition as to what your program is doing and
 why.
 
-Another useful tool that the ~State! exposes is the ability to
+Another useful tool that the `State` exposes is the ability to
 generate a graph specification, suitable for display via
-[[https://www.graphviz.org/doc/info/lang.html][dot]].
-|}]
+[dot](https://www.graphviz.org/doc/info/lang.html).
 
-[%%org {|
-
-* Optimization tips
+# Optimization tips
 
 In this section, we'll briefly go over some useful tips for
 transforming your computations to make them more efficient.
@@ -313,7 +275,7 @@ come with tradeoffs.  As always, you shouldn't optimize your program
 blindly, but instead balance the clarity of the code against the
 performance improvements you can get.
 
-** Create fewer incrementals in the inner loop
+## Create fewer incrementals in the inner loop
 
 Large incremental graphs are often fairly regular, with some core bits
 of structure repeated over and over.  It's often useful to focus on
@@ -322,30 +284,24 @@ they contain.  This can be as simple as replacing multiple incremental
 maps with a single map and ordinary function application.  e.g.,
 consider the following two functions.
 
-|}]
-
-let z x = x >>| Float.sqrt >>| Float.to_int;;
-[%%expect {|
+```ocaml
+# let z x = x >>| Float.sqrt >>| Float.to_int;;
 val z : float Incr.t -> int Incr.t = <fun>
-|}];;
-
-let w x = let%map x = x in Float.to_int (Float.sqrt x);;
-[%%expect {|
+# let w x = let%map x = x in Float.to_int (Float.sqrt x);;
 val w : float Incr.t -> int Incr.t = <fun>
-|}];;
+```
 
-[%%org {|
-These two functions compute the same result, but ~w~ uses one less
+These two functions compute the same result, but `w` uses one less
 incremental, and so is likely the better choice here.  Note that this
 kind of transformation isn't always a win: if the first function often
 produced the same result, and the second computation was expensive,
 losing the cutoff could be a net loss.  But in this case, it's clearly
 a win.
 
-** Filter first
+## Filter first
 
 Complex incremental computations, especially those that use
-~Incr_map~, are often organized in stages, where you have an initial
+`Incr_map`, are often organized in stages, where you have an initial
 data structure that is transformed through multiple steps.  When one
 of those stages filters down the data-set in a material way, it's a
 good idea to put that filtering as soon as you can in the process.
@@ -354,23 +310,23 @@ cost, it can do a lot to reduce the amount of memory your program
 consumes.  This is especially true if some of the later stages use the
 primed operators, which generate one incremental per data element.
 
-** Flatten computations
+## Flatten computations
 
-As discussed in [[./part3-map.mlt][Part 3]], nested incrementally, of
-the kind you get with operations like ~Incr_map.mapi'~, is typically
+As discussed in [Part 3](./part3-map.mdx), nested incrementally, of
+the kind you get with operations like `Incr_map.mapi'`, is typically
 more expensive, both in memory and in compute time, than the
 flatter-style of computation when using an operation like
-~Incr_map.map~ or ~Incr_map.unordered_fold~.
+`Incr_map.map` or `Incr_map.unordered_fold`.
 
-** Share sub-computations
+## Share sub-computations
 
 It's common to have multiple different parts of your computation need
 to reference the same incrementally computed value. When possible,
-it's better to share those computations. [[./part8-sharing.mlt][Part
-8]] discusses this in more detail and demonstrates techniques for
+it's better to share those computations. [Part 8](./part8-sharing.mdx)
+discusses this in more detail and demonstrates techniques for
 achieving this sharing.
 
-** Minimize what's necessary
+## Minimize what's necessary
 
 Incremental will only cause the parts of the graph that are currently
 /necessary/ to be recomputed.  A part of the graph is /necessary/ if
@@ -388,7 +344,7 @@ There is a cost there, however: if you're not keeping the data
 associated with those out-of-sight views up to date, it does mean that
 switching views can then be more expensive.
 
-** Batch computations
+## Batch computations
 
 While stabilizations are inexpensive, there are still good reasons to
 stabilize less often.  In particular, different changes to your input
@@ -403,5 +359,5 @@ really customize per computation. It's rather something that you
 choose at an application level, when you construct the loop that
 drives stabilization.
 
-[[./part8-sharing.mlt][Part 8: Sharing]]
-|}]
+[Part 8: Sharing](./part8-sharing.mdx)
+
