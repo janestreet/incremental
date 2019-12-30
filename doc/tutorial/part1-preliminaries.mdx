@@ -95,12 +95,12 @@ val z : float Incr.t = <abstr>
 Now, let's sum these up with a couple applications of the `map2`
 operator.
 
-```
-let sum =
-  Incr.map2
-    z
-    (Incr.map2 x y `f:(fun x y -> x +. y))
-    `f:(fun z x_and_y -> z +. x_and_y);;
+```ocaml
+# let sum =
+    Incr.map2
+      z
+      (Incr.map2 x y ~f:(fun x y -> x +. y))
+      ~f:(fun z x_and_y -> z +. x_and_y);;
 val sum : float Incr.t = <abstr>
 ```
 
@@ -416,13 +416,11 @@ then the computation only happens the first time.
 ```ocaml
 # let new_b = (3,2)
 val new_b : int * int = (3, 2)
-
 # let () =
     z := { !z with b = new_b };
     show ()
 b
 result: 12
-
 # let () =
     z := { !z with b = new_b };
     show ()
