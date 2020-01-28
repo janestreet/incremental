@@ -98,6 +98,7 @@ struct
 
         module Infix = Infix
         module Before_or_after = Before_or_after
+        module Node_value = Node_value
         module Step_function = Step_function
 
         let invariant = invariant
@@ -4120,6 +4121,30 @@ struct
                    Heap_block.create_exn (f a)))
             in
             stage (fun a -> Heap_block.value (memo_f a)))
+        ;;
+
+        let node_value = node_value
+
+        let%expect_test _ =
+          let show t = print_s [%sexp (node_value t : int Node_value.t)] in
+          if M.bind_lhs_change_should_invalidate_rhs
+          then (
+            show invalid;
+            [%expect {| Invalid |}]);
+          let x = Var.create 13 in
+          let t = watch x in
+          show t;
+          [%expect {| (Unnecessary_maybe_stale ()) |}];
+          let o = observe t in
+          show t;
+          [%expect {| (Unnecessary_maybe_stale ()) |}];
+          stabilize_ [%here];
+          show t;
+          [%expect {| (Necessary_maybe_stale (13)) |}];
+          Observer.disallow_future_use o;
+          stabilize_ [%here];
+          show t;
+          [%expect {| (Unnecessary_maybe_stale (13)) |}]
         ;;
 
         let%expect_test _ =

@@ -214,6 +214,22 @@ module Generic = struct
   let am_stabilizing state = State.am_stabilizing state
   let save_dot = State.save_dot
 
+  module Node_value = struct
+    type 'a t =
+      | Invalid
+      | Necessary_maybe_stale of 'a option
+      | Unnecessary_maybe_stale of 'a option
+    [@@deriving sexp_of]
+  end
+
+  let node_value t : _ Node_value.t =
+    if not (is_valid t)
+    then Invalid
+    else if is_necessary t
+    then Necessary_maybe_stale (Uopt.to_option t.value_opt)
+    else Unnecessary_maybe_stale (Uopt.to_option t.value_opt)
+  ;;
+
   (* We override [sexp_of_t] to show just the value, rather than the internal
      representation.  We only show the value if it is necessary and valid. *)
   let sexp_of_t sexp_of_a t =

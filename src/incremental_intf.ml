@@ -856,6 +856,19 @@ module type S_gen = sig
   val user_info : _ t -> Info.t option
   val set_user_info : _ t -> Info.t option -> unit
 
+  module Node_value : sig
+    type 'a t =
+      | Invalid
+      | Necessary_maybe_stale of 'a option
+      | Unnecessary_maybe_stale of 'a option
+    [@@deriving sexp_of]
+  end
+
+  (** [node_value t] returns whatever value [t] happens to have in it, regardless of
+      whether [t] is valid, necessary, or stale.  One should use [observe] for a more
+      sensible semantics, reserving [node_value] for debugging. *)
+  val node_value : 'a t -> 'a Node_value.t
+
   module Packed : sig
     type t
 
@@ -1821,6 +1834,16 @@ module type Incremental = sig
   val user_info : _ t -> Info.t option
 
   val set_user_info : _ t -> Info.t option -> unit
+
+  module Node_value : sig
+    type 'a t =
+      | Invalid
+      | Necessary_maybe_stale of 'a option
+      | Unnecessary_maybe_stale of 'a option
+    [@@deriving sexp_of]
+  end
+
+  val node_value : ('a, _) t -> 'a Node_value.t
 
   module Packed : sig
     type t
