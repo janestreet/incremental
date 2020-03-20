@@ -133,6 +133,7 @@ module Generic = struct
         | Invalidated -> f Invalidated
         | Unnecessary ->
           failwiths
+            ~here:[%here]
             "Incremental bug -- Observer.on_update_exn got unexpected update \
              Unnecessary"
             t

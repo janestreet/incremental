@@ -121,19 +121,29 @@ let invariant invariant_a t =
 let value_exn t =
   match t.state with
   | Created ->
-    failwiths "Observer.value_exn called without stabilizing" t [%sexp_of: _ t]
+    failwiths
+      ~here:[%here]
+      "Observer.value_exn called without stabilizing"
+      t
+      [%sexp_of: _ t]
   | Disallowed | Unlinked ->
-    failwiths "Observer.value_exn called after disallow_future_use" t [%sexp_of: _ t]
+    failwiths
+      ~here:[%here]
+      "Observer.value_exn called after disallow_future_use"
+      t
+      [%sexp_of: _ t]
   | In_use ->
     let uopt = t.observing.value_opt in
     if Uopt.is_none uopt
-    then failwiths "attempt to get value of an invalid node" t [%sexp_of: _ t];
+    then
+      failwiths ~here:[%here] "attempt to get value of an invalid node" t [%sexp_of: _ t];
     Uopt.unsafe_value uopt
 ;;
 
 let on_update_exn t on_update_handler =
   match t.state with
-  | Disallowed | Unlinked -> failwiths "on_update disallowed" t [%sexp_of: _ t]
+  | Disallowed | Unlinked ->
+    failwiths ~here:[%here] "on_update disallowed" t [%sexp_of: _ t]
   | Created | In_use ->
     t.on_update_handlers <- on_update_handler :: t.on_update_handlers;
     (match t.state with

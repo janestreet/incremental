@@ -81,6 +81,7 @@ let set_max_height_allowed t max_height_allowed =
   if max_height_allowed < t.max_height_seen
   then
     failwiths
+      ~here:[%here]
       "cannot set_max_height_allowed less than the max height already seen"
       (max_height_allowed, `max_height_seen t.max_height_seen)
       [%sexp_of: int * [ `max_height_seen of int ]];
@@ -105,7 +106,12 @@ let add_unless_mem (type a) t (node : a Node.t) =
 
 let remove_min_exn t : Node.Packed.t =
   if debug && is_empty t
-  then failwiths "Adjust_heights_heap.remove_min of empty heap" t [%sexp_of: t];
+  then
+    failwiths
+      ~here:[%here]
+      "Adjust_heights_heap.remove_min of empty heap"
+      t
+      [%sexp_of: t];
   let r = ref t.height_lower_bound in
   while Uopt.is_none t.nodes_by_height.(!r) do
     incr r
@@ -127,6 +133,7 @@ let set_height t (node : _ Node.t) height =
     if height > max_height_allowed t
     then
       failwiths
+        ~here:[%here]
         "node with too large height"
         (`Height height, `Max (max_height_allowed t))
         [%sexp_of: [ `Height of int ] * [ `Max of int ]]);
@@ -139,6 +146,7 @@ let ensure_height_requirement t ~original_child ~original_parent ~child ~parent 
   if Node.same parent original_child
   then
     failwiths
+      ~here:[%here]
       "adding edge made graph cyclic"
       (`child original_child, `parent original_parent)
       [%sexp_of: [ `child of _ Node.t ] * [ `parent of _ Node.t ]];

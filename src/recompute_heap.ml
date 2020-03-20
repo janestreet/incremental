@@ -119,7 +119,11 @@ let unlink (type a) t (node : a Node.t) =
 let add (type a) t (node : a Node.t) =
   if debug && (Node.is_in_recompute_heap node || not (Node.needs_to_be_computed node))
   then
-    failwiths "incorrect attempt to add node to recompute heap" node [%sexp_of: _ Node.t];
+    failwiths
+      ~here:[%here]
+      "incorrect attempt to add node to recompute heap"
+      node
+      [%sexp_of: _ Node.t];
   if debug then assert (node.height <= max_height_allowed t);
   let height = node.height in
   if height < t.height_lower_bound then t.height_lower_bound <- height;
@@ -130,7 +134,11 @@ let add (type a) t (node : a Node.t) =
 let remove (type a) t (node : a Node.t) =
   if debug && ((not (Node.is_in_recompute_heap node)) || Node.needs_to_be_computed node)
   then
-    failwiths "incorrect [remove] of node from recompute heap" node [%sexp_of: _ Node.t];
+    failwiths
+      ~here:[%here]
+      "incorrect [remove] of node from recompute heap"
+      node
+      [%sexp_of: _ Node.t];
   unlink t node;
   node.next_in_recompute_heap <- Uopt.none;
   node.height_in_recompute_heap <- -1;
@@ -167,6 +175,7 @@ let remove_min t : Node.Packed.t =
     if debug && t.height_lower_bound >= Array.length t.nodes_by_height
     then
       failwiths
+        ~here:[%here]
         "Recompute_heap.remove_min unexpectedly reached end of heap"
         t
         [%sexp_of: t];
