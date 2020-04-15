@@ -393,679 +393,9 @@
 open Core_kernel
 open! Import
 
-(** [S_gen] is the type of the module returned by [Incremental.Make].  It is a
-    specialization of the interface of [Incremental], with:
+module type Map_n_gen = sig
+  type ('a, 'w) t
 
-    - the ['w] state_witness type parameter removed
-    - the [State.t] argument removed
-
-    The comments for components of [S_gen] are in [module type Incremental] below. *)
-module type S_gen = sig
-  module State : sig
-    type t [@@deriving sexp_of]
-
-    include Invariant.S with type t := t
-
-    (** [t] is the shared state for a call to [Incremental.Make]. *)
-    val t : t
-
-    val keep_node_creation_backtrace : t -> bool
-    val set_keep_node_creation_backtrace : t -> bool -> unit
-    val max_height_allowed : t -> int
-    val set_max_height_allowed : t -> int -> unit
-    val num_active_observers : t -> int
-    val max_height_seen : t -> int
-    val num_nodes_became_necessary : t -> int
-    val num_nodes_became_unnecessary : t -> int
-    val num_nodes_changed : t -> int
-    val num_nodes_created : t -> int
-    val num_nodes_invalidated : t -> int
-    val num_nodes_recomputed : t -> int
-    val num_nodes_recomputed_directly_because_one_child : t -> int
-    val num_nodes_recomputed_directly_because_min_height : t -> int
-    val num_stabilizes : t -> int
-    val num_var_sets : t -> int
-
-    module Stats : sig
-      type t [@@deriving sexp_of]
-    end
-
-    val stats : t -> Stats.t
-  end
-
-  type 'a t [@@deriving sexp_of]
-  type 'a incremental := 'a t
-
-  include Invariant.S1 with type 'a t := 'a t
-
-  val is_const : _ t -> bool
-  val is_valid : _ t -> bool
-  val is_necessary : _ t -> bool
-  val const : 'a -> 'a t
-  val return : 'a -> 'a t
-  val map : 'a t -> f:('a -> 'b) -> 'b t
-  val ( >>| ) : 'a t -> ('a -> 'b) -> 'b t
-  val map2 : 'a1 t -> 'a2 t -> f:('a1 -> 'a2 -> 'b) -> 'b t
-  val map3 : 'a1 t -> 'a2 t -> 'a3 t -> f:('a1 -> 'a2 -> 'a3 -> 'b) -> 'b t
-
-  val map4
-    :  'a1 t
-    -> 'a2 t
-    -> 'a3 t
-    -> 'a4 t
-    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'b)
-    -> 'b t
-
-  val map5
-    :  'a1 t
-    -> 'a2 t
-    -> 'a3 t
-    -> 'a4 t
-    -> 'a5 t
-    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'b)
-    -> 'b t
-
-  val map6
-    :  'a1 t
-    -> 'a2 t
-    -> 'a3 t
-    -> 'a4 t
-    -> 'a5 t
-    -> 'a6 t
-    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'b)
-    -> 'b t
-
-  val map7
-    :  'a1 t
-    -> 'a2 t
-    -> 'a3 t
-    -> 'a4 t
-    -> 'a5 t
-    -> 'a6 t
-    -> 'a7 t
-    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'b)
-    -> 'b t
-
-  val map8
-    :  'a1 t
-    -> 'a2 t
-    -> 'a3 t
-    -> 'a4 t
-    -> 'a5 t
-    -> 'a6 t
-    -> 'a7 t
-    -> 'a8 t
-    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'b)
-    -> 'b t
-
-  val map9
-    :  'a1 t
-    -> 'a2 t
-    -> 'a3 t
-    -> 'a4 t
-    -> 'a5 t
-    -> 'a6 t
-    -> 'a7 t
-    -> 'a8 t
-    -> 'a9 t
-    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'b)
-    -> 'b t
-
-  val map10
-    :  'a1 t
-    -> 'a2 t
-    -> 'a3 t
-    -> 'a4 t
-    -> 'a5 t
-    -> 'a6 t
-    -> 'a7 t
-    -> 'a8 t
-    -> 'a9 t
-    -> 'a10 t
-    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a6 -> 'a7 -> 'a8 -> 'a9 -> 'a10 -> 'b)
-    -> 'b t
-
-  val map11
-    :  'a1 t
-    -> 'a2 t
-    -> 'a3 t
-    -> 'a4 t
-    -> 'a5 t
-    -> 'a6 t
-    -> 'a7 t
-    -> 'a8 t
-    -> 'a9 t
-    -> 'a10 t
-    -> 'a11 t
-    -> f:('a1
-          -> 'a2
-          -> 'a3
-          -> 'a4
-          -> 'a5
-          -> 'a6
-          -> 'a7
-          -> 'a8
-          -> 'a9
-          -> 'a10
-          -> 'a11
-          -> 'b)
-    -> 'b t
-
-  val map12
-    :  'a1 t
-    -> 'a2 t
-    -> 'a3 t
-    -> 'a4 t
-    -> 'a5 t
-    -> 'a6 t
-    -> 'a7 t
-    -> 'a8 t
-    -> 'a9 t
-    -> 'a10 t
-    -> 'a11 t
-    -> 'a12 t
-    -> f:('a1
-          -> 'a2
-          -> 'a3
-          -> 'a4
-          -> 'a5
-          -> 'a6
-          -> 'a7
-          -> 'a8
-          -> 'a9
-          -> 'a10
-          -> 'a11
-          -> 'a12
-          -> 'b)
-    -> 'b t
-
-  val map13
-    :  'a1 t
-    -> 'a2 t
-    -> 'a3 t
-    -> 'a4 t
-    -> 'a5 t
-    -> 'a6 t
-    -> 'a7 t
-    -> 'a8 t
-    -> 'a9 t
-    -> 'a10 t
-    -> 'a11 t
-    -> 'a12 t
-    -> 'a13 t
-    -> f:('a1
-          -> 'a2
-          -> 'a3
-          -> 'a4
-          -> 'a5
-          -> 'a6
-          -> 'a7
-          -> 'a8
-          -> 'a9
-          -> 'a10
-          -> 'a11
-          -> 'a12
-          -> 'a13
-          -> 'b)
-    -> 'b t
-
-  val map14
-    :  'a1 t
-    -> 'a2 t
-    -> 'a3 t
-    -> 'a4 t
-    -> 'a5 t
-    -> 'a6 t
-    -> 'a7 t
-    -> 'a8 t
-    -> 'a9 t
-    -> 'a10 t
-    -> 'a11 t
-    -> 'a12 t
-    -> 'a13 t
-    -> 'a14 t
-    -> f:('a1
-          -> 'a2
-          -> 'a3
-          -> 'a4
-          -> 'a5
-          -> 'a6
-          -> 'a7
-          -> 'a8
-          -> 'a9
-          -> 'a10
-          -> 'a11
-          -> 'a12
-          -> 'a13
-          -> 'a14
-          -> 'b)
-    -> 'b t
-
-  val map15
-    :  'a1 t
-    -> 'a2 t
-    -> 'a3 t
-    -> 'a4 t
-    -> 'a5 t
-    -> 'a6 t
-    -> 'a7 t
-    -> 'a8 t
-    -> 'a9 t
-    -> 'a10 t
-    -> 'a11 t
-    -> 'a12 t
-    -> 'a13 t
-    -> 'a14 t
-    -> 'a15 t
-    -> f:('a1
-          -> 'a2
-          -> 'a3
-          -> 'a4
-          -> 'a5
-          -> 'a6
-          -> 'a7
-          -> 'a8
-          -> 'a9
-          -> 'a10
-          -> 'a11
-          -> 'a12
-          -> 'a13
-          -> 'a14
-          -> 'a15
-          -> 'b)
-    -> 'b t
-
-  val bind : 'a t -> f:('a -> 'b t) -> 'b t
-  val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
-  val bind2 : 'a1 t -> 'a2 t -> f:('a1 -> 'a2 -> 'b t) -> 'b t
-  val bind3 : 'a1 t -> 'a2 t -> 'a3 t -> f:('a1 -> 'a2 -> 'a3 -> 'b t) -> 'b t
-
-  val bind4
-    :  'a1 t
-    -> 'a2 t
-    -> 'a3 t
-    -> 'a4 t
-    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> 'b t)
-    -> 'b t
-
-  module Infix : sig
-    val ( >>| ) : 'a t -> ('a -> 'b) -> 'b t
-    val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
-  end
-
-  val join : 'a t t -> 'a t
-  val if_ : bool t -> then_:'a t -> else_:'a t -> 'a t
-  val freeze : ?when_:('a -> bool) -> 'a t -> 'a t
-  val depend_on : 'a t -> depend_on:_ t -> 'a t
-  val necessary_if_alive : 'a t -> 'a t
-  val for_all : bool t array -> bool t
-  val exists : bool t array -> bool t
-  val all : 'a t list -> 'a list t
-  val both : 'a t -> 'b t -> ('a * 'b) t
-  val array_fold : 'a t array -> init:'b -> f:('b -> 'a -> 'b) -> 'b t
-
-  val reduce_balanced
-    :  'a t array
-    -> f:('a -> 'b)
-    -> reduce:('b -> 'b -> 'b)
-    -> 'b t option
-
-  module Unordered_array_fold_update : sig
-    type ('a, 'b) t =
-      | F_inverse of ('b -> 'a -> 'b)
-      | Update of ('b -> old_value:'a -> new_value:'a -> 'b)
-  end
-
-  val unordered_array_fold
-    :  ?full_compute_every_n_changes:int
-    -> 'a t array
-    -> init:'b
-    -> f:('b -> 'a -> 'b)
-    -> update:('a, 'b) Unordered_array_fold_update.t
-    -> 'b t
-
-  val opt_unordered_array_fold
-    :  ?full_compute_every_n_changes:int
-    -> 'a option t array
-    -> init:'b
-    -> f:('b -> 'a -> 'b)
-    -> f_inverse:('b -> 'a -> 'b)
-    -> 'b option t
-
-  val sum
-    :  ?full_compute_every_n_changes:int
-    -> 'a t array
-    -> zero:'a
-    -> add:('a -> 'a -> 'a)
-    -> sub:('a -> 'a -> 'a)
-    -> 'a t
-
-  val opt_sum
-    :  ?full_compute_every_n_changes:int
-    -> 'a option t array
-    -> zero:'a
-    -> add:('a -> 'a -> 'a)
-    -> sub:('a -> 'a -> 'a)
-    -> 'a option t
-
-  val sum_int : int t array -> int t
-  val sum_float : float t array -> float t
-
-  module Scope : sig
-    type t
-
-    val top : t
-    val current : unit -> t
-    val within : t -> f:(unit -> 'a) -> 'a
-  end
-
-  module Var : sig
-    type 'a t [@@deriving sexp_of]
-
-    val create : ?use_current_scope:bool -> 'a -> 'a t
-    val set : 'a t -> 'a -> unit
-    val watch : 'a t -> 'a incremental
-    val value : 'a t -> 'a
-    val latest_value : 'a t -> 'a
-  end
-
-  module Observer : sig
-    type 'a t [@@deriving sexp_of]
-
-    include Invariant.S1 with type 'a t := 'a t
-
-    val observing : 'a t -> 'a incremental
-    val use_is_allowed : _ t -> bool
-    val value : 'a t -> 'a Or_error.t
-    val value_exn : 'a t -> 'a
-
-    module Update : sig
-      type 'a t =
-        | Initialized of 'a
-        | Changed of 'a * 'a
-        | Invalidated
-      [@@deriving compare, sexp_of]
-    end
-
-    val on_update_exn : 'a t -> f:('a Update.t -> unit) -> unit
-    val disallow_future_use : _ t -> unit
-  end
-
-  val observe : ?should_finalize:bool -> 'a t -> 'a Observer.t
-
-  module Update : sig
-    type 'a t =
-      | Necessary of 'a
-      | Changed of 'a * 'a
-      | Invalidated
-      | Unnecessary
-    [@@deriving compare, sexp_of]
-  end
-
-  val on_update : 'a t -> f:('a Update.t -> unit) -> unit
-  val stabilize : unit -> unit
-  val am_stabilizing : unit -> bool
-
-  module Cutoff : sig
-    type 'a t [@@deriving sexp_of]
-
-    include Invariant.S1 with type 'a t := 'a t
-
-    val create : (old_value:'a -> new_value:'a -> bool) -> 'a t
-    val of_compare : ('a -> 'a -> int) -> 'a t
-    val of_equal : ('a -> 'a -> bool) -> 'a t
-    val always : _ t
-    val never : _ t
-    val phys_equal : _ t
-    val poly_equal : _ t
-    val should_cutoff : 'a t -> old_value:'a -> new_value:'a -> bool
-    val equal : 'a t -> 'a t -> bool
-  end
-
-  val set_cutoff : 'a t -> 'a Cutoff.t -> unit
-  val get_cutoff : 'a t -> 'a Cutoff.t
-  val lazy_from_fun : (unit -> 'a) -> 'a Lazy.t
-  val default_hash_table_initial_size : int
-
-  val memoize_fun
-    :  ?initial_size:int
-    -> 'a Base.Hashtbl.Key.t
-    -> ('a -> 'b)
-    -> ('a -> 'b) Staged.t
-
-  val memoize_fun_by_key
-    :  ?initial_size:int
-    -> 'key Base.Hashtbl.Key.t
-    -> ('a -> 'key)
-    -> ('a -> 'b)
-    -> ('a -> 'b) Staged.t
-
-  val weak_memoize_fun
-    :  ?initial_size:int
-    -> 'a Base.Hashtbl.Key.t
-    -> ('a -> 'b Heap_block.t)
-    -> ('a -> 'b Heap_block.t) Staged.t
-
-  val weak_memoize_fun_by_key
-    :  ?initial_size:int
-    -> 'key Base.Hashtbl.Key.t
-    -> ('a -> 'key)
-    -> ('a -> 'b Heap_block.t)
-    -> ('a -> 'b Heap_block.t) Staged.t
-
-  val user_info : _ t -> Info.t option
-  val set_user_info : _ t -> Info.t option -> unit
-
-  module Node_value : sig
-    type 'a t =
-      | Invalid
-      | Necessary_maybe_stale of 'a option
-      | Unnecessary_maybe_stale of 'a option
-    [@@deriving sexp_of]
-  end
-
-  (** [node_value t] returns whatever value [t] happens to have in it, regardless of
-      whether [t] is valid, necessary, or stale.  One should use [observe] for a more
-      sensible semantics, reserving [node_value] for debugging. *)
-  val node_value : 'a t -> 'a Node_value.t
-
-  module Packed : sig
-    type t
-
-    val save_dot : string -> t list -> unit
-  end
-
-  val pack : _ t -> Packed.t
-  val save_dot : string -> unit
-
-  module Let_syntax : sig
-    val return : 'a -> 'a t
-    val ( >>| ) : 'a t -> ('a -> 'b) -> 'b t
-    val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
-
-    module Let_syntax : sig
-      val bind : 'a t -> f:('a -> 'b t) -> 'b t
-      val map : 'a t -> f:('a -> 'b) -> 'b t
-      val both : 'a t -> 'b t -> ('a * 'b) t
-
-      module Open_on_rhs : sig
-        val watch : 'a Var.t -> 'a t
-      end
-    end
-  end
-
-  module Before_or_after : sig
-    type t =
-      | Before
-      | After
-    [@@deriving sexp_of]
-  end
-
-  module Step_function = Step_function
-
-  module Clock : sig
-    type t [@@deriving sexp_of]
-
-    val default_timing_wheel_config : Timing_wheel.Config.t
-
-    val create
-      :  ?timing_wheel_config:Timing_wheel.Config.t
-      -> start:Time_ns.t
-      -> unit
-      -> t
-
-    val alarm_precision : t -> Time_ns.Span.t
-    val timing_wheel_length : t -> int
-    val now : t -> Time_ns.t
-    val watch_now : t -> Time_ns.t incremental
-    val advance_clock : t -> to_:Time_ns.t -> unit
-    val advance_clock_by : t -> Time_ns.Span.t -> unit
-    val at : t -> Time_ns.t -> Before_or_after.t incremental
-    val after : t -> Time_ns.Span.t -> Before_or_after.t incremental
-    val at_intervals : t -> Time_ns.Span.t -> unit incremental
-    val step_function : t -> init:'a -> (Time_ns.t * 'a) list -> 'a incremental
-    val incremental_step_function : t -> 'a Step_function.t incremental -> 'a incremental
-
-    val snapshot
-      :  t
-      -> 'a incremental
-      -> at:Time_ns.t
-      -> before:'a
-      -> 'a incremental Or_error.t
-  end
-
-  module Expert : sig
-    module Dependency : sig
-      type 'a t [@@deriving sexp_of]
-
-      val create : ?on_change:('a -> unit) -> 'a incremental -> 'a t
-      val value : 'a t -> 'a
-    end
-
-    module Node : sig
-      type 'a t [@@deriving sexp_of]
-
-      val create
-        :  ?on_observability_change:(is_now_observable:bool -> unit)
-        -> (unit -> 'a)
-        -> 'a t
-
-      val watch : 'a t -> 'a incremental
-      val make_stale : _ t -> unit
-      val invalidate : _ t -> unit
-      val add_dependency : _ t -> _ Dependency.t -> unit
-      val remove_dependency : _ t -> _ Dependency.t -> unit
-    end
-  end
-end
-
-module type Incremental = sig
-  (** A [State.t] holds shared state used by all the incremental functions. *)
-  module State : sig
-    type 'w t [@@deriving sexp_of]
-
-    module type S = sig
-      type state_witness [@@deriving sexp_of]
-
-      val t : state_witness t
-    end
-
-    val create : ?max_height_allowed:int (** default is 128 *) -> unit -> (module S)
-
-    (** If [keep_node_creation_backtrace], then whenever a new node is created,
-        incremental will call [Backtrace.get] and store the result in the node.  The
-        backtrace will then appear in subsequent error messages when the node is pretty
-        printed. *)
-    val keep_node_creation_backtrace : _ t -> bool
-
-    val set_keep_node_creation_backtrace : _ t -> bool -> unit
-    val max_height_allowed : _ t -> int
-
-    (** [set_max_height_allowed t height] sets the maximum allowed height of nodes.
-        [set_max_height_allowed] raises if called during stabilization, or if [height <
-        max_height_seen t]. *)
-    val set_max_height_allowed : _ t -> int -> unit
-
-    (** [num_active_observers] returns (in constant time) the number of observers that
-        have been created and not yet disallowed (either explicitly or via
-        finalization). *)
-    val num_active_observers : _ t -> int
-
-    (** {2 constant-time stats} These are counters that are constant time to read, and
-        that are automatically updated in the ordinary course.  *)
-
-    val max_height_seen : _ t -> int
-    val num_nodes_became_necessary : _ t -> int
-    val num_nodes_became_unnecessary : _ t -> int
-
-    (** Number of times a node has seen its value changed, the determination of which
-        depends on the choice of cutoff. *)
-    val num_nodes_changed : _ t -> int
-
-    val num_nodes_created : _ t -> int
-    val num_nodes_invalidated : _ t -> int
-    val num_nodes_recomputed : _ t -> int
-    val num_nodes_recomputed_directly_because_one_child : _ t -> int
-    val num_nodes_recomputed_directly_because_min_height : _ t -> int
-    val num_stabilizes : _ t -> int
-    val num_var_sets : _ t -> int
-
-    (** [Stats] contains information about the DAG intended for human consumption.
-
-        [stats] takes time proportional to the number of necessary nodes. *)
-    module Stats : sig
-      type t [@@deriving sexp_of]
-    end
-
-    val stats : _ t -> Stats.t
-  end
-
-  (** [type ('a,'w) t] is the type of incrementals that have a value of type ['a], with a
-      state witness of type ['w].
-
-      Incrementals are not covariant, i.e. we do not have [(+'a, _) t] -- consider,
-      e.g. [set_cutoff] and [get_cutoff].  However, if you have types [a1] and [a2] where
-      [a1] is a subtype of [a2], and a value [t1 : a1 t], then the following builds an
-      incremental value of type [a2 t]:
-
-      {[
-        let t2 : a2 t = t1 >>| fun a1 -> (a1 : a1 :> a2)
-      ]} *)
-  type ('a, 'w) t [@@deriving sexp_of]
-
-  type ('a, 'w) incremental := ('a, 'w) t
-
-  include Invariant.S2 with type ('a, 'w) t := ('a, 'w) t
-
-  val state : (_, 'w) t -> 'w State.t
-
-  (** If [is_const t] then [t] is a constant-valued incremental.  [is_const (const a)] is
-      true. *)
-  val is_const : _ t -> bool
-
-  val is_valid : _ t -> bool
-  val is_necessary : _ t -> bool
-
-  (** {1 Creating incrementals} *)
-
-  (** [const state a] returns an incremental whose value never changes.  It is the same as
-      [return], but reads more clearly in many situations because it serves as a nice
-      reminder that the incremental won't change (except possibly be invalidated). *)
-  val const : 'w State.t -> 'a -> ('a, 'w) t
-
-  val return : 'w State.t -> 'a -> ('a, 'w) t
-
-  (** [map t1 ~f] returns an incremental [t] that maintains its value as [f a], where [a]
-      is the value of [t1].  [map2], [map3], ..., [map9] are the generalizations to more
-      arguments.  If you need map<N> for some N > 9, it can easily be added, but also see
-      [array_fold] and [unordered_array_fold].
-
-      [f] should not create incremental nodes but this behavior is not checked; if you
-      want to create incremental nodes, use [bind].  The invalidation machinery that is
-      used with [bind] is not used with [map]. *)
-  val map : ('a, 'w) t -> f:('a -> 'b) -> ('b, 'w) t
-
-  val ( >>| ) : ('a, 'w) t -> ('a -> 'b) -> ('b, 'w) t
   val map2 : ('a1, 'w) t -> ('a2, 'w) t -> f:('a1 -> 'a2 -> 'b) -> ('b, 'w) t
 
   val map3
@@ -1301,6 +631,487 @@ module type Incremental = sig
           -> 'a15
           -> 'b)
     -> ('b, 'w) t
+end
+
+module type Map_n = sig
+  type 'a t
+
+  include Map_n_gen with type ('a, 'w) t := 'a t
+end
+
+module type Bind_n_gen = sig
+  type ('a, 'w) t
+
+  val bind2 : ('a1, 'w) t -> ('a2, 'w) t -> f:('a1 -> 'a2 -> ('b, 'w) t) -> ('b, 'w) t
+
+  val bind3
+    :  ('a1, 'w) t
+    -> ('a2, 'w) t
+    -> ('a3, 'w) t
+    -> f:('a1 -> 'a2 -> 'a3 -> ('b, 'w) t)
+    -> ('b, 'w) t
+
+  val bind4
+    :  ('a1, 'w) t
+    -> ('a2, 'w) t
+    -> ('a3, 'w) t
+    -> ('a4, 'w) t
+    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> ('b, 'w) t)
+    -> ('b, 'w) t
+end
+
+module type Bind_n = sig
+  type 'a t
+
+  include Bind_n_gen with type ('a, 'w) t := 'a t
+end
+
+(** [S_gen] is the type of the module returned by [Incremental.Make].  It is a
+    specialization of the interface of [Incremental], with:
+
+    - the ['w] state_witness type parameter removed
+    - the [State.t] argument removed
+
+    The comments for components of [S_gen] are in [module type Incremental] below. *)
+module type S_gen = sig
+  module State : sig
+    type t [@@deriving sexp_of]
+
+    include Invariant.S with type t := t
+
+    (** [t] is the shared state for a call to [Incremental.Make]. *)
+    val t : t
+
+    val keep_node_creation_backtrace : t -> bool
+    val set_keep_node_creation_backtrace : t -> bool -> unit
+    val max_height_allowed : t -> int
+    val set_max_height_allowed : t -> int -> unit
+    val num_active_observers : t -> int
+    val max_height_seen : t -> int
+    val num_nodes_became_necessary : t -> int
+    val num_nodes_became_unnecessary : t -> int
+    val num_nodes_changed : t -> int
+    val num_nodes_created : t -> int
+    val num_nodes_invalidated : t -> int
+    val num_nodes_recomputed : t -> int
+    val num_nodes_recomputed_directly_because_one_child : t -> int
+    val num_nodes_recomputed_directly_because_min_height : t -> int
+    val num_stabilizes : t -> int
+    val num_var_sets : t -> int
+
+    module Stats : sig
+      type t [@@deriving sexp_of]
+    end
+
+    val stats : t -> Stats.t
+  end
+
+  type 'a t [@@deriving sexp_of]
+  type 'a incremental := 'a t
+
+  include Invariant.S1 with type 'a t := 'a t
+
+  val is_const : _ t -> bool
+  val is_valid : _ t -> bool
+  val is_necessary : _ t -> bool
+  val const : 'a -> 'a t
+  val return : 'a -> 'a t
+  val map : 'a t -> f:('a -> 'b) -> 'b t
+  val ( >>| ) : 'a t -> ('a -> 'b) -> 'b t
+
+  include Map_n with type 'a t := 'a t
+
+  val bind : 'a t -> f:('a -> 'b t) -> 'b t
+  val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
+
+  include Bind_n with type 'a t := 'a t
+
+  module Infix : sig
+    val ( >>| ) : 'a t -> ('a -> 'b) -> 'b t
+    val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
+  end
+
+  val join : 'a t t -> 'a t
+  val if_ : bool t -> then_:'a t -> else_:'a t -> 'a t
+  val freeze : ?when_:('a -> bool) -> 'a t -> 'a t
+  val depend_on : 'a t -> depend_on:_ t -> 'a t
+  val necessary_if_alive : 'a t -> 'a t
+  val for_all : bool t array -> bool t
+  val exists : bool t array -> bool t
+  val all : 'a t list -> 'a list t
+  val both : 'a t -> 'b t -> ('a * 'b) t
+  val array_fold : 'a t array -> init:'b -> f:('b -> 'a -> 'b) -> 'b t
+
+  val reduce_balanced
+    :  'a t array
+    -> f:('a -> 'b)
+    -> reduce:('b -> 'b -> 'b)
+    -> 'b t option
+
+  module Unordered_array_fold_update : sig
+    type ('a, 'b) t =
+      | F_inverse of ('b -> 'a -> 'b)
+      | Update of ('b -> old_value:'a -> new_value:'a -> 'b)
+  end
+
+  val unordered_array_fold
+    :  ?full_compute_every_n_changes:int
+    -> 'a t array
+    -> init:'b
+    -> f:('b -> 'a -> 'b)
+    -> update:('a, 'b) Unordered_array_fold_update.t
+    -> 'b t
+
+  val opt_unordered_array_fold
+    :  ?full_compute_every_n_changes:int
+    -> 'a option t array
+    -> init:'b
+    -> f:('b -> 'a -> 'b)
+    -> f_inverse:('b -> 'a -> 'b)
+    -> 'b option t
+
+  val sum
+    :  ?full_compute_every_n_changes:int
+    -> 'a t array
+    -> zero:'a
+    -> add:('a -> 'a -> 'a)
+    -> sub:('a -> 'a -> 'a)
+    -> 'a t
+
+  val opt_sum
+    :  ?full_compute_every_n_changes:int
+    -> 'a option t array
+    -> zero:'a
+    -> add:('a -> 'a -> 'a)
+    -> sub:('a -> 'a -> 'a)
+    -> 'a option t
+
+  val sum_int : int t array -> int t
+  val sum_float : float t array -> float t
+
+  module Scope : sig
+    type t
+
+    val top : t
+    val current : unit -> t
+    val within : t -> f:(unit -> 'a) -> 'a
+  end
+
+  module Var : sig
+    type 'a t [@@deriving sexp_of]
+
+    val create : ?use_current_scope:bool -> 'a -> 'a t
+    val set : 'a t -> 'a -> unit
+    val watch : 'a t -> 'a incremental
+    val value : 'a t -> 'a
+    val latest_value : 'a t -> 'a
+  end
+
+  module Observer : sig
+    type 'a t [@@deriving sexp_of]
+
+    include Invariant.S1 with type 'a t := 'a t
+
+    val observing : 'a t -> 'a incremental
+    val use_is_allowed : _ t -> bool
+    val value : 'a t -> 'a Or_error.t
+    val value_exn : 'a t -> 'a
+
+    module Update : sig
+      type 'a t =
+        | Initialized of 'a
+        | Changed of 'a * 'a
+        | Invalidated
+      [@@deriving compare, sexp_of]
+    end
+
+    val on_update_exn : 'a t -> f:('a Update.t -> unit) -> unit
+    val disallow_future_use : _ t -> unit
+  end
+
+  val observe : ?should_finalize:bool -> 'a t -> 'a Observer.t
+
+  module Update : sig
+    type 'a t =
+      | Necessary of 'a
+      | Changed of 'a * 'a
+      | Invalidated
+      | Unnecessary
+    [@@deriving compare, sexp_of]
+  end
+
+  val on_update : 'a t -> f:('a Update.t -> unit) -> unit
+  val stabilize : unit -> unit
+  val am_stabilizing : unit -> bool
+
+  module Cutoff : sig
+    type 'a t [@@deriving sexp_of]
+
+    include Invariant.S1 with type 'a t := 'a t
+
+    val create : (old_value:'a -> new_value:'a -> bool) -> 'a t
+    val of_compare : ('a -> 'a -> int) -> 'a t
+    val of_equal : ('a -> 'a -> bool) -> 'a t
+    val always : _ t
+    val never : _ t
+    val phys_equal : _ t
+    val poly_equal : _ t
+    val should_cutoff : 'a t -> old_value:'a -> new_value:'a -> bool
+    val equal : 'a t -> 'a t -> bool
+  end
+
+  val set_cutoff : 'a t -> 'a Cutoff.t -> unit
+  val get_cutoff : 'a t -> 'a Cutoff.t
+  val lazy_from_fun : (unit -> 'a) -> 'a Lazy.t
+  val default_hash_table_initial_size : int
+
+  val memoize_fun
+    :  ?initial_size:int
+    -> 'a Base.Hashtbl.Key.t
+    -> ('a -> 'b)
+    -> ('a -> 'b) Staged.t
+
+  val memoize_fun_by_key
+    :  ?initial_size:int
+    -> 'key Base.Hashtbl.Key.t
+    -> ('a -> 'key)
+    -> ('a -> 'b)
+    -> ('a -> 'b) Staged.t
+
+  val weak_memoize_fun
+    :  ?initial_size:int
+    -> 'a Base.Hashtbl.Key.t
+    -> ('a -> 'b Heap_block.t)
+    -> ('a -> 'b Heap_block.t) Staged.t
+
+  val weak_memoize_fun_by_key
+    :  ?initial_size:int
+    -> 'key Base.Hashtbl.Key.t
+    -> ('a -> 'key)
+    -> ('a -> 'b Heap_block.t)
+    -> ('a -> 'b Heap_block.t) Staged.t
+
+  val user_info : _ t -> Info.t option
+  val set_user_info : _ t -> Info.t option -> unit
+
+  module Node_value : sig
+    type 'a t =
+      | Invalid
+      | Necessary_maybe_stale of 'a option
+      | Unnecessary_maybe_stale of 'a option
+    [@@deriving sexp_of]
+  end
+
+  (** [node_value t] returns whatever value [t] happens to have in it, regardless of
+      whether [t] is valid, necessary, or stale.  One should use [observe] for a more
+      sensible semantics, reserving [node_value] for debugging. *)
+  val node_value : 'a t -> 'a Node_value.t
+
+  module Packed : sig
+    type t
+
+    val save_dot : string -> t list -> unit
+  end
+
+  val pack : _ t -> Packed.t
+  val save_dot : string -> unit
+
+  module Let_syntax : sig
+    val return : 'a -> 'a t
+    val ( >>| ) : 'a t -> ('a -> 'b) -> 'b t
+    val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
+
+    module Let_syntax : sig
+      val bind : 'a t -> f:('a -> 'b t) -> 'b t
+
+      include Bind_n with type 'a t := 'a t
+
+      val map : 'a t -> f:('a -> 'b) -> 'b t
+
+      include Map_n with type 'a t := 'a t
+
+      val both : 'a t -> 'b t -> ('a * 'b) t
+
+      module Open_on_rhs : sig
+        val watch : 'a Var.t -> 'a t
+      end
+    end
+  end
+
+  module Before_or_after : sig
+    type t =
+      | Before
+      | After
+    [@@deriving sexp_of]
+  end
+
+  module Step_function = Step_function
+
+  module Clock : sig
+    type t [@@deriving sexp_of]
+
+    val default_timing_wheel_config : Timing_wheel.Config.t
+
+    val create
+      :  ?timing_wheel_config:Timing_wheel.Config.t
+      -> start:Time_ns.t
+      -> unit
+      -> t
+
+    val alarm_precision : t -> Time_ns.Span.t
+    val timing_wheel_length : t -> int
+    val now : t -> Time_ns.t
+    val watch_now : t -> Time_ns.t incremental
+    val advance_clock : t -> to_:Time_ns.t -> unit
+    val advance_clock_by : t -> Time_ns.Span.t -> unit
+    val at : t -> Time_ns.t -> Before_or_after.t incremental
+    val after : t -> Time_ns.Span.t -> Before_or_after.t incremental
+    val at_intervals : t -> Time_ns.Span.t -> unit incremental
+    val step_function : t -> init:'a -> (Time_ns.t * 'a) list -> 'a incremental
+    val incremental_step_function : t -> 'a Step_function.t incremental -> 'a incremental
+
+    val snapshot
+      :  t
+      -> 'a incremental
+      -> at:Time_ns.t
+      -> before:'a
+      -> 'a incremental Or_error.t
+  end
+
+  module Expert : sig
+    module Dependency : sig
+      type 'a t [@@deriving sexp_of]
+
+      val create : ?on_change:('a -> unit) -> 'a incremental -> 'a t
+      val value : 'a t -> 'a
+    end
+
+    module Node : sig
+      type 'a t [@@deriving sexp_of]
+
+      val create
+        :  ?on_observability_change:(is_now_observable:bool -> unit)
+        -> (unit -> 'a)
+        -> 'a t
+
+      val watch : 'a t -> 'a incremental
+      val make_stale : _ t -> unit
+      val invalidate : _ t -> unit
+      val add_dependency : _ t -> _ Dependency.t -> unit
+      val remove_dependency : _ t -> _ Dependency.t -> unit
+    end
+  end
+end
+
+module type Incremental = sig
+  (** A [State.t] holds shared state used by all the incremental functions. *)
+  module State : sig
+    type 'w t [@@deriving sexp_of]
+
+    module type S = sig
+      type state_witness [@@deriving sexp_of]
+
+      val t : state_witness t
+    end
+
+    val create : ?max_height_allowed:int (** default is 128 *) -> unit -> (module S)
+
+    (** If [keep_node_creation_backtrace], then whenever a new node is created,
+        incremental will call [Backtrace.get] and store the result in the node.  The
+        backtrace will then appear in subsequent error messages when the node is pretty
+        printed. *)
+    val keep_node_creation_backtrace : _ t -> bool
+
+    val set_keep_node_creation_backtrace : _ t -> bool -> unit
+    val max_height_allowed : _ t -> int
+
+    (** [set_max_height_allowed t height] sets the maximum allowed height of nodes.
+        [set_max_height_allowed] raises if called during stabilization, or if [height <
+        max_height_seen t]. *)
+    val set_max_height_allowed : _ t -> int -> unit
+
+    (** [num_active_observers] returns (in constant time) the number of observers that
+        have been created and not yet disallowed (either explicitly or via
+        finalization). *)
+    val num_active_observers : _ t -> int
+
+    (** {2 constant-time stats} These are counters that are constant time to read, and
+        that are automatically updated in the ordinary course.  *)
+
+    val max_height_seen : _ t -> int
+    val num_nodes_became_necessary : _ t -> int
+    val num_nodes_became_unnecessary : _ t -> int
+
+    (** Number of times a node has seen its value changed, the determination of which
+        depends on the choice of cutoff. *)
+    val num_nodes_changed : _ t -> int
+
+    val num_nodes_created : _ t -> int
+    val num_nodes_invalidated : _ t -> int
+    val num_nodes_recomputed : _ t -> int
+    val num_nodes_recomputed_directly_because_one_child : _ t -> int
+    val num_nodes_recomputed_directly_because_min_height : _ t -> int
+    val num_stabilizes : _ t -> int
+    val num_var_sets : _ t -> int
+
+    (** [Stats] contains information about the DAG intended for human consumption.
+
+        [stats] takes time proportional to the number of necessary nodes. *)
+    module Stats : sig
+      type t [@@deriving sexp_of]
+    end
+
+    val stats : _ t -> Stats.t
+  end
+
+  (** [type ('a,'w) t] is the type of incrementals that have a value of type ['a], with a
+      state witness of type ['w].
+
+      Incrementals are not covariant, i.e. we do not have [(+'a, _) t] -- consider,
+      e.g. [set_cutoff] and [get_cutoff].  However, if you have types [a1] and [a2] where
+      [a1] is a subtype of [a2], and a value [t1 : a1 t], then the following builds an
+      incremental value of type [a2 t]:
+
+      {[
+        let t2 : a2 t = t1 >>| fun a1 -> (a1 : a1 :> a2)
+      ]} *)
+  type ('a, 'w) t [@@deriving sexp_of]
+
+  type ('a, 'w) incremental := ('a, 'w) t
+
+  include Invariant.S2 with type ('a, 'w) t := ('a, 'w) t
+
+  val state : (_, 'w) t -> 'w State.t
+
+  (** If [is_const t] then [t] is a constant-valued incremental.  [is_const (const a)] is
+      true. *)
+  val is_const : _ t -> bool
+
+  val is_valid : _ t -> bool
+  val is_necessary : _ t -> bool
+
+  (** {1 Creating incrementals} *)
+
+  (** [const state a] returns an incremental whose value never changes.  It is the same as
+      [return], but reads more clearly in many situations because it serves as a nice
+      reminder that the incremental won't change (except possibly be invalidated). *)
+  val const : 'w State.t -> 'a -> ('a, 'w) t
+
+  val return : 'w State.t -> 'a -> ('a, 'w) t
+
+  (** [map t1 ~f] returns an incremental [t] that maintains its value as [f a], where [a]
+      is the value of [t1].  [map2], [map3], ..., [map9] are the generalizations to more
+      arguments.  If you need map<N> for some N > 9, it can easily be added, but also see
+      [array_fold] and [unordered_array_fold].
+
+      [f] should not create incremental nodes but this behavior is not checked; if you
+      want to create incremental nodes, use [bind].  The invalidation machinery that is
+      used with [bind] is not used with [map]. *)
+  val map : ('a, 'w) t -> f:('a -> 'b) -> ('b, 'w) t
+
+  val ( >>| ) : ('a, 'w) t -> ('a -> 'b) -> ('b, 'w) t
+
+  include Map_n_gen with type ('a, 'w) t := ('a, 'w) t
 
   (** [bind t1 ~f] returns an incremental [t2] that behaves like [f v], where [v] is the
       value of [t1].  If [t1]'s value changes, then incremental applies [f] to that new
@@ -1325,22 +1136,8 @@ module type Incremental = sig
   val bind : ('a, 'w) t -> f:('a -> ('b, 'w) t) -> ('b, 'w) t
 
   val ( >>= ) : ('a, 'w) t -> ('a -> ('b, 'w) t) -> ('b, 'w) t
-  val bind2 : ('a1, 'w) t -> ('a2, 'w) t -> f:('a1 -> 'a2 -> ('b, 'w) t) -> ('b, 'w) t
 
-  val bind3
-    :  ('a1, 'w) t
-    -> ('a2, 'w) t
-    -> ('a3, 'w) t
-    -> f:('a1 -> 'a2 -> 'a3 -> ('b, 'w) t)
-    -> ('b, 'w) t
-
-  val bind4
-    :  ('a1, 'w) t
-    -> ('a2, 'w) t
-    -> ('a3, 'w) t
-    -> ('a4, 'w) t
-    -> f:('a1 -> 'a2 -> 'a3 -> 'a4 -> ('b, 'w) t)
-    -> ('b, 'w) t
+  include Bind_n_gen with type ('a, 'w) t := ('a, 'w) t
 
   module Infix : sig
     val ( >>| ) : ('a, 'w) t -> ('a -> 'b) -> ('b, 'w) t
@@ -1870,14 +1667,21 @@ module type Incremental = sig
       ]}
 
       Note that this is less efficient than using [map3], [map4], etc., as the latter
-      produces fewer intermediate nodes. *)
+      produces fewer intermediate nodes.  You can also use [let%mapn] syntax to use n-ary
+      map functions efficiently. *)
   module Let_syntax : sig
     val ( >>| ) : ('a, 'w) t -> ('a -> 'b) -> ('b, 'w) t
     val ( >>= ) : ('a, 'w) t -> ('a -> ('b, 'w) t) -> ('b, 'w) t
 
     module Let_syntax : sig
       val bind : ('a, 'w) t -> f:('a -> ('b, 'w) t) -> ('b, 'w) t
+
+      include Bind_n_gen with type ('a, 'w) t := ('a, 'w) t
+
       val map : ('a, 'w) t -> f:('a -> 'b) -> ('b, 'w) t
+
+      include Map_n_gen with type ('a, 'w) t := ('a, 'w) t
+
       val both : ('a, 'w) t -> ('b, 'w) t -> ('a * 'b, 'w) t
 
       module Open_on_rhs : sig

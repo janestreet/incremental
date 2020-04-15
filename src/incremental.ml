@@ -50,24 +50,29 @@ module Generic = struct
   let return = const
   let observe = State.create_observer
   let map = State.map
-  let map2 = State.map2
-  let map3 = State.map3
-  let map4 = State.map4
-  let map5 = State.map5
-  let map6 = State.map6
-  let map7 = State.map7
-  let map8 = State.map8
-  let map9 = State.map9
-  let map10 = State.map10
-  let map11 = State.map11
-  let map12 = State.map12
-  let map13 = State.map13
-  let map14 = State.map14
-  let map15 = State.map15
   let bind = State.bind
-  let bind2 = State.bind2
-  let bind3 = State.bind3
-  let bind4 = State.bind4
+
+  module N_ary_map_and_bind = struct
+    let map2 = State.map2
+    let map3 = State.map3
+    let map4 = State.map4
+    let map5 = State.map5
+    let map6 = State.map6
+    let map7 = State.map7
+    let map8 = State.map8
+    let map9 = State.map9
+    let map10 = State.map10
+    let map11 = State.map11
+    let map12 = State.map12
+    let map13 = State.map13
+    let map14 = State.map14
+    let map15 = State.map15
+    let bind2 = State.bind2
+    let bind3 = State.bind3
+    let bind4 = State.bind4
+  end
+
+  include N_ary_map_and_bind
 
   module Infix = struct
     let ( >>| ) t f = map t ~f
@@ -254,6 +259,8 @@ module Generic = struct
       let bind = bind
       let map = map
       let both t1 t2 = map2 t1 t2 ~f:(fun x1 x2 -> x1, x2)
+
+      include N_ary_map_and_bind
 
       module Open_on_rhs = struct
         let watch = Var.watch
