@@ -124,7 +124,7 @@ statistics about how a given incremental computation is behaving.
       }
 
     let reporter () =
-      let open Expect_test_helpers_kernel in
+      let open Expect_test_helpers_base in
       let old_stats = ref (snap ()) in
       let report () =
         let stats = snap () in
@@ -360,4 +360,3 @@ choose at an application level, when you construct the loop that
 drives stabilization.
 
 [Part 8: Sharing](./part8-sharing.mdx)
-
