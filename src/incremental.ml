@@ -118,6 +118,7 @@ module Generic = struct
     (* We override [sexp_of_t] to just show the value, rather than the internal
        representation. *)
     let sexp_of_t sexp_of_a t = t.value |> [%sexp_of: a]
+    let replace t ~f = set t (f (latest_value t))
   end
 
   module Observer = struct

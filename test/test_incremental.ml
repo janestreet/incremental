@@ -351,6 +351,7 @@ struct
           let set = set
           let value = value
           let watch = watch
+          let replace = replace
 
           let%expect_test _ =
             (* observing a var after stabilization *)
@@ -365,6 +366,16 @@ struct
             (* observing a set var after stabilization *)
             let x = create_ [%here] 0 in
             set x 1;
+            stabilize_ [%here];
+            let o = observe (watch x) in
+            stabilize_ [%here];
+            assert (Observer.value_exn o = 1)
+          ;;
+
+          let%expect_test _ =
+            (* observing a replace var after stabilization *)
+            let x = create_ [%here] 0 in
+            replace x ~f:(( + ) 1);
             stabilize_ [%here];
             let o = observe (watch x) in
             stabilize_ [%here];
@@ -457,6 +468,29 @@ struct
             assert (value x = 2);
             stabilize_ [%here];
             [%test_result: int] (Observer.value_exn o) ~expect:2;
+            disallow_future_use o
+          ;;
+
+          let%expect_test _ =
+            (* [replace] during stabilization gets the latest value *)
+            let x = create_ [%here] 0 in
+            let o =
+              observe
+                (map (watch x) ~f:(fun v ->
+                   set x 2;
+                   replace x ~f:(fun v ->
+                     assert (v = 2);
+                     v + 1);
+                   v))
+            in
+            stabilize_ [%here];
+            print_s [%sexp (value x : int)];
+            [%expect {| 3 |}];
+            print_s [%sexp (Observer.value_exn o : int)];
+            [%expect {| 0 |}];
+            stabilize_ [%here];
+            print_s [%sexp (Observer.value_exn o : int)];
+            [%expect {| 3 |}];
             disallow_future_use o
           ;;
 

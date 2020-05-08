@@ -805,6 +805,7 @@ module type S_gen = sig
     val watch : 'a t -> 'a incremental
     val value : 'a t -> 'a
     val latest_value : 'a t -> 'a
+    val replace : 'a t -> f:('a -> 'a) -> unit
   end
 
   module Observer : sig
@@ -1406,6 +1407,9 @@ module type Incremental = sig
     (** [latest_value t] returns the value most recently [set] for [t].  It can differ
         from [value t] only during stabilization. *)
     val latest_value : ('a, _) t -> 'a
+
+    (** [replace t ~f] = [set t (f (latest_value t))] *)
+    val replace : ('a, _) t -> f:('a -> 'a) -> unit
   end
 
   module Observer : sig
