@@ -1,4 +1,5 @@
 opam-version: "2.0"
+version: "v0.14.0"
 maintainer: "opensource@janestreet.com"
 authors: ["Jane Street Group, LLC <opensource@janestreet.com>"]
 homepage: "https://github.com/janestreet/incremental"
@@ -10,9 +11,9 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "4.08.0"}
-  "core_kernel"
-  "ppx_jane"
+  "ocaml"       {>= "4.08.0"}
+  "core_kernel" {>= "v0.14" & < "v0.15"}
+  "ppx_jane"    {>= "v0.14" & < "v0.15"}
   "dune"        {>= "2.0.0"}
 ]
 synopsis: "Library for incremental computations"
