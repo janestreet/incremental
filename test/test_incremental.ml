@@ -537,8 +537,7 @@ struct
               set lhs 1;
               stabilize_ [%here];
               if check_invalidity
-              then
-                [%test_result: bool] (not (is_valid rhs)) ~expect:use_current_scope;
+              then [%test_result: bool] (not (is_valid rhs)) ~expect:use_current_scope;
               assert (Observer.value_exn o = 1))
           ;;
         end
@@ -608,8 +607,7 @@ struct
 
         let%expect_test _ =
           test_map 6 (fun i ->
-            map6 i i i i i i ~f:(fun a1 a2 a3 a4 a5 a6 ->
-              a1 + a2 + a3 + a4 + a5 + a6))
+            map6 i i i i i i ~f:(fun a1 a2 a3 a4 a5 a6 -> a1 + a2 + a3 + a4 + a5 + a6))
         ;;
 
         let%expect_test _ =
@@ -2785,8 +2783,8 @@ struct
           disallow_future_use o
         ;;
 
-        let%expect_test "incremental step function with step in the past, present, \
-                         and future"
+        let%expect_test "incremental step function with step in the past, present, and \
+                         future"
           =
           let test ~step_at =
             let clock = Clock.create ~start:Time_ns.epoch () in
@@ -3036,9 +3034,7 @@ struct
               stabilize_ [%here];
               if check_invalidity
               then
-                [%test_result: int]
-                  ~expect:num_alarms
-                  (Clock.timing_wheel_length clock);
+                [%test_result: int] ~expect:num_alarms (Clock.timing_wheel_length clock);
               disallow_future_use o)
         ;;
 
@@ -4351,15 +4347,16 @@ struct
           *)
           let map_filter_mapi
             : type k v1 v2.
-              on_event:([ `Left of k
-                        | `Lhs_change
-                        | `Main
-                        | `On_change of k * v2 option
-                        | `Per_key of k
-                        | `Right of k
-                        | `Unequal of k
-                        ]
-                        -> unit)
+              on_event:
+                ([ `Left of k
+                 | `Lhs_change
+                 | `Main
+                 | `On_change of k * v2 option
+                 | `Per_key of k
+                 | `Right of k
+                 | `Unequal of k
+                 ]
+                 -> unit)
               -> (k, v1, 'comparator) Map.t t
               -> f:(k -> v1 t -> v2 option t)
               -> (k, v2, 'comparator) Map.t t
@@ -4457,9 +4454,7 @@ struct
               end)
             in
             let push, check = M.on_update_queue () in
-            let var =
-              Var.create (String.Map.of_alist_exn [ "a", 1; "b", 2; "c", 3 ])
-            in
+            let var = Var.create (String.Map.of_alist_exn [ "a", 1; "b", 2; "c", 3 ]) in
             let increment = Var.create 1 in
             let assert_incremental_computation_is_correct observer =
               let from_scratch =
@@ -4586,12 +4581,13 @@ struct
           *)
           let staged_eq
             : type a.
-              on_event:([ `Scheduling
-                        | `Is_eq of a
-                        | `Add_reverse_dep of a
-                        | `Remove_reverse_dep of a
-                        ]
-                        -> unit)
+              on_event:
+                ([ `Scheduling
+                 | `Is_eq of a
+                 | `Add_reverse_dep of a
+                 | `Remove_reverse_dep of a
+                 ]
+                 -> unit)
               -> a Hashtbl.Hashable.t
               -> a t
               -> (a -> bool t) Staged.t
@@ -4606,9 +4602,7 @@ struct
                     Option.iter
                       (Hashtbl.find reverse_dependencies old_v)
                       ~f:E.Node.make_stale);
-                  Option.iter
-                    (Hashtbl.find reverse_dependencies v)
-                    ~f:E.Node.make_stale;
+                  Option.iter (Hashtbl.find reverse_dependencies v) ~f:E.Node.make_stale;
                   last := Some v)
               in
               Staged.stage (fun a ->

@@ -494,7 +494,8 @@ module type Map_n_gen = sig
     -> ('a9, 'w) t
     -> ('a10, 'w) t
     -> ('a11, 'w) t
-    -> f:('a1
+    -> f:
+         ('a1
           -> 'a2
           -> 'a3
           -> 'a4
@@ -521,7 +522,8 @@ module type Map_n_gen = sig
     -> ('a10, 'w) t
     -> ('a11, 'w) t
     -> ('a12, 'w) t
-    -> f:('a1
+    -> f:
+         ('a1
           -> 'a2
           -> 'a3
           -> 'a4
@@ -550,7 +552,8 @@ module type Map_n_gen = sig
     -> ('a11, 'w) t
     -> ('a12, 'w) t
     -> ('a13, 'w) t
-    -> f:('a1
+    -> f:
+         ('a1
           -> 'a2
           -> 'a3
           -> 'a4
@@ -581,7 +584,8 @@ module type Map_n_gen = sig
     -> ('a12, 'w) t
     -> ('a13, 'w) t
     -> ('a14, 'w) t
-    -> f:('a1
+    -> f:
+         ('a1
           -> 'a2
           -> 'a3
           -> 'a4
@@ -614,7 +618,8 @@ module type Map_n_gen = sig
     -> ('a13, 'w) t
     -> ('a14, 'w) t
     -> ('a15, 'w) t
-    -> f:('a1
+    -> f:
+         ('a1
           -> 'a2
           -> 'a3
           -> 'a4

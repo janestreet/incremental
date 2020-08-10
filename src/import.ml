@@ -1,5 +1,4 @@
-[%%import
-  "debug.mlh"]
+[%%import "debug.mlh"]
 
 open Core_kernel
 include Int.Replace_polymorphic_compare
@@ -10,8 +9,7 @@ include Int.Replace_polymorphic_compare
    the production and debug lib, and users can choose to build with the debug library, if
    they suspect they found a bug in incremental. *)
 
-[%%if
-  JSC_DEBUG]
+[%%if JSC_DEBUG]
 
 let debug = true
 
@@ -37,8 +35,7 @@ module Array = struct
 
   (* Not defining aliases in production mode, since they break type specialization of
      array accesses. *)
-  [%%if
-    JSC_DEBUG]
+  [%%if JSC_DEBUG]
 
   let unsafe_get = get
   let unsafe_set = set

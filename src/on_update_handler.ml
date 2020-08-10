@@ -27,9 +27,7 @@ type 'a t =
   }
 [@@deriving sexp_of]
 
-let create f ~at:created_at =
-  { f; previous_update_kind = Never_been_updated; created_at }
-;;
+let create f ~at:created_at = { f; previous_update_kind = Never_been_updated; created_at }
 
 let really_run t (node_update : _ Node_update.t) =
   t.previous_update_kind

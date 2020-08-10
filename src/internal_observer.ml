@@ -78,8 +78,7 @@ let invariant invariant_a t =
              assert (
                same_as_packed
                  t
-                 (Uopt.value_exn (Packed_.next_in_all (Uopt.value_exn prev_in_all)))
-             )))
+                 (Uopt.value_exn (Packed_.next_in_all (Uopt.value_exn prev_in_all))))))
       ~next_in_all:
         (check (fun next_in_all ->
            (match t.state with
@@ -90,8 +89,7 @@ let invariant invariant_a t =
              assert (
                same_as_packed
                  t
-                 (Uopt.value_exn (Packed_.prev_in_all (Uopt.value_exn next_in_all)))
-             )))
+                 (Uopt.value_exn (Packed_.prev_in_all (Uopt.value_exn next_in_all))))))
       ~prev_in_observing:
         (check (fun prev_in_observing ->
            (match t.state with

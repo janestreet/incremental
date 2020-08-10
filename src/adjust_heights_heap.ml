@@ -107,11 +107,7 @@ let add_unless_mem (type a) t (node : a Node.t) =
 let remove_min_exn t : Node.Packed.t =
   if debug && is_empty t
   then
-    failwiths
-      ~here:[%here]
-      "Adjust_heights_heap.remove_min of empty heap"
-      t
-      [%sexp_of: t];
+    failwiths ~here:[%here] "Adjust_heights_heap.remove_min of empty heap" t [%sexp_of: t];
   let r = ref t.height_lower_bound in
   while Uopt.is_none t.nodes_by_height.(!r) do
     incr r

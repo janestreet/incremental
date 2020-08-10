@@ -25,11 +25,7 @@ type 'a t = 'a Types.Kind.t =
   | Map2 : ('a1 -> 'a2 -> 'a) * 'a1 Node.t * 'a2 Node.t -> 'a t
   | Map3 : ('a1 -> 'a2 -> 'a3 -> 'a) * 'a1 Node.t * 'a2 Node.t * 'a3 Node.t -> 'a t
   | Map4 :
-      ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a)
-      * 'a1 Node.t
-      * 'a2 Node.t
-      * 'a3 Node.t
-      * 'a4 Node.t
+      ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a) * 'a1 Node.t * 'a2 Node.t * 'a3 Node.t * 'a4 Node.t
       -> 'a t
   | Map5 :
       ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'a)
@@ -457,8 +453,7 @@ let iteri_children (type a) (t : a t) ~(f : int -> Node.Packed.t -> unit) : unit
     f 7 (T node7);
     f 8 (T node8);
     f 9 (T node9)
-  | Map11
-      (_, node0, node1, node2, node3, node4, node5, node6, node7, node8, node9, node10)
+  | Map11 (_, node0, node1, node2, node3, node4, node5, node6, node7, node8, node9, node10)
     ->
     f 0 (T node0);
     f 1 (T node1);

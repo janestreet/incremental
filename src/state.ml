@@ -186,10 +186,7 @@ let directly_observed t =
 ;;
 
 let save_dot t file = Node.Packed.save_dot file (directly_observed t)
-
-let iter_observer_descendants t ~f =
-  Node.Packed.iter_descendants (directly_observed t) ~f
-;;
+let iter_observer_descendants t ~f = Node.Packed.iter_descendants (directly_observed t) ~f
 
 module Stats = struct
   type t =
@@ -209,8 +206,7 @@ let stats t =
   let num_nodes_by_num_parents = Array.create ~len:(max_num_parents + 1) 0 in
   iter_observer_descendants t ~f:(fun (T node) ->
     let num_parents = node.num_parents in
-    num_nodes_by_num_parents.(num_parents)
-    <- num_nodes_by_num_parents.(num_parents) + 1);
+    num_nodes_by_num_parents.(num_parents) <- num_nodes_by_num_parents.(num_parents) + 1);
   let percentage_of_nodes_by_num_parents =
     Array.foldi num_nodes_by_num_parents ~init:[] ~f:(fun i ac num_nodes ->
       if num_nodes = 0
@@ -377,8 +373,7 @@ let rec remove_children : type a. a Node.t -> unit =
   Node.iteri_children parent ~f:(fun child_index (T child) ->
     remove_child ~child ~parent ~child_index)
 
-and remove_child : type a b. child:b Node.t -> parent:a Node.t -> child_index:int -> unit
-  =
+and remove_child : type a b. child:b Node.t -> parent:a Node.t -> child_index:int -> unit =
   fun ~child ~parent ~child_index ->
   Node.remove_parent ~child ~parent ~child_index;
   check_if_unnecessary child
@@ -490,8 +485,7 @@ and invalidate_nodes_created_on_rhs node =
    graph.  This in turn means that we will continue to compute those nodes after the
    parent bind's lhs, which gives them more of a chance to become unnecessary and not be
    computed should the parent bind's lhs change. *)
-let rescope_nodes_created_on_rhs _t (first_node_on_rhs : Node.Packed.t Uopt.t) ~new_scope
-  =
+let rescope_nodes_created_on_rhs _t (first_node_on_rhs : Node.Packed.t Uopt.t) ~new_scope =
   let r = ref first_node_on_rhs in
   while Uopt.is_some !r do
     let (T node_on_rhs) = Uopt.unsafe_value !r in
@@ -535,8 +529,7 @@ let propagate_invalidity t =
            then (
              match kind with
              | Bind_main _ | If_then_else _ | Join_main _ -> ()
-             | _ ->
-               assert false (* nodes with no children are never pushed on the stack *)));
+             | _ -> assert false (* nodes with no children are never pushed on the stack *)));
         (* We do not check [Node.needs_to_be_computed node] here, because it should be
            true, and because computing it takes O(number of children), node can be pushed
            on the stack once per child, and expert nodes can have lots of children. *)
@@ -1248,8 +1241,7 @@ let add_new_observers t =
       if Uopt.is_some old_observers
       then (
         internal_observer.next_in_observing <- old_observers;
-        (Uopt.unsafe_value old_observers).prev_in_observing
-        <- Uopt.some internal_observer);
+        (Uopt.unsafe_value old_observers).prev_in_observing <- Uopt.some internal_observer);
       observing.observers <- Uopt.some internal_observer;
       (* By adding [internal_observer] to [observing.observers], we may have added
          on-update handlers to [observing].  We need to handle [observing] after this
@@ -1449,9 +1441,7 @@ let map12 (n1 : _ Node.t) n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 ~f =
 ;;
 
 let map13 (n1 : _ Node.t) n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 ~f =
-  create_node
-    n1.state
-    (Map13 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13))
+  create_node n1.state (Map13 (f, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13))
 ;;
 
 let map14 (n1 : _ Node.t) n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 n14 ~f =
@@ -1525,9 +1515,7 @@ let bind2 n1 n2 ~f =
 ;;
 
 let bind3 n1 n2 n3 ~f =
-  bind
-    (map3 n1 n2 n3 ~f:(fun v1 v2 v3 -> v1, v2, v3))
-    ~f:(fun (v1, v2, v3) -> f v1 v2 v3)
+  bind (map3 n1 n2 n3 ~f:(fun v1 v2 v3 -> v1, v2, v3)) ~f:(fun (v1, v2, v3) -> f v1 v2 v3)
 ;;
 
 let bind4 n1 n2 n3 n4 ~f =
@@ -1881,8 +1869,7 @@ let create (module Config : Config.Incremental_config) ~max_height_allowed =
   let recompute_heap = Recompute_heap.create ~max_height_allowed in
   let t =
     { status = Not_stabilizing
-    ; bind_lhs_change_should_invalidate_rhs =
-        Config.bind_lhs_change_should_invalidate_rhs
+    ; bind_lhs_change_should_invalidate_rhs = Config.bind_lhs_change_should_invalidate_rhs
     ; stabilization_num = Stabilization_num.zero
     ; current_scope = Scope.top
     ; adjust_heights_heap
@@ -1960,8 +1947,7 @@ module Expert = struct
 
   let currently_running_node_exn state name =
     match state.only_in_debug.currently_running_node with
-    | None ->
-      raise_s [%sexp ("can only call " ^ name ^ " during stabilization" : string)]
+    | None -> raise_s [%sexp ("can only call " ^ name ^ " during stabilization" : string)]
     | Some current -> current
   ;;
 

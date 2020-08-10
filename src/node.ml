@@ -418,8 +418,7 @@ let unsafe_value t = Uopt.unsafe_value t.value_opt
 let value_exn t =
   if Uopt.is_some t.value_opt
   then Uopt.unsafe_value t.value_opt
-  else
-    failwiths ~here:[%here] "attempt to get value of an invalid node" t [%sexp_of: _ t]
+  else failwiths ~here:[%here] "attempt to get value of an invalid node" t [%sexp_of: _ t]
 ;;
 
 let get_cutoff t = t.cutoff

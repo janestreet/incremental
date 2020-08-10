@@ -13,8 +13,7 @@ module Update = struct
     match t with
     | Update update -> update
     | F_inverse f_inverse ->
-      fun fold_value ~old_value ~new_value ->
-        f (f_inverse fold_value old_value) new_value
+      fun fold_value ~old_value ~new_value -> f (f_inverse fold_value old_value) new_value
   ;;
 end
 
@@ -58,8 +57,7 @@ let invariant invariant_a invariant_acc t =
            [%test_result: bool]
              (Uopt.is_some fold_value)
              ~expect:
-               (t.num_changes_since_last_full_compute
-                < t.full_compute_every_n_changes)))
+               (t.num_changes_since_last_full_compute < t.full_compute_every_n_changes)))
       ~num_changes_since_last_full_compute:
         (check (fun num_changes_since_last_full_compute ->
            assert (num_changes_since_last_full_compute >= 0);
