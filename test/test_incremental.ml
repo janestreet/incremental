@@ -4970,6 +4970,77 @@ struct
         stabilize ();
         Observer.disallow_future_use o
       ;;
+
+      let%expect_test _ =
+        (* Updating var during partial stabilization should not reflect until
+           next stabilization *)
+        let open I in
+        let v = Var.create 0 in
+        let x = map (Var.watch v) ~f:(fun v -> v + 1) in
+        let y = map (Var.watch v) ~f:(fun v -> v - 1) in
+        let z = map (both x y) ~f:(fun (x, y) -> x + y) in
+        let o = observe z in
+        stabilize ();
+        printf "%d" (Observer.value_exn o);
+        [%expect {| 0 |}];
+        (match Expert.do_one_step_of_stabilize () with
+         | Keep_going -> ()
+         | Done -> assert false);
+        Var.set v 1;
+        while
+          match Expert.do_one_step_of_stabilize () with
+          | Keep_going -> true
+          | Done -> false
+        do
+          ()
+        done;
+        printf "%d" (Observer.value_exn o);
+        [%expect {| 0 |}];
+        stabilize ();
+        printf "%d" (Observer.value_exn o);
+        [%expect {| 2 |}]
+      ;;
+
+      let%expect_test "stabilizing in the middle of a partial stabilization should raise" =
+        let module I = Make () in
+        let open I in
+        let v = Var.create 0 in
+        let x = map (Var.watch v) ~f:(fun v -> v + 1) in
+        let y = map (Var.watch v) ~f:(fun v -> v - 1) in
+        let z = map (both x y) ~f:(fun (x, y) -> x + y) in
+        let o = observe z in
+        stabilize ();
+        printf "%d" (Observer.value_exn o);
+        [%expect {| 0 |}];
+        (match Expert.do_one_step_of_stabilize () with
+         | Keep_going -> ()
+         | Done -> assert false);
+        Var.set v 1;
+        assert (does_raise stabilize)
+      ;;
+
+      let%expect_test "can't step after stabilization raises" =
+        let module I = Make () in
+        let open I in
+        let v = Var.create 0 in
+        let x = map (Var.watch v) ~f:(fun _ -> assert false) in
+        let o = observe x in
+        assert (does_raise stabilize);
+        assert (does_raise Expert.do_one_step_of_stabilize);
+        disallow_future_use o
+      ;;
+
+      let%expect_test "can't step inside update handlers" =
+        let module I = Make () in
+        let open I in
+        let v = Var.create 0 in
+        let x = map (Var.watch v) ~f:(fun v -> v + 1) in
+        let o = observe x in
+        Observer.on_update_exn o ~f:(fun _ ->
+          ignore (Expert.do_one_step_of_stabilize () : Expert.Step_result.t));
+        assert (does_raise stabilize);
+        disallow_future_use o
+      ;;
     end)
   ;;
 end

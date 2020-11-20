@@ -1128,24 +1128,16 @@ and maybe_change_value : type a. a Node.t -> a -> unit =
   if debug then invariant t
 ;;
 
-let recompute_everything_that_is_necessary t =
-  let module R = Recompute_heap in
-  let r = t.recompute_heap in
-  while R.length r > 0 do
-    let (T node) = R.remove_min r in
-    if debug && not (Node.needs_to_be_computed node)
-    then
-      failwiths
-        ~here:[%here]
-        "node unexpectedly does not need to be computed"
-        node
-        [%sexp_of: _ Node.t];
-    recompute node
-  done;
-  if debug
-  then (
-    t.only_in_debug.currently_running_node <- None;
-    t.only_in_debug.expert_nodes_created_by_current_node <- [])
+let[@inline always] recompute_first_node_that_is_necessary r =
+  let (T node) = Recompute_heap.remove_min r in
+  if debug && not (Node.needs_to_be_computed node)
+  then
+    failwiths
+      ~here:[%here]
+      "node unexpectedly does not need to be computed"
+      node
+      [%sexp_of: _ Node.t];
+  recompute node
 ;;
 
 let unlink_disallowed_observers t =
@@ -1324,58 +1316,113 @@ let reclaim_space_in_weak_hashtbls t =
   done
 ;;
 
+let stabilize_start t =
+  t.status <- Stabilizing;
+  disallow_finalized_observers t;
+  (* Just like for binds, we add new observers before removing disallowed observers to
+     potentially avoid switching the observability of some nodes back and forth. *)
+  add_new_observers t;
+  unlink_disallowed_observers t;
+  if debug then invariant t
+;;
+
+let stabilize_end t =
+  if debug
+  then (
+    t.only_in_debug.currently_running_node <- None;
+    t.only_in_debug.expert_nodes_created_by_current_node <- []);
+  (* We increment [t.stabilization_num] before handling variables set during
+     stabilization, so that they are treated as set during the new stabilization cycle.
+     Also, we increment before running on-update handlers, to avoid running on update
+     handlers created during on update handlers. *)
+  t.stabilization_num <- Stabilization_num.add1 t.stabilization_num;
+  while not (Stack.is_empty t.set_during_stabilization) do
+    let (T var) = Stack.pop_exn t.set_during_stabilization in
+    let value = Uopt.value_exn var.value_set_during_stabilization in
+    var.value_set_during_stabilization <- Uopt.none;
+    set_var_while_not_stabilizing var value
+  done;
+  while not (Stack.is_empty t.handle_after_stabilization) do
+    let (T node) = Stack.pop_exn t.handle_after_stabilization in
+    node.is_in_handle_after_stabilization <- false;
+    let old_value = node.old_value_opt in
+    node.old_value_opt <- Uopt.none;
+    let node_update : _ Node_update.t =
+      if not (Node.is_valid node)
+      then Invalidated
+      else if not (Node.is_necessary node)
+      then Unnecessary
+      else (
+        let new_value = Uopt.value_exn node.value_opt in
+        if Uopt.is_none old_value
+        then Necessary new_value
+        else Changed (Uopt.unsafe_value old_value, new_value))
+    in
+    Stack.push t.run_on_update_handlers (T (node, node_update))
+  done;
+  t.status <- Running_on_update_handlers;
+  let now = t.stabilization_num in
+  while not (Stack.is_empty t.run_on_update_handlers) do
+    let (T (node, node_update)) = Stack.pop_exn t.run_on_update_handlers in
+    Node.run_on_update_handlers node node_update ~now
+  done;
+  t.status <- Not_stabilizing;
+  reclaim_space_in_weak_hashtbls t
+;;
+
+let raise_during_stabilization t exn =
+  t.status <- Stabilize_previously_raised (Raised_exn.create exn);
+  raise exn
+;;
+
 let stabilize t =
   ensure_not_stabilizing t ~name:"stabilize" ~allow_in_update_handler:false;
   try
-    t.status <- Stabilizing;
-    disallow_finalized_observers t;
-    (* Just like for binds, we add new observers before removing disallowed observers to
-       potentially avoid switching the observability of some nodes back and forth. *)
-    add_new_observers t;
-    unlink_disallowed_observers t;
-    if debug then invariant t;
-    recompute_everything_that_is_necessary t;
-    (* We increment [t.stabilization_num] before handling variables set during
-       stabilization, so that they are treated as set during the new stabilization cycle.
-       Also, we increment before running on-update handlers, to avoid running on update
-       handlers created during on update handlers. *)
-    t.stabilization_num <- Stabilization_num.add1 t.stabilization_num;
-    while not (Stack.is_empty t.set_during_stabilization) do
-      let (T var) = Stack.pop_exn t.set_during_stabilization in
-      let value = Uopt.value_exn var.value_set_during_stabilization in
-      var.value_set_during_stabilization <- Uopt.none;
-      set_var_while_not_stabilizing var value
+    stabilize_start t;
+    let r = t.recompute_heap in
+    while Recompute_heap.length r > 0 do
+      recompute_first_node_that_is_necessary r
     done;
-    while not (Stack.is_empty t.handle_after_stabilization) do
-      let (T node) = Stack.pop_exn t.handle_after_stabilization in
-      node.is_in_handle_after_stabilization <- false;
-      let old_value = node.old_value_opt in
-      node.old_value_opt <- Uopt.none;
-      let node_update : _ Node_update.t =
-        if not (Node.is_valid node)
-        then Invalidated
-        else if not (Node.is_necessary node)
-        then Unnecessary
-        else (
-          let new_value = Uopt.value_exn node.value_opt in
-          if Uopt.is_none old_value
-          then Necessary new_value
-          else Changed (Uopt.unsafe_value old_value, new_value))
-      in
-      Stack.push t.run_on_update_handlers (T (node, node_update))
-    done;
-    t.status <- Running_on_update_handlers;
-    let now = t.stabilization_num in
-    while not (Stack.is_empty t.run_on_update_handlers) do
-      let (T (node, node_update)) = Stack.pop_exn t.run_on_update_handlers in
-      Node.run_on_update_handlers node node_update ~now
-    done;
-    t.status <- Not_stabilizing;
-    reclaim_space_in_weak_hashtbls t
+    stabilize_end t
+  with
+  | exn -> raise_during_stabilization t exn
+;;
+
+module Step_result = struct
+  type t =
+    | Keep_going
+    | Done
+  [@@deriving sexp_of]
+end
+
+let do_one_step_of_stabilize t : Step_result.t =
+  try
+    match t.status with
+    | Not_stabilizing ->
+      stabilize_start t;
+      Keep_going
+    | Stabilizing ->
+      let r = t.recompute_heap in
+      if Recompute_heap.length r > 0
+      then (
+        recompute_first_node_that_is_necessary r;
+        Keep_going)
+      else (
+        stabilize_end t;
+        Done)
+    | Running_on_update_handlers | Stabilize_previously_raised _ ->
+      ensure_not_stabilizing t ~name:"step" ~allow_in_update_handler:false;
+      assert false
   with
   | exn ->
-    t.status <- Stabilize_previously_raised (Raised_exn.create exn);
-    raise exn
+    (match t.status with
+     | Stabilize_previously_raised _ ->
+       (* If stabilization has already raised, then [exn] is merely a notification of this
+          fact, rather than the original exception itself.  We should just propagate [exn]
+          forward; calling [raise_during_stabilization] would store [exn] as the exception
+          that initially raised during stabilization. *)
+       raise exn
+     | _ -> raise_during_stabilization t exn)
 ;;
 
 let create_node_in t created_in kind =

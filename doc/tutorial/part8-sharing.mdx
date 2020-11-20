@@ -38,29 +38,29 @@ some concepts from databases, particularly the notion of a
 First, let's introduce some types for representing orders and
 executions.
 
-```ocaml non-deterministic
-# open Core
-# module Dir = struct
-    type t = Buy | Sell
-  end
-# module Symbol : Identifiable = String
-# module Order = struct
-    module Id : Identifiable = String
-    type t = { price: float
-             ; size : int
-             ; symbol: Symbol.t
-             ; order_id : Id.t
-             ; dir: Dir.t
-             }
-  end
-# module Exec = struct
-    module Id : Identifiable = String
-    type t = { id: Id.t
-             ; price: float
-             ; size: int
-             ; oid: Order.Id.t
-             }
-  end
+```ocaml
+open Core
+module Dir = struct
+  type t = Buy | Sell
+end
+module Symbol : Identifiable = String
+module Order = struct
+  module Id : Identifiable = String
+  type t = { price: float
+           ; size : int
+           ; symbol: Symbol.t
+           ; order_id : Id.t
+           ; dir: Dir.t
+           }
+end
+module Exec = struct
+  module Id : Identifiable = String
+  type t = { id: Id.t
+           ; price: float
+           ; size: int
+           ; oid: Order.Id.t
+           }
+end
 ```
 
 Our goal is to compute two things:
@@ -73,14 +73,14 @@ We'll assume that the input to our computation is the set of open
 orders indexed by order id and executions indexed by execution id.
 We'll reify this in our model type below:
 
-```ocaml non-deterministic
-# module Model = struct
-    type t =
-      { orders : Order.t Map.M(Order.Id).t
-      ; execs : Exec.t Map.M(Exec.Id).t
-      }
-    [@@deriving fields]
-  end
+```ocaml
+module Model = struct
+  type t =
+    { orders : Order.t Map.M(Order.Id).t
+    ; execs : Exec.t Map.M(Exec.Id).t
+    }
+  [@@deriving fields]
+end
 ```
 
 [%%org {|
@@ -92,10 +92,10 @@ so we'll recapitulate that here.
 |}]
 
 
-```ocaml non-deterministic
-# module Incr = Incremental.Make ()
-# module Incr_map = Incr_map.Make (Incr)
-# open Incr.Let_syntax;;
+```ocaml
+module Incr = Incremental.Make ()
+module Incr_map = Incr_map.Make (Incr)
+open Incr.Let_syntax;;
 ```
 
 ```ocaml
@@ -217,14 +217,14 @@ to both functions.  One idiom for doing this is to create a type that
 contains a version of your data that is /denormalized/, to steal a
 term from the database world.  i.e., we might have a type like this:
 
-```ocaml non-deterministic
-# module Enriched_model = struct
-    type t =
-      { orders_and_execs :
-          (Order.t option * Exec.t Map.M(Exec.Id).t) Map.M(Order.Id).t
-      ; execs : Exec.t Map.M(Exec.Id).t
-      } [@@deriving fields]
-  end
+```ocaml
+module Enriched_model = struct
+  type t =
+    { orders_and_execs :
+        (Order.t option * Exec.t Map.M(Exec.Id).t) Map.M(Order.Id).t
+    ; execs : Exec.t Map.M(Exec.Id).t
+    } [@@deriving fields]
+end
 ```
 
 This way of representing the data contains redundancies, since

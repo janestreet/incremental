@@ -299,12 +299,12 @@ components directly.
 Here's a trivial example of how this approach works.  Let's start with
 a data type with two components.
 
-```ocaml non-deterministic
-# type z =
-    { a: int list
-    ; b: (int * int)
-    }
-  [@@deriving fields]
+```ocaml
+type z =
+  { a: int list
+  ; b: (int * int)
+  }
+[@@deriving fields]
 ```
 
 Now, we're going to write a function that multiplies together the

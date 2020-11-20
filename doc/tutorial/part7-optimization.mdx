@@ -83,7 +83,7 @@ incremental computations.  You'll find these functions in the `State`
 module.  For example, the following code shows you how to read out the
 number of Incremental nodes that have been created thus far.
 
-```ocaml non-deterministic
+```ocaml
 open Core
 module Incr = Incremental.Make ()
 module Incr_map = Incr_map.Make(Incr);;

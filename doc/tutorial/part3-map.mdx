@@ -20,22 +20,22 @@ by using Incremental.
 These examples will be around sets of orders.  Let's start with some
 types for describing orders.
 
-```ocaml non-deterministic
-# open Core
-# module Symbol : Identifiable = String
-# module Dir = struct
-    type t = Buy | Sell [@@deriving equal]
-  end
-# module Order = struct
-    module Id : Identifiable = String
-    type t =
-      { sym: Symbol.t
-      ; size: int
-      ; price: float
-      ; dir: Dir.t
-      ; id : Id.t
-      }
-  end
+```ocaml
+open Core
+module Symbol : Identifiable = String
+module Dir = struct
+  type t = Buy | Sell [@@deriving equal]
+end
+module Order = struct
+  module Id : Identifiable = String
+  type t =
+    { sym: Symbol.t
+    ; size: int
+    ; price: float
+    ; dir: Dir.t
+    ; id : Id.t
+    }
+end
 ```
 
 The following function is a simple, all-at-once computation that takes
@@ -85,8 +85,8 @@ But instead of using `Map.symmetric_diff` directly, we're going to use
 advantage of the diffability of maps.  One such operator is
 `Incr_map.unordered_fold`.  Let's first instantiate the `Incr_map` module:
 
-```ocaml non-deterministic
-# module Incr_map = Incr_map.Make(Incr);;
+```ocaml
+module Incr_map = Incr_map.Make(Incr);;
 ```
 
 and then show how we can compute our share counts using it:

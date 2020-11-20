@@ -303,12 +303,22 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
 
       let create ?on_observability_change f = create State.t ?on_observability_change f
     end
+
+    module Step_result = State.Step_result
+
+    let do_one_step_of_stabilize () = State.do_one_step_of_stabilize State.t
   end
 
   module Let_syntax = struct
     include Let_syntax
 
     let return a = return State.t a
+
+    module Let_syntax = struct
+      include Let_syntax
+
+      let return = return
+    end
   end
 
   module Scope = struct
@@ -431,6 +441,10 @@ module Expert = struct
         let invariant _ _ = ()
       end)
   end
+
+  module Step_result = State.Step_result
+
+  let do_one_step_of_stabilize state = State.do_one_step_of_stabilize state
 end
 
 module Node = struct
@@ -474,6 +488,7 @@ module type S = sig
     with type 'a Cutoff.t = 'a Cutoff.t
     with type 'a Expert.Dependency.t = ('a, state_witness) Expert.Dependency.t
     with type 'a Expert.Node.t = ('a, state_witness) Expert.Node.t
+    with type Expert.Step_result.t = Expert.Step_result.t
     with type 'a Observer.t = ('a, state_witness) Observer.t
     with type 'a Observer.Update.t = 'a Observer.Update.t
     with type Packed.t = Packed.t

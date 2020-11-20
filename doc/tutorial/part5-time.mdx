@@ -16,18 +16,17 @@ should be down, but are in fact still running.
 
 First, let's start by modeling out some types for this example.
 
-```ocaml non-deterministic
-# open Core
-# module Service_id : Identifiable = String
-module Service_id : Core.Identifiable
-# module Service_status = struct
-    type t =
-      { id : Service_id.t
-      ; start_time: Time_ns.t
-      ; stop_time: Time_ns.t option
-      ; is_running: bool
-      } [@@deriving fields]
-  end
+```ocaml
+open Core
+module Service_id : Identifiable = String
+module Service_status = struct
+  type t =
+    { id : Service_id.t
+    ; start_time: Time_ns.t
+    ; stop_time: Time_ns.t option
+    ; is_running: bool
+    } [@@deriving fields]
+end
 ```
 
 Now, let's try to write a function that computes the set of services
@@ -52,10 +51,10 @@ Now, let's try to create an incremental version of this, where the map
 of service infos and the now are both passed in as incrementals.
 First, let's set up incremental.
 
-```ocaml non-deterministic
-# module Incr = Incremental.Make ()
-# module Incr_map = Incr_map.Make(Incr)
-# open Incr.Let_syntax
+```ocaml
+module Incr = Incremental.Make ()
+module Incr_map = Incr_map.Make(Incr)
+open Incr.Let_syntax
 ```
 
 And now, we can define the incremental version.

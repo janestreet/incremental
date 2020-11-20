@@ -9,7 +9,7 @@ patterns to deconstruct a given value, you might end up with more
 dependencies than you expected.  Here's an example demonstrating this
 from [part 1](./part1-preliminaries.mdx).
 
-```ocaml non-deterministic
+```ocaml
 open Core
 module Incr = Incremental.Make ()
 module Incr_map = Incr_map.Make (Incr);;

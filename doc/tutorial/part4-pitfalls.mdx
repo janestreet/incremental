@@ -81,8 +81,8 @@ module Incr : Incremental.S
 
 And, we'll instantiate ~Incr_map~ as well.
 
-```ocaml non-deterministic
-# module Incr_map = Incr_map.Make(Incr);;
+```ocaml
+module Incr_map = Incr_map.Make(Incr);;
 ```
 
 And here's the actual filter function.
@@ -153,11 +153,11 @@ Here's another example of Incremental gone wrong.  Imagine we want to
 use our filter function above on a model that contains both the
 pattern and data.  Here's the definition of the model:
 
-```ocaml non-deterministic
-# type model = { pattern: String.Search_pattern.t
-               ; data: int Map.M(String).t
-               }
-  [@@deriving fields];;
+```ocaml
+type model = { pattern: String.Search_pattern.t
+             ; data: int Map.M(String).t
+             }
+[@@deriving fields];;
 ```
 
 And here's a way of filtering the model based on the pattern.

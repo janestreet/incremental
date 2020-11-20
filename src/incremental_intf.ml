@@ -929,6 +929,7 @@ module type S_gen = sig
 
     module Let_syntax : sig
       val bind : 'a t -> f:('a -> 'b t) -> 'b t
+      val return : 'a -> 'a t
 
       include Bind_n with type 'a t := 'a t
 
@@ -1006,6 +1007,15 @@ module type S_gen = sig
       val add_dependency : _ t -> _ Dependency.t -> unit
       val remove_dependency : _ t -> _ Dependency.t -> unit
     end
+
+    module Step_result : sig
+      type t =
+        | Keep_going
+        | Done
+      [@@deriving sexp_of]
+    end
+
+    val do_one_step_of_stabilize : unit -> Step_result.t
   end
 end
 
@@ -1900,6 +1910,25 @@ module type Incremental = sig
       (** [remove_dependency t dep] can only be called from a child of [t]. *)
       val remove_dependency : (_, 'w) t -> (_, 'w) Dependency.t -> unit
     end
+
+    module Step_result : sig
+      type t =
+        | Keep_going
+        | Done
+      [@@deriving sexp_of]
+    end
+
+
+    (** [do_one_step_of_stabilize state] runs a part of stabilization. This can be used as
+        a replacement for [stabilize], to split up potentially long calls to [stabilize].
+
+        A stabilization is ongoing until [do_one_step_of_stabilize] returns [Done]. During
+        such a stabilization, behavior is the same as during a regular stabilization.
+
+        Calling [do_one_step_of_stabilize] during a call to [do_one_step_of_stabilize] or
+        [stabilize] is a programming error but it is not detected. Behavior is
+        undefined. *)
+    val do_one_step_of_stabilize : _ State.t -> Step_result.t
   end
 
   module type S_gen = S_gen
@@ -1915,6 +1944,7 @@ module type Incremental = sig
       with type 'a Cutoff.t = 'a Cutoff.t
       with type 'a Expert.Dependency.t = ('a, state_witness) Expert.Dependency.t
       with type 'a Expert.Node.t = ('a, state_witness) Expert.Node.t
+      with type Expert.Step_result.t = Expert.Step_result.t
       with type 'a Observer.t = ('a, state_witness) Observer.t
       with type 'a Observer.Update.t = 'a Observer.Update.t
       with type Packed.t = Packed.t
