@@ -2060,6 +2060,9 @@ module Expert = struct
         then assert_currently_running_node_is_child state node "add_dependency";
       let e = Uopt.unsafe_value e_opt in
       let new_child_index = Expert.add_child_edge e (E dep) in
+      (* [node] is not guaranteed to be necessary, even if we are running in a child of
+         [node], because we could be running due to a parent other than [node] making us
+         necessary. *)
       if Node.is_necessary node
       then (
         add_parent ~child:dep.child ~parent:node ~child_index:new_child_index;
@@ -2075,27 +2078,30 @@ module Expert = struct
     then (
       if debug then assert_currently_running_node_is_child state node "remove_dependency";
       let e = Uopt.unsafe_value e_opt in
-      (* It would require additional thoughts to check whether allowing the node not to be
-         necessary makes sense. *)
-      assert (Node.is_necessary node);
+      (* [node] is not guaranteed to be necessary, for the reason stated in
+         [add_dependency] *)
       let edge_index = Uopt.value_exn edge.index in
       let (E last_edge) = Expert.last_child_edge_exn e in
       let last_edge_index = Uopt.value_exn last_edge.index in
       if edge_index <> last_edge_index
       then (
-        Node.swap_children_except_in_kind
-          node
-          ~child1:edge.child
-          ~child_index1:edge_index
-          ~child2:last_edge.child
-          ~child_index2:last_edge_index;
+        if Node.is_necessary node
+        then
+          Node.swap_children_except_in_kind
+            node
+            ~child1:edge.child
+            ~child_index1:edge_index
+            ~child2:last_edge.child
+            ~child_index2:last_edge_index;
         Expert.swap_children e ~child_index1:edge_index ~child_index2:last_edge_index;
         if debug then Node.invariant ignore node);
       Expert.remove_last_child_edge_exn e;
-      remove_child ~child:edge.child ~parent:node ~child_index:last_edge_index;
-      if debug then assert (Node.needs_to_be_computed node);
-      if not (Node.is_in_recompute_heap node)
-      then Recompute_heap.add state.recompute_heap node;
-      if not (Node.is_valid edge.child) then Expert.decr_invalid_children e)
+      if debug then assert (Node.is_stale node);
+      if Node.is_necessary node
+      then (
+        remove_child ~child:edge.child ~parent:node ~child_index:last_edge_index;
+        if not (Node.is_in_recompute_heap node)
+        then Recompute_heap.add state.recompute_heap node;
+        if not (Node.is_valid edge.child) then Expert.decr_invalid_children e))
   ;;
 end

@@ -4704,6 +4704,106 @@ struct
             assert (skip_invalidity_check || not (is_valid all));
             disallow_future_use o
           ;;
+
+          (* Ensure we can make changes to an unnecessary expert node from a necessary
+             child. *)
+          let%expect_test _ =
+            let weird_unzip
+              : type a b c. a list t -> (a t -> (b * c) t) -> b list t * c list t
+              =
+              (* This function doesn't do anything really interesting, the point is more
+                 that the caller can make it call add_dependency or remove_dependency as
+                 desired. And we can check the correctness of the results. *)
+              fun t f ->
+                let f_result = ref None in
+                let fs1 = ref None in
+                let fs2 = ref None in
+                let parent1 = E.Node.create (fun () -> Option.value_exn !fs1 ()) in
+                let parent2 = E.Node.create (fun () -> Option.value_exn !fs2 ()) in
+                let lhs_change =
+                  map t ~f:(fun l ->
+                    (match !f_result with
+                     | Some (len, (deps1, deps2)) when len <> List.length l ->
+                       (* remove_dependency does something different for the last
+                          child. So iterate in different orders so we cover both cases. *)
+                       List.iter deps1 ~f:(E.Node.remove_dependency parent1);
+                       List.iter (List.rev deps2) ~f:(E.Node.remove_dependency parent2);
+                       f_result := None
+                     | _ -> ());
+                    match !f_result with
+                    | Some _ -> ()
+                    | None ->
+                      let deps, new_refs =
+                        List.unzip
+                          (List.init (List.length l) ~f:(fun i ->
+                             let incr = f (map t ~f:(fun l -> List.nth_exn l i)) in
+                             let r1 = ref None in
+                             let dep1 =
+                               E.Dependency.create incr ~on_change:(fun x ->
+                                 r1 := Some (fst x))
+                             in
+                             let r2 = ref None in
+                             let dep2 =
+                               E.Dependency.create incr ~on_change:(fun x ->
+                                 r2 := Some (snd x))
+                             in
+                             E.Node.add_dependency parent1 dep1;
+                             E.Node.add_dependency parent2 dep2;
+                             (dep1, dep2), (r1, r2)))
+                      in
+                      let compute_result l f () =
+                        List.map l ~f:(fun r -> Option.value_exn !(f r))
+                      in
+                      fs1 := Some (compute_result new_refs fst);
+                      fs2 := Some (compute_result new_refs snd);
+                      f_result := Some (List.length l, List.unzip deps))
+                in
+                E.Node.add_dependency parent1 (E.Dependency.create lhs_change);
+                E.Node.add_dependency parent2 (E.Dependency.create lhs_change);
+                E.Node.watch parent1, E.Node.watch parent2
+            in
+            Ref.set_temporarily sexp_style To_string_hum ~f:(fun () ->
+              let v1 = Var.create [ 2 ] in
+              let n1, n2 =
+                weird_unzip (Var.watch v1) (fun t -> map t ~f:(fun x -> x, -x))
+              in
+              (* We add/remove dependencies with only n2 necessary, both necessary
+                 and only n1 necessary.  *)
+              let o2 = observe n2 in
+              stabilize_ ();
+              print_s [%sexp (value o2 : int list)];
+              [%expect "(-2)"];
+              Var.set v1 [ 3 ];
+              stabilize_ ();
+              print_s [%sexp (value o2 : int list)];
+              [%expect "(-3)"];
+              Var.set v1 [ 3; 4; 5 ];
+              stabilize_ ();
+              print_s [%sexp (value o2 : int list)];
+              [%expect "(-3 -4 -5)"];
+              Var.set v1 [];
+              stabilize_ ();
+              print_s [%sexp (value o2 : int list)];
+              [%expect "()"];
+              Var.set v1 [ 3; 4; 5 ];
+              stabilize_ ();
+              let o1 = observe n1 in
+              stabilize_ ();
+              print_s [%sexp (value o1 : int list), (value o2 : int list)];
+              [%expect "((3 4 5) (-3 -4 -5))"];
+              Var.set v1 [ 6 ];
+              stabilize_ ();
+              print_s [%sexp (value o1 : int list), (value o2 : int list)];
+              [%expect "((6) (-6))"];
+              disallow_future_use o2;
+              Var.set v1 [ 7; 8; 9 ];
+              stabilize_ ();
+              print_s [%sexp (value o1 : int list)];
+              [%expect "(7 8 9)"];
+              Var.set v1 [];
+              stabilize_ ();
+              disallow_future_use o1)
+          ;;
         end
       end :
         (* This signature constraint is here to remind us to add a unit test

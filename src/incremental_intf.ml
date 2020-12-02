@@ -1893,8 +1893,7 @@ module type Incremental = sig
           exception is raised.
 
           This is intended to be called either outside of stabilization, or right after
-          creating [t], or from a child of [t] (and in that case, as a consequence [t]
-          must be necessary).
+          creating [t], or from a child of [t].
 
           The [on_change] callback of [dep] will be fired when [t] becomes observable,
           or immediately, or whenever the child changes as long as [t] is observable.

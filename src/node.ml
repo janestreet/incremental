@@ -396,7 +396,11 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
                    (T t)
                    (get_parent
                       child
-                      ~index:my_parent_index_in_child_at_index.(child_index))))))
+                      ~index:my_parent_index_in_child_at_index.(child_index))));
+           if debug && not (is_necessary t)
+           then
+             Array.iter my_parent_index_in_child_at_index ~f:(fun x ->
+               assert (x = -1))))
       ~my_child_index_in_parent_at_index:
         (check (fun my_child_index_in_parent_at_index ->
            [%test_result: int]
@@ -408,7 +412,11 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
                  (T t)
                  (Kind.slow_get_child
                     parent.kind
-                    ~index:my_child_index_in_parent_at_index.(parent_index))))))
+                    ~index:my_child_index_in_parent_at_index.(parent_index))));
+           if debug && not (is_necessary t)
+           then
+             Array.iter my_child_index_in_parent_at_index ~f:(fun x ->
+               assert (x = -1))))
       ~force_necessary:ignore
       ~creation_backtrace:ignore)
 ;;
