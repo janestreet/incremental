@@ -1,4 +1,3 @@
-#+UUID: b0d50942-3e29-32af-f21a-c396cbd2867d
 A library for building self-adjusting computations, following the work
 of [[http://www.umut-acar.org/self-adjusting-computation][Umut Acar et. al.]]. Incremental gives you a way of building complex
 computations that can update efficiently in response to their inputs.
