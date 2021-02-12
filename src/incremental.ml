@@ -169,6 +169,8 @@ module Generic = struct
   module Clock = struct
     include State.Clock
 
+    let state = incr_state
+
     let default_timing_wheel_config =
       let alarm_precision = Alarm_precision.about_one_millisecond in
       let level_bits = [ 14; 13; 5 ] in

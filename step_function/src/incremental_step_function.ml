@@ -25,9 +25,10 @@ let value t ~at = value_internal t.init t.steps ~at
 let constant init = { init; steps = Sequence.empty }
 
 let create_exn ~init ~steps =
-  if not
-       (List.is_sorted steps ~compare:(fun (time1, _) (time2, _) ->
-          Time_ns.compare time1 time2))
+  if
+    not
+      (List.is_sorted steps ~compare:(fun (time1, _) (time2, _) ->
+         Time_ns.compare time1 time2))
   then
     raise_s
       [%message

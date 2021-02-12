@@ -619,9 +619,10 @@ let add_parent ~child ~parent ~child_index =
   propagate_invalidity t;
   if debug then assert (Node.is_necessary parent);
   (* we only add necessary parents *)
-  if (not (Node.is_in_recompute_heap parent))
-  && (Stabilization_num.is_none parent.recomputed_at
-      || Node.edge_is_stale ~child ~parent)
+  if
+    (not (Node.is_in_recompute_heap parent))
+    && (Stabilization_num.is_none parent.recomputed_at
+        || Node.edge_is_stale ~child ~parent)
   then Recompute_heap.add t.recompute_heap parent
 ;;
 
@@ -786,10 +787,11 @@ let rec recompute : type a. a Node.t -> unit =
     if Uopt.is_some child
     then (
       let child = Uopt.value_exn child in
-      if Stabilization_num.compare
-           child.changed_at
-           step_function_node.extracted_step_function_from_child_at
-         > 0
+      if
+        Stabilization_num.compare
+          child.changed_at
+          step_function_node.extracted_step_function_from_child_at
+        > 0
       then (
         step_function_node.extracted_step_function_from_child_at <- child.changed_at;
         remove_alarm clock step_function_node.alarm;
@@ -996,12 +998,13 @@ and maybe_change_value : type a. a Node.t -> a -> unit =
   fun node new_value ->
   let t = node.state in
   let old_value_opt = node.value_opt in
-  if Uopt.is_none old_value_opt
-  || not
-       (Cutoff.should_cutoff
-          node.cutoff
-          ~old_value:(Uopt.unsafe_value old_value_opt)
-          ~new_value)
+  if
+    Uopt.is_none old_value_opt
+    || not
+         (Cutoff.should_cutoff
+            node.cutoff
+            ~old_value:(Uopt.unsafe_value old_value_opt)
+            ~new_value)
   then (
     node.value_opt <- Uopt.some new_value;
     node.changed_at <- t.stabilization_num;
@@ -2051,12 +2054,13 @@ module Expert = struct
     then (
       if debug
       then
-        if am_stabilizing state
-        && not
-             (List.mem
-                ~equal:phys_equal
-                state.only_in_debug.expert_nodes_created_by_current_node
-                (T node))
+        if
+          am_stabilizing state
+          && not
+               (List.mem
+                  ~equal:phys_equal
+                  state.only_in_debug.expert_nodes_created_by_current_node
+                  (T node))
         then assert_currently_running_node_is_child state node "add_dependency";
       let e = Uopt.unsafe_value e_opt in
       let new_child_index = Expert.add_child_edge e (E dep) in

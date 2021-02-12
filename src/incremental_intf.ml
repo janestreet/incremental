@@ -1739,6 +1739,7 @@ module type Incremental = sig
     (** The [alarm_precision] of the underlying timing wheel. *)
     val alarm_precision : _ t -> Time_ns.Span.t
 
+    val state : 'w t -> 'w State.t
     val timing_wheel_length : _ t -> int
 
     (** [now t] returns the current time of incremental's clock. *)
