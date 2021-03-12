@@ -22,7 +22,7 @@ Incremental has some constraints that are worth understanding.
 
 - **It works best if the information you're using fits in memory**.
   There's no built-in support for dealing with on-disk stores, though
-  you can combine incremental with other techniques for fetching data
+  you can combine Incremental with other techniques for fetching data
   from disk when necessary.
 
 - **Incremental is fast, but it isn't super fast**. In particular, it's
@@ -37,10 +37,10 @@ previous computations in the nodes of the graph. That way, when one of
 the inputs to your computation is updated, only the part of the graph
 that depends on that input needs to be re-evaluated.
 
-There are three basic parts to an incremental graph: /variables/,
-which constitute the inputs to the computation, /incrementals/ which
+There are three basic parts to an incremental graph: *variables*,
+which constitute the inputs to the computation, *incrementals* which
 correspond to the intermediate stages of the computation, and
-/observers/, which are nodes from which you can read the output of a
+*observers*, which are nodes from which you can read the output of a
 computation.
 
 In practice, you always need all three. You initialize a variable just
@@ -135,7 +135,7 @@ Note the use of `and`, which produces the moral equivalent of `map2`.
 
 In order to read the value out, we have to create an observer, at
 which point we can grab the current value.  Before reading the value,
-however, we need to call /stabilize/, which makes sure that the output
+however, we need to call *stabilize*, which makes sure that the output
 of the computation is up-to-date.
 
 ```ocaml
@@ -271,6 +271,7 @@ achieves real gains, and that it has real overhead.  Indeed, if we run
 this with 100 nodes instead of 100000, we'll get results that look
 like this.
 
+
 ```
 | Name | Time/Run | Percentage |
 |------+----------+------------|
@@ -346,8 +347,8 @@ if you think about how this desugars.  In particular, the above
 pattern is the same as:
 
 ```ocaml skip
-   let a_i = Incr.map z `f:(fun x -> x.a) in
-   Incr.map a_i `f:(fun a -> ...)
+   let a_i = Incr.map z ~f:(fun x -> x.a) in
+   Incr.map a_i ~f:(fun a -> ...)
 ```
 
 The two invocations of `Incr.map` are now clearly visible.
@@ -442,6 +443,7 @@ And you can create a cutoff from a simple equality function.
 val int_cutoff : int Incr.Cutoff.t = <abstr>
 ```
 
+
 Now let's see what happens if we don't create that intermediate map
 node by replacing this style
 
@@ -533,4 +535,3 @@ We'll talk more about how to think about the use of cutoffs and why
 they're important later on in the tutorial.
 
 [Part 2: Dynamic computations with bind](./part2-dynamic.mdx)
-

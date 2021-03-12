@@ -14,7 +14,7 @@ When people first start using Incremental, they think of it as being
 something they can sprinkle costlessly throughout their program to
 improve its performance.  This is far from the truth. Incremental
 nodes themselves are expensive to construct, expensive to fire, and
-take up a lot of memory.  To be clear, they're not /that/ expensive;
+take up a lot of memory.  To be clear, they're not *that* expensive;
 you can fire millions of incremental nodes per second. But they're
 still orders of magnitude more expensive than a simple addition.
 
@@ -76,7 +76,7 @@ module Incr : Incremental.S
 # open Incr.Let_syntax
 ```
 
-And, we'll instantiate ~Incr_map~ as well.
+And, we'll instantiate `Incr_map` as well.
 
 ```ocaml
 module Incr_map = Incr_map.Make(Incr);;
@@ -176,6 +176,7 @@ Incremental, since it creates a new incremental node that can't be
 efficiently compared to any previous incremental node. That means you
 get the overhead of Incremental with none of its benefits.
 
+
 If you want to get the right incrementality, you instead need to
 project out the components of the model individually, and feed them to
 `filter_key_by_string`, as follows.
@@ -268,7 +269,7 @@ fresh type, so two comparators with the same type must be the same.
 Or at least, they must be logically the same; but they needn't be the
 same physical object.  It turns out that `Map.comparator_s` allocates
 a new first-class module to wrap the comparator in, so different calls
-to `Map.Comparator_s` yield different heap-allocated objects.
+to `Map.comparator_s` yield different heap-allocated objects.
 
 As a result, the above function has been horrifically de-optimized,
 and is now even worse than a simple all-at-once version of the
@@ -283,7 +284,7 @@ reflects the fact that the comparator can't actually change.
 # let index_by outer_comparator map get_outer_index =
     let comparator = map >>| Map.comparator_s in
     (* Safe because comparators are uniquely determined by their type *)
-    Incr.set_cutoff map (Incr.Cutoff.of_equal (fun _ _ -> true));
+    Incr.set_cutoff comparator (Incr.Cutoff.of_equal (fun _ _ -> true));
     let%bind inner_comparator = comparator in
     let add ~key ~data acc =
       let idx = get_outer_index data in

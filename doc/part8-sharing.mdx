@@ -63,8 +63,8 @@ end
 Our goal is to compute two things:
 
 - the open interest of the orders (i.e., the sum over all orders of
-  the sum of price times the size remaining on the order)
-- For each symbol, the number of executed shares.
+  the price times the size remaining on the order);
+- for each symbol, the number of executed shares.
 
 We'll assume that the input to our computation is the set of open
 orders indexed by order id and executions indexed by execution id.
@@ -80,13 +80,10 @@ module Model = struct
 end
 ```
 
-[%%org {|
-
 Both calculations will require associating execs with orders, so let's
 start by writing a function to do just that.  We're also going to need
 the `index_by` operation we introduced in [Part 3](./part3-map.mdx),
 so we'll recapitulate that here.
-|}]
 
 
 ```ocaml
@@ -187,7 +184,7 @@ per symbol, leaning on the same `orders_and_execs` function.
       |> Incr_map.filter_mapi ~f:(fun ~key:_ ~data:(maybe_order, execs) ->
         match maybe_order with
         | None ->
-          (* drop execs with no order.  In real life, we should report an error. *)
+          (* Drop execs with no order.  In real life, we should report an error. *)
           None
         | Some order -> Some (order.symbol, Map.length execs))
     in
@@ -211,7 +208,7 @@ concurrently, we're effectively going to duplicate the
 
 We can fix this by just computing `orders_and_execs` once, and pass it
 to both functions.  One idiom for doing this is to create a type that
-contains a version of your data that is /denormalized/, to steal a
+contains a version of your data that is *denormalized*, to steal a
 term from the database world.  i.e., we might have a type like this:
 
 ```ocaml
@@ -276,12 +273,12 @@ at how to use one of them:
 = <fun>
 ```
 
-The way this works is you give it a unary function whose input is
+The way this works is you give it a function whose input is
 hashable and whose output is a heap block.  It will then give you a
 new function with the same signature, but that always returns the same
 heap block, as long as that heap block is still allocated somewhere.
 
-This function takes advantage of /weak pointers/, which provide for a
+This function takes advantage of *weak pointers*, which provide for a
 nice memory management story.  In particular, weak pointers don't
 prevent the values they point to from being collected.  As a result,
 this function maintains a cache that will remain populated only so

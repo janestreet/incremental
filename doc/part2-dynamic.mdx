@@ -79,7 +79,6 @@ with new nodes.
 Here's an example of this in action. First, let's bring back the
 function for summing together a list of incrementals from the previous
 part.
-|}]
 
 ```ocaml
 # let incr_list_sum l =
@@ -153,13 +152,13 @@ Now we can update the computation by either changing the values in the
 
 # Incremental performance, and why you often want to avoid bind
 
-We've now used incremental to build a computation that dynamically
+We've now used Incremental to build a computation that dynamically
 changes its structure. But let's stop for a moment to think about the
 performance characteristics of this version of the computation.  After
-all, incremental is an optimization framework! If you're not thinking
-about performance, you probably shouldn't be using incremental at all.
+all, Incremental is an optimization framework! If you're not thinking
+about performance, you probably shouldn't be using Incremental at all.
 
-In particular, what is the /incremental performance/ of `dynamic_sum`?
+In particular, what is the *incremental performance* of `dynamic_sum`?
 I.e., what is the computational cost of stabilizing the computation
 after the inputs change?
 

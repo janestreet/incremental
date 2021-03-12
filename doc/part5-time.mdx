@@ -45,8 +45,8 @@ val should_have_stopped :
 ```
 
 Now, let's try to create an incremental version of this, where the map
-of service infos and the now are both passed in as incrementals.
-First, let's set up incremental.
+of service infos and the `now` are both passed in as incrementals.
+First, let's set up Incremental.
 
 ```ocaml
 module Incr = Incremental.Make ()
@@ -76,7 +76,7 @@ status changes, you only have to do work for the specific service
 statuses that have been updated.  But when the time changes, every
 incremental in the map refires.  And time changes a lot!
 
-`Incremental`'s built-in support for time-based computations can help.
+Incremental's built-in support for time-based computations can help.
 To use it, we first need to get our hands on an Incremental clock,
 which is an imperative data structure that you can feed the current
 time to.
@@ -161,6 +161,7 @@ Note the use of `bind` and `return` here. Despite our earlier
 exhortations to be careful about using these functions, these uses are
 reasonable because we're only doing a small amount of work on the
 right-hand side of the bind.
+
 
 And the overall computation has good incremental performance relative
 to time changes.  In particular, the `Incr.Clock.at` nodes don't

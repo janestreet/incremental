@@ -86,6 +86,18 @@ advantage of the diffability of maps.  One such operator is
 module Incr_map = Incr_map.Make(Incr);;
 ```
 
+```ocaml
+# let _ = Incr_map.unordered_fold;;
+- : ?data_equal:('a -> 'a -> bool) ->
+    ?update:(key:'b -> old_data:'a -> new_data:'a -> 'c -> 'c) ->
+    ?specialized_initial:(init:'c -> ('b, 'a, 'd) Map.t -> 'c) ->
+    ('b, 'a, 'd) Map.t Incr.t ->
+    init:'c ->
+    add:(key:'b -> data:'a -> 'c -> 'c) ->
+    remove:(key:'b -> data:'a -> 'c -> 'c) -> 'c Incr.t
+= <fun>
+```
+
 and then show how we can compute our share counts using it:
 
 ```ocaml
@@ -112,15 +124,16 @@ behavior on a modify.
 The incremental graph here is actually very simple, it's just:
 
 ```
-+--------+     +-------------------+
-| orders |---->| shares-per-symbol |
-+--------+     +-------------------+
++--------+     +--------+
+| orders |---->| shares |
++--------+     +--------+
 ```
 
 The optimization here doesn't come from having a graph structure that
 tracks dependencies and allows us to only recompute the necessary
 subset of the graph. Instead, symmetric diff is being used under the
 covers to discover the differences and respond to them individually.
+
 
 This might lead you to wonder why we're using Incremental at all, as
 opposed to something that's more focused on just diffing. But what's
@@ -151,9 +164,9 @@ different incremental computations on the same universe of inputs, and
 you're guaranteed that, once you call `stabilize`, all of the
 computations will be in sync with each other.
 
-* Nested incrementality
+## Nested incrementality
 
-But `Incr_map` lets you do more than just string together a collection
+`Incr_map` lets you do more than just string together a collection
 of diff-style computations within your computation graph. It also lets
 you build computations that richly integrate diff-style and
 graph-style incrementality.  This turns out to make the approach more
@@ -234,6 +247,23 @@ the function to itself be incremental.
 Happily, `Incr_map` has another function, `Incr_map.mapi'` (you might
 pronounce that "mapi prime"), that does just that.
 
+Compare the types of each function: 
+```ocaml
+# let _ = Incr_map.mapi
+- : ?data_equal:('a -> 'a -> bool) ->
+    ('b, 'a, 'c) Map.t Incr.t ->
+    f:(key:'b -> data:'a -> 'd) -> ('b, 'd, 'c) Map.t Incr.t
+= <fun>
+# let _ = Incr_map.mapi'
+- : ?cutoff:'a Incr.Cutoff.t ->
+    ?data_equal:('a -> 'a -> bool) ->
+    ('b, 'a, 'c) Map.t Incr.t ->
+    f:(key:'b -> data:'a Incr.t -> 'd Incr.t) -> ('b, 'd, 'c) Map.t Incr.t
+= <fun>
+```
+
+And using it to compute `shares_by_symbol`
+
 ```ocaml
 # let shares_by_symbol orders =
     let orders_by_symbol = index_by_symbol orders in
@@ -276,7 +306,7 @@ path corresponding to that entry in the map.
 Adding and removing keys from `m`, on the other hand, corresponds to
 adding and removing entire paths through the graph.
 
-* Performance questions
+## Performance questions
 
 It's worth stopping and thinking about the performance implications of
 this approach. In particular, you end up minting potentially a rather
@@ -338,4 +368,3 @@ primed operators.  As such, you can end up doing the expensive
 calculation on a small subset of the data.
 
 [Part 4: Pitfalls](./part4-pitfalls.mdx)
-
