@@ -8,6 +8,7 @@ from [part 1](./part1-preliminaries.mdx).
 
 ```ocaml
 open Core
+module Time_ns = Time_ns_unix
 module Incr = Incremental.Make ()
 module Incr_map = Incr_map.Make (Incr);;
 open Incr.Let_syntax;;

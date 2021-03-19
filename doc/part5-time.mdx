@@ -15,6 +15,7 @@ First, let's start by modeling out some types for this example.
 
 ```ocaml
 open Core
+module Time_ns = Time_ns_unix
 module Service_id : Identifiable = String
 module Service_status = struct
   type t =
