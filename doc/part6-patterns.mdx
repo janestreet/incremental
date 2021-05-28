@@ -9,6 +9,7 @@ from [part 1](./part1-preliminaries.mdx).
 ```ocaml
 open Core
 module Time_ns = Time_ns_unix
+module Unix = Core_unix
 module Incr = Incremental.Make ()
 module Incr_map = Incr_map.Make (Incr);;
 open Incr.Let_syntax;;
@@ -116,7 +117,8 @@ module Hostname : Core.Identifiable
              ; status : Status.t
              }
   end
-module Host : sig type t = { addr : Unix.inet_addr; status : Status.t; } end
+module Host :
+  sig type t = { addr : UnixLabels.inet_addr; status : Status.t; } end
 # module Service = struct
     module Id : Identifiable = String
     type t = { host : Hostname.t

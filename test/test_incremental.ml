@@ -1,6 +1,7 @@
 open! Core
 open Float.Robustly_comparable
 open! Import
+module Unix = Core_unix
 
 let sec = Time_ns.Span.of_sec
 
