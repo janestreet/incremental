@@ -1,6 +1,6 @@
 (** An ['a Step_function.t] is a function from [Time_ns.t] to ['a]. *)
 
-open! Core_kernel
+open! Core
 
 type 'a t [@@deriving sexp_of]
 

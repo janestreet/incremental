@@ -3,7 +3,7 @@
     An observer is a root of the incremental DAG -- all descendants of an observer are
     "necessary", so that stabilization ensures their values are up to date. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 type 'a t = 'a Types.Internal_observer.t

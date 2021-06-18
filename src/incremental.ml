@@ -1,6 +1,6 @@
 (* This module is mostly a wrapper around [State] functions. *)
 
-open! Core_kernel
+open! Core
 open! Import
 include Incremental_intf
 

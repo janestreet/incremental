@@ -3,7 +3,7 @@
     An alarm value is stored in the timing wheel and is used to implement time-based
     functions: [at], [at_interval], [snapshot], [step_function]. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 module Action : sig

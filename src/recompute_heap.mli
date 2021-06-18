@@ -5,7 +5,7 @@
     topological order, using the recompute heap to visit them in increasing order of
     height. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 type t = Types.Recompute_heap.t [@@deriving sexp_of]

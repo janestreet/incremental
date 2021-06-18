@@ -8,7 +8,7 @@
    sexp converter that would try to produce an infinite sexp.
 *)
 
-open Core_kernel
+open Core
 open Import
 
 module rec Adjust_heights_heap : sig
@@ -16,7 +16,7 @@ module rec Adjust_heights_heap : sig
     { mutable length : int
     ; mutable height_lower_bound : int
     ; mutable max_height_seen : int
-    ; mutable nodes_by_height : Node.Packed.t Uopt.t array
+    ; mutable nodes_by_height : Node.Packed.t Uopt.t Uniform_array.t
     }
 end =
   Adjust_heights_heap
@@ -107,7 +107,7 @@ and Expert : sig
   type 'a t =
     { f : unit -> 'a
     ; on_observability_change : is_now_observable:bool -> unit
-    ; mutable children : packed_edge Uopt.t Array.t
+    ; mutable children : packed_edge Uopt.t Uniform_array.t
     ; mutable num_children : int
     ; mutable force_stale : bool
     ; mutable num_invalid_children : int
@@ -427,7 +427,7 @@ and Node : sig
     ; mutable num_on_update_handlers : int
     ; mutable num_parents : int
     ;
-      mutable parent1_and_beyond : Node.Packed.t Uopt.t array
+      mutable parent1_and_beyond : Node.Packed.t Uopt.t Uniform_array.t
     ; mutable parent0 : Node.Packed.t Uopt.t
     ; mutable created_in : Scope.t
     ; mutable next_node_in_same_scope : Node.Packed.t Uopt.t
@@ -535,7 +535,7 @@ and Recompute_heap : sig
   type t =
     { mutable length : int
     ; mutable height_lower_bound : int
-    ; mutable nodes_by_height : Node.Packed.t Uopt.t array
+    ; mutable nodes_by_height : Node.Packed.t Uopt.t Uniform_array.t
     }
 end =
   Recompute_heap

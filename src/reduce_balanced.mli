@@ -2,7 +2,7 @@
 
     A [Reduce_balanced.t] is a kind of DAG node. ['a] is the type of value being folded. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 val create

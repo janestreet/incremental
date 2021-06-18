@@ -1,4 +1,4 @@
-open Core_kernel
+open Core
 open Import
 open Kind
 module Internal_observer = Types.Internal_observer
@@ -43,7 +43,7 @@ type 'a t = 'a Types.Node.t =
        This representation is optimized for the overwhelmingly common case that a node has
        only one parent. *)
     mutable num_parents : int
-  ; mutable parent1_and_beyond : Packed.t Uopt.t array
+  ; mutable parent1_and_beyond : Packed.t Uopt.t Uniform_array.t
   ; mutable parent0 : Packed.t Uopt.t
   ; (* [created_in] is initially the scope that the node is created in.  If a node is
        later "rescoped", then created_in will be adjusted to the new scope that the node
@@ -176,7 +176,8 @@ let is_in_recompute_heap t = t.height_in_recompute_heap >= 0
 let is_in_adjust_heights_heap t = t.height_in_adjust_heights_heap >= 0
 
 let get_parent t ~index =
-  Uopt.value_exn (if index = 0 then t.parent0 else t.parent1_and_beyond.(index - 1))
+  Uopt.value_exn
+    (if index = 0 then t.parent0 else Uniform_array.get t.parent1_and_beyond (index - 1))
 ;;
 
 let iteri_parents t ~f =
@@ -184,7 +185,7 @@ let iteri_parents t ~f =
   then (
     f 0 (Uopt.value_exn t.parent0);
     for index = 1 to t.num_parents - 1 do
-      f index (Uopt.value_exn t.parent1_and_beyond.(index - 1))
+      f index (Uopt.value_exn (Uniform_array.get t.parent1_and_beyond (index - 1)))
     done)
 ;;
 
@@ -314,13 +315,14 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
       ~num_parents:
         (check (fun num_parents ->
            assert (num_parents >= 0);
-           assert (num_parents <= 1 + Array.length t.parent1_and_beyond)))
+           assert (num_parents <= 1 + Uniform_array.length t.parent1_and_beyond)))
       ~parent1_and_beyond:
         (check (fun parent1_and_beyond ->
-           for parent_index = 1 to Array.length parent1_and_beyond do
+           for parent_index = 1 to Uniform_array.length parent1_and_beyond do
              [%test_eq: bool]
                (parent_index < t.num_parents)
-               (Uopt.is_some parent1_and_beyond.(parent_index - 1))
+               (Uopt.is_some
+                  (Uniform_array.get parent1_and_beyond (parent_index - 1)))
            done))
       ~parent0:
         (check (fun parent0 ->
@@ -405,7 +407,7 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
         (check (fun my_child_index_in_parent_at_index ->
            [%test_result: int]
              (Array.length my_child_index_in_parent_at_index)
-             ~expect:(Array.length t.parent1_and_beyond + 1);
+             ~expect:(Uniform_array.length t.parent1_and_beyond + 1);
            iteri_parents t ~f:(fun parent_index (T parent) ->
              assert (
                packed_same
@@ -490,7 +492,7 @@ let create state created_in kind =
     ; changed_at = Stabilization_num.none
     ; num_on_update_handlers = 0
     ; num_parents = 0
-    ; parent1_and_beyond = [||]
+    ; parent1_and_beyond = Uniform_array.empty
     ; parent0 = Uopt.none
     ; created_in
     ; next_node_in_same_scope = Uopt.none
@@ -521,14 +523,14 @@ let create state created_in kind =
   t
 ;;
 
-let max_num_parents t = 1 + Array.length t.parent1_and_beyond
+let max_num_parents t = 1 + Uniform_array.length t.parent1_and_beyond
 
 let make_space_for_parent_if_necessary t =
   if t.num_parents = max_num_parents t
   then (
     let new_max_num_parents = 2 * max_num_parents t in
     t.parent1_and_beyond
-    <- Array.realloc t.parent1_and_beyond ~len:(new_max_num_parents - 1) Uopt.none;
+    <- Uniform_array.realloc t.parent1_and_beyond ~len:(new_max_num_parents - 1);
     t.my_child_index_in_parent_at_index
     <- Array.realloc t.my_child_index_in_parent_at_index ~len:new_max_num_parents (-1));
   if debug then assert (t.num_parents < max_num_parents t)
@@ -549,7 +551,7 @@ let set_parent : type a. child:a t -> parent:Packed.t Uopt.t -> parent_index:int
   fun ~child ~parent ~parent_index ->
   if parent_index = 0
   then child.parent0 <- parent
-  else child.parent1_and_beyond.(parent_index - 1) <- parent
+  else Uniform_array.set child.parent1_and_beyond (parent_index - 1) parent
 ;;
 
 let link
@@ -588,7 +590,9 @@ let remove_parent : type a b. child:a t -> parent:b t -> child_index:int -> unit
   let last_parent_index = child.num_parents - 1 in
   if parent_index < last_parent_index
   then (
-    let (T parent) = Uopt.value_exn child.parent1_and_beyond.(last_parent_index - 1) in
+    let (T parent) =
+      Uopt.value_exn (Uniform_array.get child.parent1_and_beyond (last_parent_index - 1))
+    in
     link
       ~child
       ~child_index:child.my_child_index_in_parent_at_index.(last_parent_index)

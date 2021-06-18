@@ -4,7 +4,7 @@
     stabilization either when the value of the node changes, when the handler is
     installed, or when the node becomes invalid. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 module Node_update : sig

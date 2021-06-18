@@ -1,4 +1,4 @@
-open Core_kernel
+open Core
 open! Import
 open Types.Kind
 module Alarm_value = Types.Alarm_value

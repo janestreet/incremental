@@ -390,7 +390,7 @@
       {li [Incremental_unit_tests]. }
       } *)
 
-open Core_kernel
+open Core
 open! Import
 
 module type Map_n_gen = sig

@@ -7,7 +7,7 @@
     by visiting ancestors in topological order, using the adjust-heights heap to visit
     them in increasing order of pre-adjusted height. *)
 
-open! Core_kernel
+open! Core
 open! Import
 open Types
 

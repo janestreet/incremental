@@ -4,7 +4,7 @@
     incrementally. The operations to change the set of children and to react to various
     events (new value in a child etc) are exposed to the user. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 include module type of struct

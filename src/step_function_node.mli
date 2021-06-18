@@ -4,7 +4,7 @@
     [Time_ns.t] to ['a] with a finite number of steps.  The steps are in nondecreasing
     time order. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 include module type of struct

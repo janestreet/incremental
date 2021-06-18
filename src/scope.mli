@@ -4,7 +4,7 @@
     bind, or [Uopt.some packed_bind] for nodes created on the right-hand side of a
     bind. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 include module type of struct

@@ -6,7 +6,7 @@
     i.e. if one of its children changed at a stabilization since the node was
     recomputed. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 type t = private int [@@deriving compare, sexp_of]

@@ -1,4 +1,4 @@
-open Core_kernel
+open Core
 open Import
 module Node = Types.Node
 
@@ -367,7 +367,7 @@ let iteri_children (type a) (t : a t) ~(f : int -> Node.Packed.t -> unit) : unit
   | Const _ -> ()
   | Expert { children; num_children; _ } ->
     for i = 0 to num_children - 1 do
-      let (Expert.E r) = Uopt.value_exn (Array.unsafe_get children i) in
+      let (Expert.E r) = Uopt.value_exn (Uniform_array.unsafe_get children i) in
       f i (T r.child)
     done
   | Freeze { child; _ } -> f 0 (T child)
@@ -593,7 +593,7 @@ let slow_get_child : type a. a t -> index:_ -> Node.Packed.t =
   | Array_fold { children; _ } -> T children.(index)
   | Unordered_array_fold { children; _ } -> T children.(index)
   | Expert { children; _ } ->
-    let (E edge) = Uopt.value_exn children.(index) in
+    let (E edge) = Uopt.value_exn (Uniform_array.get children index) in
     T edge.child
   | _ ->
     with_return (fun r ->

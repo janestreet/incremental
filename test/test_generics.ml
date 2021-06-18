@@ -1,6 +1,6 @@
 (* This code tests that generic functions can operate on [Incremental.Make] values. *)
 
-open! Core_kernel
+open! Core
 open! Import
 module I = Incremental.Make ()
 

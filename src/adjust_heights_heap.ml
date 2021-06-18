@@ -1,4 +1,4 @@
-open Core_kernel
+open Core
 open Import
 open Types.Kind
 
@@ -7,17 +7,17 @@ module As_adjust_heights_list = Node.Packed.As_list (struct
   end)
 
 module Nodes_by_height = struct
-  type t = As_adjust_heights_list.t Array.t [@@deriving sexp_of]
+  type t = As_adjust_heights_list.t Uniform_array.t [@@deriving sexp_of]
 
   let sexp_of_t t =
     let max_nonempty_index = ref (-1) in
-    Array.iteri t ~f:(fun i l -> if Uopt.is_some l then max_nonempty_index := i);
-    Array.sub t ~pos:0 ~len:(!max_nonempty_index + 1) |> [%sexp_of: t]
+    Uniform_array.iteri t ~f:(fun i l -> if Uopt.is_some l then max_nonempty_index := i);
+    Uniform_array.sub t ~pos:0 ~len:(!max_nonempty_index + 1) |> [%sexp_of: t]
   ;;
 
   let invariant t =
     Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
-      Array.iteri t ~f:(fun height nodes ->
+      Uniform_array.iteri t ~f:(fun height nodes ->
         As_adjust_heights_list.invariant nodes;
         As_adjust_heights_list.iter nodes ~f:(fun (T node) ->
           assert (node.height_in_adjust_heights_heap = height);
@@ -28,11 +28,13 @@ module Nodes_by_height = struct
               node.height_in_recompute_heap = node.height_in_adjust_heights_heap))))
   ;;
 
-  let create ~max_height_allowed = Array.create ~len:(max_height_allowed + 1) Uopt.none
+  let create ~max_height_allowed =
+    Uniform_array.create ~len:(max_height_allowed + 1) Uopt.none
+  ;;
 
   let length t =
     let r = ref 0 in
-    Array.iter t ~f:(fun node -> r := !r + As_adjust_heights_list.length node);
+    Uniform_array.iter t ~f:(fun node -> r := !r + As_adjust_heights_list.length node);
     !r
   ;;
 end
@@ -46,7 +48,7 @@ type t = Types.Adjust_heights_heap.t =
 [@@deriving fields, sexp_of]
 
 let is_empty t = length t = 0
-let max_height_allowed t = Array.length t.nodes_by_height - 1
+let max_height_allowed t = Uniform_array.length t.nodes_by_height - 1
 
 let invariant t =
   Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
@@ -58,9 +60,9 @@ let invariant t =
       ~height_lower_bound:
         (check (fun height_lower_bound ->
            assert (height_lower_bound >= 0);
-           assert (height_lower_bound <= Array.length t.nodes_by_height);
+           assert (height_lower_bound <= Uniform_array.length t.nodes_by_height);
            for height = 0 to height_lower_bound - 1 do
-             assert (Uopt.is_none t.nodes_by_height.(height))
+             assert (Uopt.is_none (Uniform_array.get t.nodes_by_height height))
            done))
       ~max_height_seen:
         (check (fun max_height_seen ->
@@ -100,8 +102,8 @@ let add_unless_mem (type a) t (node : a Node.t) =
     if debug then assert (height <= max_height_allowed t);
     node.height_in_adjust_heights_heap <- height;
     t.length <- t.length + 1;
-    node.next_in_adjust_heights_heap <- t.nodes_by_height.(height);
-    Array.unsafe_set t.nodes_by_height height (Uopt.some (Node.Packed.T node)))
+    node.next_in_adjust_heights_heap <- Uniform_array.get t.nodes_by_height height;
+    Uniform_array.unsafe_set t.nodes_by_height height (Uopt.some (Node.Packed.T node)))
 ;;
 
 let remove_min_exn t : Node.Packed.t =
@@ -109,15 +111,15 @@ let remove_min_exn t : Node.Packed.t =
   then
     failwiths ~here:[%here] "Adjust_heights_heap.remove_min of empty heap" t [%sexp_of: t];
   let r = ref t.height_lower_bound in
-  while Uopt.is_none t.nodes_by_height.(!r) do
+  while Uopt.is_none (Uniform_array.get t.nodes_by_height !r) do
     incr r
   done;
   let height = !r in
   t.height_lower_bound <- height;
-  let (T node) = Uopt.unsafe_value (Array.unsafe_get t.nodes_by_height height) in
+  let (T node) = Uopt.unsafe_value (Uniform_array.unsafe_get t.nodes_by_height height) in
   node.height_in_adjust_heights_heap <- -1;
   t.length <- t.length - 1;
-  Array.unsafe_set t.nodes_by_height height node.next_in_adjust_heights_heap;
+  Uniform_array.unsafe_set t.nodes_by_height height node.next_in_adjust_heights_heap;
   node.next_in_adjust_heights_heap <- Uopt.none;
   T node
 ;;
@@ -179,7 +181,9 @@ let adjust_heights
       let (T parent) = Uopt.value_exn child.parent0 in
       ensure_height_requirement t ~original_child ~original_parent ~child ~parent;
       for parent_index = 1 to child.num_parents - 1 do
-        let (T parent) = Uopt.value_exn child.parent1_and_beyond.(parent_index - 1) in
+        let (T parent) =
+          Uopt.value_exn (Uniform_array.get child.parent1_and_beyond (parent_index - 1))
+        in
         ensure_height_requirement t ~original_child ~original_parent ~child ~parent
       done);
     match child.kind with

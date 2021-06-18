@@ -1,7 +1,7 @@
 (** A timing-wheel alarm used to implement a time-dependent incremental: [at],
     [at_intervals], [snapshot], [step_function]. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 type t = Types.Alarm.t [@@deriving sexp_of]

@@ -1,6 +1,6 @@
 (library (name incremental_debug_test)
- (libraries core expect_test_helpers_core incremental incremental_debug
-  core.time_ns_unix)
+ (libraries core_kernel.core expect_test_helpers_core incremental
+  incremental_debug core.time_ns_unix)
  (preprocess (pps ppx_jane)))
 
 (rule

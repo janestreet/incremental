@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Expect_test_helpers_base
 module Step_function = Incremental_step_function
 open! Step_function

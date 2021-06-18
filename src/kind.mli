@@ -3,7 +3,7 @@
     [Kind.t] is a variant type with one constructor for each kind of node (const, var,
     map, bind, etc.). *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 include module type of struct

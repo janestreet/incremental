@@ -4,7 +4,7 @@
    This module does not have an mli because it would essentially duplicate
    [Incremental.S], except adding an extra [State.t] argument to functions. *)
 
-open Core_kernel
+open Core
 open Import
 open Types.Kind
 
@@ -1016,7 +1016,9 @@ and maybe_change_value : type a. a Node.t -> a -> unit =
     if node.num_parents >= 1
     then (
       for parent_index = 1 to node.num_parents - 1 do
-        let (T parent) = Uopt.value_exn node.parent1_and_beyond.(parent_index - 1) in
+        let (T parent) =
+          Uopt.value_exn (Uniform_array.get node.parent1_and_beyond (parent_index - 1))
+        in
         (match parent.kind with
          | Expert expert ->
            let child_index = node.my_child_index_in_parent_at_index.(parent_index) in

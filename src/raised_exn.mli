@@ -3,7 +3,7 @@
     A [Raised_exn.t] is an exception paired with the backtrace that was grabbed at the
     time the exception was raised. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 type t [@@deriving sexp_of]

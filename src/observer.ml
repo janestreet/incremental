@@ -1,4 +1,4 @@
-open Core_kernel
+open Core
 open! Import
 
 type 'a t = 'a Internal_observer.t ref [@@deriving sexp_of]

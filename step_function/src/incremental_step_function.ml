@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 
 module Time_ns = struct
   include Time_ns

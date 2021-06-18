@@ -3,7 +3,7 @@
     An [Array_fold.t] is a kind of DAG node.  It is an immutable value that holds the
     children of type ['a] and can [compute] the fold to produce a value of type ['b]. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 include module type of struct

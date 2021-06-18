@@ -12,7 +12,7 @@
     if [is_necessary t], then [t.recomputed_at >= c.changed_at] for all children [c] of
     [t].  I.e. it implies that all necessary nodes aren't stale. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 (** For performance reasons, we do not use an OCaml existential type for [Node.Packed.t]:

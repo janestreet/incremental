@@ -1,4 +1,4 @@
-open! Core_kernel
+open! Core
 open! Import
 module Node = Types.Node
 
@@ -19,7 +19,7 @@ type packed_edge = Types.Expert.packed_edge = E : 'a edge -> packed_edge
 type 'a t = 'a Types.Expert.t =
   { f : unit -> 'a
   ; on_observability_change : is_now_observable:bool -> unit
-  ; mutable children : packed_edge Uopt.t Array.t
+  ; mutable children : packed_edge Uopt.t Uniform_array.t
   ; mutable num_children : int
   ; (* When set, makes the node of [t] stale.  It is set when the set of children changes.
        Otherwise the normal check of staleness (comparing the [changed_at] field of
@@ -50,10 +50,10 @@ let invariant
       ; will_fire_all_callbacks = _
       }
   =
-  assert (num_children <= Array.length children);
+  assert (num_children <= Uniform_array.length children);
   ignore num_invalid_children;
   (* invariant is below, because we need some context *)
-  Array.iteri children ~f:(fun i uopt ->
+  Uniform_array.iteri children ~f:(fun i uopt ->
     match i < num_children with
     | true ->
       let (E r) = Uopt.value_exn uopt in
@@ -70,7 +70,7 @@ let invariant_about_num_invalid_children
   else (
     let count_invalid_children = ref 0 in
     for i = 0 to num_children - 1 do
-      let (E r) = Uopt.value_exn children.(i) in
+      let (E r) = Uopt.value_exn (Uniform_array.get children i) in
       if not (Node.is_valid r.child) then incr count_invalid_children
     done;
     [%test_result: int] num_invalid_children ~expect:!count_invalid_children)
@@ -79,7 +79,7 @@ let invariant_about_num_invalid_children
 let create ~f ~on_observability_change =
   { f
   ; on_observability_change
-  ; children = [||]
+  ; children = Uniform_array.empty
   ; num_children = 0
   ; force_stale = false
   ; num_invalid_children = 0
@@ -99,11 +99,11 @@ let incr_invalid_children t = t.num_invalid_children <- t.num_invalid_children +
 let decr_invalid_children t = t.num_invalid_children <- t.num_invalid_children - 1
 
 let make_space_for_child_if_necessary t =
-  if t.num_children >= Array.length t.children
+  if t.num_children >= Uniform_array.length t.children
   then (
-    if debug then assert (t.num_children = Array.length t.children);
-    let new_max = Int.max 2 (2 * Array.length t.children) in
-    t.children <- Array.realloc t.children ~len:new_max Uopt.none)
+    if debug then assert (t.num_children = Uniform_array.length t.children);
+    let new_max = Int.max 2 (2 * Uniform_array.length t.children) in
+    t.children <- Uniform_array.realloc t.children ~len:new_max)
 ;;
 
 let add_child_edge t packed_edge =
@@ -112,7 +112,7 @@ let add_child_edge t packed_edge =
   make_space_for_child_if_necessary t;
   let new_child_index = t.num_children in
   edge.index <- Uopt.some new_child_index;
-  t.children.(new_child_index) <- Uopt.some packed_edge;
+  Uniform_array.set t.children new_child_index (Uopt.some packed_edge);
   t.num_children <- t.num_children + 1;
   t.force_stale <- true;
   (* We will bump the number of invalid children if necessary when connecting child and
@@ -121,22 +121,22 @@ let add_child_edge t packed_edge =
 ;;
 
 let swap_children t ~child_index1 ~child_index2 =
-  let (E edge1) = Uopt.value_exn t.children.(child_index1) in
-  let (E edge2) = Uopt.value_exn t.children.(child_index2) in
+  let (E edge1) = Uopt.value_exn (Uniform_array.get t.children child_index1) in
+  let (E edge2) = Uopt.value_exn (Uniform_array.get t.children child_index2) in
   edge1.index <- Uopt.some child_index2;
   edge2.index <- Uopt.some child_index1;
-  Array.swap t.children child_index1 child_index2
+  Uniform_array.swap t.children child_index1 child_index2
 ;;
 
 let last_child_edge_exn t =
   let last_index = t.num_children - 1 in
-  Uopt.value_exn t.children.(last_index)
+  Uopt.value_exn (Uniform_array.get t.children last_index)
 ;;
 
 let remove_last_child_edge_exn t =
   let last_index = t.num_children - 1 in
-  let packed_edge_opt = t.children.(last_index) in
-  t.children.(last_index) <- Uopt.none;
+  let packed_edge_opt = Uniform_array.get t.children last_index in
+  Uniform_array.set t.children last_index Uopt.none;
   t.num_children <- last_index;
   t.force_stale <- true;
   assert (Uopt.is_some packed_edge_opt);
@@ -154,7 +154,7 @@ let before_main_computation t =
     if will_fire_all_callbacks
     then
       for i = 0 to t.num_children - 1 do
-        let (E r) = Uopt.value_exn t.children.(i) in
+        let (E r) = Uopt.value_exn (Uniform_array.get t.children i) in
         r.on_change (Uopt.value_exn r.child.value_opt)
       done;
     `Ok)
@@ -174,7 +174,7 @@ let observability_change t ~is_now_observable =
 let run_edge_callback t ~child_index =
   if not t.will_fire_all_callbacks
   then (
-    let (E r) = Uopt.value_exn t.children.(child_index) in
+    let (E r) = Uopt.value_exn (Uniform_array.get t.children child_index) in
     (* This value is not necessarily set, because we try to run this when connecting the
        node to its children, which could be before they have run even once.  Also the node
        could be invalid. *)

@@ -2,7 +2,7 @@
 
     An [At_intervals.t] is a kind of DAG node that changes at a regular time interval. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 include module type of struct

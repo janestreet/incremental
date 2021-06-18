@@ -3,7 +3,7 @@
     An [At] is a kind of DAG node whose value is [Before] until the clock reaches a
     certain time, at which point its value becomes [After]. *)
 
-open! Core_kernel
+open! Core
 open! Import
 
 include module type of struct
