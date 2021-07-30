@@ -50,7 +50,8 @@ module Packed : sig
       descendants exactly once per node. *)
   val iter_descendants : t list -> f:(t -> unit) -> unit
 
-  val save_dot : string -> t list -> unit
+  val save_dot : Out_channel.t -> t list -> unit
+  val save_dot_to_file : string -> t list -> unit
 end
 
 include module type of struct

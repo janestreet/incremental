@@ -185,7 +185,8 @@ let directly_observed t =
   !r
 ;;
 
-let save_dot t file = Node.Packed.save_dot file (directly_observed t)
+let save_dot t out = Node.Packed.save_dot out (directly_observed t)
+let save_dot_to_file t file = Node.Packed.save_dot_to_file file (directly_observed t)
 let iter_observer_descendants t ~f = Node.Packed.iter_descendants (directly_observed t) ~f
 
 module Stats = struct

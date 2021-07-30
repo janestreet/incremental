@@ -79,7 +79,7 @@ struct
       fun () ->
         incr r;
         let dot_file = sprintf "/tmp/%s/z.dot.%d" (Unix.getlogin ()) !r in
-        save_dot dot_file;
+        save_dot_to_file dot_file;
         let prog = "my-dot" in
         Unix.waitpid_exn (Unix.fork_exec ~prog ~argv:[ prog; dot_file ] ())
     ;;
@@ -111,6 +111,7 @@ struct
         (* *)
         let user_info = user_info
         let set_user_info = set_user_info
+        let save_dot_to_file = save_dot_to_file
         let save_dot = save_dot
 
         module Update = Update

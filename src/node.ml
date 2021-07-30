@@ -673,34 +673,36 @@ module Packed = struct
 
   let iter_descendants ts ~f = ignore (iter_descendants_internal ts ~f : _ Hash_set.t)
 
-  let save_dot file ts =
-    Out_channel.with_file file ~f:(fun out ->
-      let node_name node = "n" ^ Node_id.to_string node.id in
-      fprintf out "digraph G {\n";
-      fprintf out "  rankdir = BT\n";
-      let bind_edges = ref [] in
-      let seen =
-        iter_descendants_internal ts ~f:(fun (T t) ->
-          let name = node_name t in
-          fprintf
-            out
-            "  %s [label=\"%s %s\\nheight = %d\"]\n"
-            name
-            name
-            (Kind.name t.kind)
-            t.height;
-          iteri_children t ~f:(fun _ (T from_) ->
-            fprintf out "  %s -> %s\n" (node_name from_) name);
-          match t.kind with
-          | Bind_lhs_change bind ->
-            Bind.iter_nodes_created_on_rhs bind ~f:(fun to_ ->
-              bind_edges := (T t, to_) :: !bind_edges)
-          | _ -> ())
-      in
-      List.iter !bind_edges ~f:(fun (T from, T to_) ->
-        if Hash_set.mem seen to_.id
-        then
-          fprintf out "  %s -> %s [style=dashed]\n" (node_name from) (node_name to_));
-      fprintf out "}\n%!")
+  let save_dot out ts =
+    let node_name node = "n" ^ Node_id.to_string node.id in
+    fprintf out "digraph G {\n";
+    fprintf out "  rankdir = BT\n";
+    let bind_edges = ref [] in
+    let seen =
+      iter_descendants_internal ts ~f:(fun (T t) ->
+        let name = node_name t in
+        fprintf
+          out
+          "  %s [label=\"%s %s\\nheight = %d\"]\n"
+          name
+          name
+          (Kind.name t.kind)
+          t.height;
+        iteri_children t ~f:(fun _ (T from_) ->
+          fprintf out "  %s -> %s\n" (node_name from_) name);
+        match t.kind with
+        | Bind_lhs_change bind ->
+          Bind.iter_nodes_created_on_rhs bind ~f:(fun to_ ->
+            bind_edges := (T t, to_) :: !bind_edges)
+        | _ -> ())
+    in
+    List.iter !bind_edges ~f:(fun (T from, T to_) ->
+      if Hash_set.mem seen to_.id
+      then fprintf out "  %s -> %s [style=dashed]\n" (node_name from) (node_name to_));
+    fprintf out "}\n%!"
+  ;;
+
+  let save_dot_to_file file ts =
+    Out_channel.with_file file ~f:(fun out -> save_dot out ts)
   ;;
 end

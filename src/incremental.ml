@@ -222,6 +222,7 @@ module Generic = struct
   let stabilize state = State.stabilize state
   let am_stabilizing state = State.am_stabilizing state
   let save_dot = State.save_dot
+  let save_dot_to_file = State.save_dot_to_file
 
   module Node_value = struct
     type 'a t =
@@ -371,7 +372,8 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
   let sum_float ts = sum_float State.t ts
   let stabilize () = stabilize State.t
   let am_stabilizing () = am_stabilizing State.t
-  let save_dot file = save_dot State.t file
+  let save_dot out = save_dot State.t out
+  let save_dot_to_file file = Out_channel.with_file file ~f:save_dot
   let lazy_from_fun f = lazy_from_fun State.t f
 
   let weak_memoize_fun_by_key ?initial_size hashable project_key f =
