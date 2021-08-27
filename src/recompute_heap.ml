@@ -107,10 +107,9 @@ let link (type a) t (node : a Node.t) =
 let unlink (type a) t (node : a Node.t) =
   let prev = node.prev_in_recompute_heap in
   let next = node.next_in_recompute_heap in
-  if
-    phys_same
-      (Uopt.some node)
-      (Uniform_array.get t.nodes_by_height node.height_in_recompute_heap)
+  if phys_same
+       (Uopt.some node)
+       (Uniform_array.get t.nodes_by_height node.height_in_recompute_heap)
   then Uniform_array.unsafe_set t.nodes_by_height node.height_in_recompute_heap next;
   set_prev next ~prev;
   set_next prev ~next;

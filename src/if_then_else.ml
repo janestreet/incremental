@@ -38,8 +38,7 @@ let invariant _invariant_a t =
            then (
              let current_branch = Uopt.value_exn current_branch in
              assert (
-               phys_equal current_branch t.then_ || phys_equal current_branch t.else_
-             ))))
+               phys_equal current_branch t.then_ || phys_equal current_branch t.else_))))
       ~then_:ignore
       ~else_:ignore)
 ;;

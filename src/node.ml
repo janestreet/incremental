@@ -616,11 +616,9 @@ let swap_children_except_in_kind parent ~child1 ~child_index1 ~child2 ~child_ind
   if debug
   then (
     assert (
-      child1.my_child_index_in_parent_at_index.(index_of_parent_in_child1) = child_index1
-    );
+      child1.my_child_index_in_parent_at_index.(index_of_parent_in_child1) = child_index1);
     assert (
-      child2.my_child_index_in_parent_at_index.(index_of_parent_in_child2) = child_index2
-    ));
+      child2.my_child_index_in_parent_at_index.(index_of_parent_in_child2) = child_index2));
   (* now start swapping *)
   child1.my_child_index_in_parent_at_index.(index_of_parent_in_child1) <- child_index2;
   child2.my_child_index_in_parent_at_index.(index_of_parent_in_child2) <- child_index1;
