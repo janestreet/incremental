@@ -98,7 +98,14 @@ module Incr_map = Incr_map.Make(Incr);;
 = <fun>
 ```
 
-and then show how we can compute our share counts using it:
+With `Incr_map.unordered_fold`, if you update a subset of the orders in
+the map, then `add` and `remove` will be called once every time an element
+is added or removed.  If an element is modified, then they'll both be
+called, with `remove` followed by `add`.  There's also an optional
+`update` argument that you can provide if you want to provide more
+optimized behavior on a modify.
+
+We can use it to compute our share counts:
 
 ```ocaml
 # let shares orders =
@@ -113,13 +120,7 @@ and then show how we can compute our share counts using it:
 val shares : ('a, Order.t, 'b) Map.t Incr.t -> int Incr.t = <fun>
 ```
 
-This function now has reasonable incremental performance.  In
-particular, if you update a subset of the orders in the map, then
-`add` and `remove` will be called once every time an element is added
-or removed.  If an element is modified, then they'll both be called,
-with `remove` followed by `add`.  There's also an optional `update`
-argument that you can provide if you want to provide more optimized
-behavior on a modify.
+This function now has reasonable incremental performance.
 
 The incremental graph here is actually very simple, it's just:
 
