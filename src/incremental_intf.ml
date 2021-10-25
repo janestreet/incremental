@@ -900,6 +900,12 @@ module type S_gen = sig
   val user_info : _ t -> Info.t option
   val set_user_info : _ t -> Info.t option -> unit
 
+  val append_user_info_graphviz
+    :  _ t
+    -> label:string list
+    -> attrs:string String.Map.t
+    -> unit
+
   module Node_value : sig
     type 'a t =
       | Invalid
@@ -1652,6 +1658,15 @@ module type Incremental = sig
   val user_info : _ t -> Info.t option
 
   val set_user_info : _ t -> Info.t option -> unit
+
+  (** [append_user_info_graphviz] also modifies the [user_info] field on the node, but in
+      a way that allows the caller to set the label and the properties on the node when a
+      graphviz graph is produced by calling [save_dot] or [save_dot_to_file]. *)
+  val append_user_info_graphviz
+    :  _ t
+    -> label:string list
+    -> attrs:string String.Map.t
+    -> unit
 
   module Node_value : sig
     type 'a t =

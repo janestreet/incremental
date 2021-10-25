@@ -444,7 +444,7 @@ and Node : sig
     ; mutable my_parent_index_in_child_at_index : int array
     ; mutable my_child_index_in_parent_at_index : int array
     ; mutable force_necessary : bool
-    ; mutable user_info : Info.t option
+    ; mutable user_info : Dot_user_info.t option
     ; creation_backtrace : Backtrace.t option
     }
   [@@deriving sexp_of]

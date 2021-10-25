@@ -139,6 +139,12 @@ val run_on_update_handlers
 val user_info : _ t -> Info.t option
 val set_user_info : _ t -> Info.t option -> unit
 
+val append_user_info_graphviz
+  :  _ t
+  -> label:string list
+  -> attrs:string String.Map.t
+  -> unit
+
 (** These functions are meant for debug, as they are not very efficient. *)
 val has_child : _ t -> child:_ t -> bool
 

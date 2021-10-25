@@ -111,6 +111,7 @@ struct
         (* *)
         let user_info = user_info
         let set_user_info = set_user_info
+        let append_user_info_graphviz = append_user_info_graphviz
         let save_dot_to_file = save_dot_to_file
         let save_dot = save_dot
 
@@ -798,6 +799,46 @@ struct
           let o = observe node1 in
           stabilize_ [%here];
           disallow_future_use o
+        ;;
+
+        let print_dot_file node = Packed.save_dot Out_channel.stdout [ pack node ]
+
+        let%expect_test "plain node graphviz" =
+          let n = return "hello" in
+          print_dot_file n;
+          [%expect
+            {|
+            digraph G {
+              rankdir = BT
+              n### [shape=Mrecord label="{{n###|Const|height=-1}}" ]
+            } |}]
+        ;;
+
+        let%expect_test "annotated with info" =
+          let n = return "hello" in
+          set_user_info n (Some (Info.of_string "hello world"));
+          print_dot_file n;
+          [%expect
+            {|
+            digraph G {
+              rankdir = BT
+              n### [shape=Mrecord label="{{hello\ world}|{n###|Const|height=-1}}" ]
+            } |}]
+        ;;
+
+        let%expect_test "annotated with label and attributes" =
+          let n = return "hello" in
+          append_user_info_graphviz
+            n
+            ~label:[ "hello"; "world" ]
+            ~attrs:(String.Map.of_alist_exn [ "fillcolor", "green" ]);
+          print_dot_file n;
+          [%expect
+            {|
+            digraph G {
+              rankdir = BT
+              n### [shape=Mrecord label="{{hello|world}|{n###|Const|height=-1}}"  "fillcolor"="green"]
+            } |}]
         ;;
 
         let%expect_test _ =

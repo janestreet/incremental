@@ -93,19 +93,40 @@ type 'a t = 'a Types.Node.t =
   ; mutable my_parent_index_in_child_at_index : int array
   ; mutable my_child_index_in_parent_at_index : int array
   ; mutable force_necessary : bool
-  ; mutable user_info : Info.t option
+  ; mutable user_info : Dot_user_info.t option
   ; creation_backtrace : Backtrace.t option
   }
 [@@deriving fields, sexp_of]
 
 let same (t1 : _ t) (t2 : _ t) = phys_same t1 t2
 let packed_same (Packed.T t1) (Packed.T t2) = same t1 t2
-let set_user_info t user_info = t.user_info <- user_info
 let is_necessary = Node.is_necessary
 let initial_num_children t = Kind.initial_num_children t.kind
 let iteri_children t ~f = Kind.iteri_children t.kind ~f
 let is_valid = Node.is_valid
 let type_equal_if_phys_same = type_equal_if_phys_same
+
+let user_info t =
+  match t.user_info with
+  | None -> None
+  | Some (Info i) -> Some i
+  | Some other -> Some (Info.create_s (Dot_user_info.sexp_of_t other))
+;;
+
+let set_user_info t info =
+  t.user_info
+  <- (match info with
+    | None -> None
+    | Some i -> Some (Info i))
+;;
+
+let append_user_info_graphviz t ~label ~attrs =
+  let new_ = Dot_user_info.dot ~label ~attributes:attrs in
+  t.user_info
+  <- (match t.user_info with
+    | None -> Some new_
+    | Some other -> Some (Dot_user_info.append other new_))
+;;
 
 let edge_is_stale ~child ~parent =
   Stabilization_num.compare child.changed_at parent.recomputed_at > 0
@@ -671,21 +692,39 @@ module Packed = struct
 
   let iter_descendants ts ~f = ignore (iter_descendants_internal ts ~f : _ Hash_set.t)
 
+  module Dot_user_info = struct
+    include Dot_user_info
+
+    let default ~name t =
+      Dot_user_info.dot
+        ~label:[ name; Kind.name t.kind; sprintf "height=%d" t.height ]
+        ~attributes:String.Map.empty
+    ;;
+  end
+
+  let print_node out ~name t =
+    let default = Dot_user_info.default ~name t in
+    let info =
+      match t.user_info with
+      | None -> default
+      | Some user_info -> Dot_user_info.append default user_info
+    in
+    fprintf out "%s\n" (Dot_user_info.to_string ~name (Dot_user_info.to_dot info))
+  ;;
+
   let save_dot out ts =
-    let node_name node = "n" ^ Node_id.to_string node.id in
+    let node_name =
+      if am_running_test
+      then fun _ -> "n###"
+      else fun node -> "n" ^ Node_id.to_string node.id
+    in
     fprintf out "digraph G {\n";
     fprintf out "  rankdir = BT\n";
     let bind_edges = ref [] in
     let seen =
       iter_descendants_internal ts ~f:(fun (T t) ->
         let name = node_name t in
-        fprintf
-          out
-          "  %s [label=\"%s %s\\nheight = %d\"]\n"
-          name
-          name
-          (Kind.name t.kind)
-          t.height;
+        print_node out ~name t;
         iteri_children t ~f:(fun _ (T from_) ->
           fprintf out "  %s -> %s\n" (node_name from_) name);
         match t.kind with
