@@ -42,7 +42,6 @@ module Generic = struct
   end
 
   include Node
-  module Node_update = On_update_handler.Node_update
 
   let state t = t.state
   let pack t = Packed.T t

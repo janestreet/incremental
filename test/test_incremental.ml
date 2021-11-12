@@ -4330,7 +4330,7 @@ struct
         module Expert = Expert
         module E = Expert
 
-        module Expert_test = struct
+        module _ = struct
           (* This tests add_dependency/remove_dependency, invalidity (in particular a node
              becomes invalid before being replaced by a valid one). *)
           include Join (struct
@@ -5192,7 +5192,7 @@ let%test_module "" =
   (module struct
     let () =
       List.iter [ true; false ] ~f:(fun bool ->
-        let module M =
+        let module _ =
           Test (struct
             let bind_lhs_change_should_invalidate_rhs = bool
           end)

@@ -1146,7 +1146,6 @@ let[@inline always] recompute_first_node_that_is_necessary r =
 let unlink_disallowed_observers t =
   while Stack.length t.disallowed_observers > 0 do
     let packed = Stack.pop_exn t.disallowed_observers in
-    let module Packed = Internal_observer.Packed in
     let (T internal_observer) = packed in
     if debug
     then

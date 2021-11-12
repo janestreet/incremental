@@ -3,7 +3,7 @@ open! Expect_test_helpers_base
 module Step_function = Incremental_step_function
 open! Step_function
 
-module T = struct
+module _ = struct
   type t = int Step_function.t [@@deriving sexp_of]
 end
 

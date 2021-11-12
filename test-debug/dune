@@ -1,7 +1,7 @@
 (library (name incremental_debug_test)
  (libraries core_kernel.core expect_test_helpers_core incremental
   incremental_debug core.time_ns_unix)
- (preprocess (pps ppx_jane)))
+ (flags :standard -w -60) (preprocess (pps ppx_jane)))
 
 (rule
  (targets import.ml test_config.ml test_config.mli test_generics.ml
