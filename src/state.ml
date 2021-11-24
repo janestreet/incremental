@@ -1454,6 +1454,13 @@ let create_var t ?(use_current_scope = false) value =
 let const t a = create_node t (Const a)
 let map (n : _ Node.t) ~f = create_node n.state (Map (f, n))
 let map2 (n1 : _ Node.t) n2 ~f = create_node n1.state (Map2 (f, n1, n2))
+
+let both (n1 : _ Node.t) (n2 : _ Node.t) =
+  match n1, n2 with
+  | { kind = Const a; _ }, { kind = Const b; _ } -> const n1.state (a, b)
+  | _ -> map2 n1 n2 ~f:Tuple2.create
+;;
+
 let map3 (n1 : _ Node.t) n2 n3 ~f = create_node n1.state (Map3 (f, n1, n2, n3))
 let map4 (n1 : _ Node.t) n2 n3 n4 ~f = create_node n1.state (Map4 (f, n1, n2, n3, n4))
 

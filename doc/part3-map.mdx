@@ -91,6 +91,7 @@ module Incr_map = Incr_map.Make(Incr);;
 - : ?data_equal:('a -> 'a -> bool) ->
     ?update:(key:'b -> old_data:'a -> new_data:'a -> 'c -> 'c) ->
     ?specialized_initial:(init:'c -> ('b, 'a, 'd) Map.t -> 'c) ->
+    ?revert_to_init_when_empty:bool ->
     ('b, 'a, 'd) Map.t Incr.t ->
     init:'c ->
     add:(key:'b -> data:'a -> 'c -> 'c) ->
@@ -248,7 +249,7 @@ the function to itself be incremental.
 Happily, `Incr_map` has another function, `Incr_map.mapi'` (you might
 pronounce that "mapi prime"), that does just that.
 
-Compare the types of each function: 
+Compare the types of each function:
 ```ocaml
 # let _ = Incr_map.mapi
 - : ?data_equal:('a -> 'a -> bool) ->
