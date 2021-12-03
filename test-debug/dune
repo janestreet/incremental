@@ -1,6 +1,6 @@
 (library (name incremental_debug_test)
- (libraries core_kernel.core expect_test_helpers_core incremental
-  incremental_debug core.time_ns_unix)
+ (libraries core expect_test_helpers_core incremental incremental_debug
+  core_unix.time_ns_unix)
  (flags :standard -w -60) (preprocess (pps ppx_jane)))
 
 (rule

@@ -1,7 +1,7 @@
 (library (name incremental_debug)
- (libraries core_kernel.balanced_reducer core_kernel.core
-  incremental_step_function core_kernel.thread_safe_queue
-  core_kernel.timing_wheel core_kernel.uopt core_kernel.weak_hashtbl)
+ (libraries core_kernel.balanced_reducer core incremental_step_function
+  core_kernel.thread_safe_queue core_kernel.timing_wheel core_kernel.uopt
+  core_kernel.weak_hashtbl)
  (preprocessor_deps debug.mlh) (flags :standard -w -60)
  (preprocess (pps ppx_jane)))
 
