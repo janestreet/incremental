@@ -702,6 +702,8 @@ module Packed = struct
     ;;
   end
 
+  let append_user_info_graphviz (T t) = append_user_info_graphviz t
+
   let print_node out ~name t =
     let default = Dot_user_info.default ~name t in
     let info =

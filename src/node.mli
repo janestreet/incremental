@@ -52,6 +52,12 @@ module Packed : sig
 
   val save_dot : Out_channel.t -> t list -> unit
   val save_dot_to_file : string -> t list -> unit
+
+  val append_user_info_graphviz
+    :  t
+    -> label:string list
+    -> attrs:string String.Map.t
+    -> unit
 end
 
 include module type of struct

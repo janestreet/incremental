@@ -924,6 +924,12 @@ module type S_gen = sig
 
     val save_dot : Out_channel.t -> t list -> unit
     val save_dot_to_file : string -> t list -> unit
+
+    val append_user_info_graphviz
+      :  t
+      -> label:string list
+      -> attrs:string String.Map.t
+      -> unit
   end
 
   val pack : _ t -> Packed.t
@@ -1485,11 +1491,13 @@ module type Incremental = sig
         [on_update_exn] raises if [disallow_future_use t] was previously called. *)
     val on_update_exn : ('a, _) t -> f:('a Update.t -> unit) -> unit
 
-    (** [disallow_future_use t] causes all future attempts to use [t] to fail and
-        [on_update_exn] handlers added to [t] to never run again.  It also causes
-        incremental to treat [t] as unobserved, and thus [stabilize] will not maintain the
-        value of [t] or any of [t]'s descendants that are needed only to maintain [t].
-        [disallow_future_use] raises if called during stabilization. *)
+    (** After [disallow_future_use t]:
+        - [on_update_exn t] and [value_exn t] will raise, and [value t] will return
+          [Error].
+        - [t]'s on-update handlers will never run again.
+        - At the next call to [stabilize], before recomputing nodes, incremental will mark
+          [t] as unobserved, and mark as unnecessary all nodes that were necessary only to
+          maintain [t]. *)
     val disallow_future_use : _ t -> unit
   end
 
