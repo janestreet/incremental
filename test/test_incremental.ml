@@ -3480,22 +3480,24 @@ struct
           let%expect_test _ =
             (* on-update-handlers added during the firing of other on-update-handlers
                should not fire now but instead after the next stabilization *)
-            List.iter [ const 1; invalid ] ~f:(fun node ->
-              let o1 = observe (const 1) in
-              let o2 = observe node in
-              let ran = ref 0 in
-              Observer.on_update_exn o1 ~f:(fun _ ->
-                Observer.on_update_exn o2 ~f:(fun _ -> incr ran));
-              Observer.on_update_exn o2 ~f:(fun _ -> ());
-              assert (!ran = 0);
-              stabilize_ [%here];
-              assert (!ran = 0);
-              stabilize_ [%here];
-              assert (!ran = 1);
-              stabilize_ [%here];
-              assert (!ran = 1);
-              disallow_future_use o1;
-              disallow_future_use o2)
+            List.iter
+              [ const 1; invalid ]
+              ~f:(fun node ->
+                let o1 = observe (const 1) in
+                let o2 = observe node in
+                let ran = ref 0 in
+                Observer.on_update_exn o1 ~f:(fun _ ->
+                  Observer.on_update_exn o2 ~f:(fun _ -> incr ran));
+                Observer.on_update_exn o2 ~f:(fun _ -> ());
+                assert (!ran = 0);
+                stabilize_ [%here];
+                assert (!ran = 0);
+                stabilize_ [%here];
+                assert (!ran = 1);
+                stabilize_ [%here];
+                assert (!ran = 1);
+                disallow_future_use o1;
+                disallow_future_use o2)
           ;;
 
           let%expect_test _ =
@@ -3941,10 +3943,12 @@ struct
             let o = observe (watch x >>| fun _i -> incr r) in
             stabilize_ [%here];
             assert (!r = 1);
-            List.iter [ 1, 1; 0, 1 ] ~f:(fun (v, expect) ->
-              Var.set x v;
-              stabilize_ [%here];
-              assert (!r = expect));
+            List.iter
+              [ 1, 1; 0, 1 ]
+              ~f:(fun (v, expect) ->
+                Var.set x v;
+                stabilize_ [%here];
+                assert (!r = expect));
             disallow_future_use o
           ;;
 
@@ -3957,10 +3961,12 @@ struct
             let o = observe (watch x >>| fun _i -> incr r) in
             stabilize_ [%here];
             assert (!r = 1);
-            List.iter [ 1, 2; 1, 3; 1, 4 ] ~f:(fun (v, expect) ->
-              Var.set x v;
-              stabilize_ [%here];
-              assert (!r = expect));
+            List.iter
+              [ 1, 2; 1, 3; 1, 4 ]
+              ~f:(fun (v, expect) ->
+                Var.set x v;
+                stabilize_ [%here];
+                assert (!r = expect));
             disallow_future_use o
           ;;
 
@@ -3975,10 +3981,12 @@ struct
             let o = observe (watch x >>| fun _i -> incr r) in
             stabilize_ [%here];
             assert (!r = 1);
-            List.iter [ r1, 1; r2, 2; r2, 2; r1, 3 ] ~f:(fun (v, expect) ->
-              Var.set x v;
-              stabilize_ [%here];
-              assert (!r = expect));
+            List.iter
+              [ r1, 1; r2, 2; r2, 2; r1, 3 ]
+              ~f:(fun (v, expect) ->
+                Var.set x v;
+                stabilize_ [%here];
+                assert (!r = expect));
             disallow_future_use o
           ;;
 
@@ -3994,10 +4002,12 @@ struct
             let o = observe (watch x >>| fun _i -> incr r) in
             stabilize_ [%here];
             assert (!r = 1);
-            List.iter [ r1a, 1; r1b, 1; r2, 2; r1a, 3 ] ~f:(fun (v, expect) ->
-              Var.set x v;
-              stabilize_ [%here];
-              assert (!r = expect));
+            List.iter
+              [ r1a, 1; r1b, 1; r2, 2; r1a, 3 ]
+              ~f:(fun (v, expect) ->
+                Var.set x v;
+                stabilize_ [%here];
+                assert (!r = expect));
             disallow_future_use o
           ;;
 
@@ -4027,10 +4037,12 @@ struct
           let a' = observe n in
           stabilize_ [%here];
           assert (value a' = 0);
-          List.iter [ 1, 0; 2, 2; 2, 2 ] ~f:(fun (v, expect) ->
-            Var.set a v;
-            stabilize_ [%here];
-            assert (value a' = expect))
+          List.iter
+            [ 1, 0; 2, 2; 2, 2 ]
+            ~f:(fun (v, expect) ->
+              Var.set a v;
+              stabilize_ [%here];
+              assert (value a' = expect))
         ;;
 
         module Scope = struct

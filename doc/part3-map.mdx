@@ -91,6 +91,7 @@ module Incr_map = Incr_map.Make(Incr);;
 - : ?data_equal:('a -> 'a -> bool) ->
     ?update:(key:'b -> old_data:'a -> new_data:'a -> 'c -> 'c) ->
     ?specialized_initial:(init:'c -> ('b, 'a, 'd) Map.t -> 'c) ->
+    ?finalize:('c -> 'c) ->
     ?revert_to_init_when_empty:bool ->
     ('b, 'a, 'd) Map.t Incr.t ->
     init:'c ->
