@@ -61,10 +61,8 @@ let invariant
     | false -> assert (Uopt.is_none uopt))
 ;;
 
-let invariant_about_num_invalid_children
-      { children; num_children; num_invalid_children; _ }
-      ~is_necessary
-  =
+let invariant_about_num_invalid_children t ~is_necessary =
+  let { children; num_children; num_invalid_children; _ } = t in
   if not is_necessary
   then [%test_result: int] num_invalid_children ~expect:0
   else (

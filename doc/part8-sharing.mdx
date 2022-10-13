@@ -113,8 +113,8 @@ open Incr.Let_syntax;;
       ~update:(fun ~key ~old_data:_ ~new_data:data -> add ~key ~data)
       ~remove
 val index_by :
-  ('a, 'b) Map.comparator ->
-  ('c, 'd) Map.comparator ->
+  ('a, 'b) Set.comparator ->
+  ('c, 'd) Set.comparator ->
   ('a, 'e, 'f) Map.t Incr.t ->
   ('e -> 'c) -> ('c, ('a, 'e, 'b) Map.t, 'd) Map.t Incr.t = <fun>
 

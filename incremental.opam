@@ -13,6 +13,7 @@ depends: [
   "ocaml" {>= "4.08.0"}
   "core"
   "core_kernel"
+  "lru_cache"
   "ppx_jane"
   "dune"        {>= "2.0.0"}
 ]

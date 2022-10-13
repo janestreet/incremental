@@ -10,3 +10,6 @@ type t [@@deriving sexp_of]
 
 (** [create exn] makes a [t] using [exn] and [Backtrace.Exn.most_recent]. *)
 val create : exn -> t
+
+val reraise : t -> 'a
+val reraise_with_message : t -> string -> 'a

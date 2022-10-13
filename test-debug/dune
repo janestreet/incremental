@@ -6,6 +6,7 @@
 (rule
  (targets import.ml test_config.ml test_config.mli test_generics.ml
   test_generics.mli test_incremental.ml test_incremental.mli
+  test_exceptional_behavior.ml test_exceptional_behavior.mli
   test_let_syntax.ml test_let_syntax.mli)
  (deps (:first_dep generate_debug_test_lib.sh) (glob_files ../test/*.ml)
   (glob_files ../test/*.mli))

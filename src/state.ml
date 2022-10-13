@@ -223,11 +223,9 @@ let am_stabilizing t =
   | Running_on_update_handlers | Stabilizing -> true
   | Not_stabilizing -> false
   | Stabilize_previously_raised raised_exn ->
-    failwiths
-      ~here:[%here]
-      "cannot call am_stabilizing -- stabilize previously raised"
+    Raised_exn.reraise_with_message
       raised_exn
-      [%sexp_of: Raised_exn.t]
+      "cannot call am_stabilizing -- stabilize previously raised"
 ;;
 
 let invariant t =
@@ -334,12 +332,9 @@ let ensure_not_stabilizing t ~name ~allow_in_update_handler =
         backtrace
         [%sexp_of: Backtrace.t])
   | Stabilize_previously_raised raised_exn ->
-    let backtrace = Backtrace.get () in
-    failwiths
-      ~here:[%here]
+    Raised_exn.reraise_with_message
+      raised_exn
       (sprintf "cannot %s -- stabilize previously raised" name)
-      (raised_exn, backtrace)
-      [%sexp_of: Raised_exn.t * Backtrace.t]
   | Stabilizing ->
     let backtrace = Backtrace.get () in
     failwiths
@@ -1251,11 +1246,9 @@ let observer_value_exn observer =
   match t.status with
   | Not_stabilizing | Running_on_update_handlers -> Observer.value_exn observer
   | Stabilize_previously_raised raised_exn ->
-    failwiths
-      ~here:[%here]
-      "Observer.value_exn called after stabilize previously raised"
+    Raised_exn.reraise_with_message
       raised_exn
-      [%sexp_of: Raised_exn.t]
+      "Observer.value_exn called after stabilize previously raised"
   | Stabilizing ->
     failwiths
       ~here:[%here]
@@ -1300,11 +1293,9 @@ let set_var var value =
   | Running_on_update_handlers | Not_stabilizing ->
     set_var_while_not_stabilizing var value
   | Stabilize_previously_raised raised_exn ->
-    failwiths
-      ~here:[%here]
-      "cannot set var -- stabilization previously raised"
+    Raised_exn.reraise_with_message
       raised_exn
-      [%sexp_of: Raised_exn.t]
+      "cannot set var -- stabilization previously raised"
   | Stabilizing ->
     if Uopt.is_none var.value_set_during_stabilization
     then Stack.push t.set_during_stabilization (T var);
@@ -1373,8 +1364,9 @@ let stabilize_end t =
 ;;
 
 let raise_during_stabilization t exn =
-  t.status <- Stabilize_previously_raised (Raised_exn.create exn);
-  raise exn
+  let raised = Raised_exn.create exn in
+  t.status <- Stabilize_previously_raised raised;
+  Raised_exn.reraise raised
 ;;
 
 let stabilize t =
