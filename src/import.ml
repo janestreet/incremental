@@ -1,7 +1,6 @@
 [%%import "debug.mlh"]
 
 open Core
-include Int.Replace_polymorphic_compare
 
 (* All [assert]s and other checks throughout the code are guarded by [if debug].  The
    DEBUG variable is set in the lib [incremental] and unset in the lib

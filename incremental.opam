@@ -15,8 +15,10 @@ depends: [
   "core_kernel"
   "lru_cache"
   "ppx_jane"
+  "ppx_optcomp"
   "dune"        {>= "2.0.0"}
 ]
+available: arch != "arm32" & arch != "x86_32"
 synopsis: "Library for incremental computations"
 description: "
 Part of Jane Street's Core library

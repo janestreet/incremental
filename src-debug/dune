@@ -2,7 +2,7 @@
  (libraries core_kernel.balanced_reducer core incremental_step_function
   core_kernel.thread_safe_queue core_kernel.timing_wheel core_kernel.uopt
   core_kernel.weak_hashtbl)
- (preprocessor_deps debug.mlh) (preprocess (pps ppx_jane)))
+ (preprocessor_deps debug.mlh) (preprocess (pps ppx_jane ppx_optcomp)))
 
 (rule
  (targets adjust_heights_heap.ml adjust_heights_heap.mli alarm.ml alarm.mli
