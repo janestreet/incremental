@@ -129,19 +129,15 @@ struct
 
           let invariant = invariant
           let t = t
-
           let%expect_test _ = invariant t
-
           let max_height_allowed = max_height_allowed
 
           (* the default *)
           let%test _ = max_height_allowed t = 128
-
           let max_height_seen = max_height_seen
 
           (* because of [let invalid] above *)
           let%test _ = max_height_seen t = 3
-
           let set_max_height_allowed = set_max_height_allowed
 
           let%expect_test _ =
@@ -165,7 +161,6 @@ struct
 
           let%test _ = max_height_allowed t = max_height_seen t
           let%expect_test _ = invariant t
-
           let num_active_observers = num_active_observers
 
           let%expect_test _ =
@@ -317,12 +312,9 @@ struct
         ;;
 
         let%test _ = is_invalid invalid
-
         let is_valid = is_valid
-
         let%test _ = is_valid (const 3)
         let%test _ = skip_invalidity_check || not (is_valid invalid)
-
         let const = const
         let return = return
         let is_const = is_const
@@ -546,7 +538,6 @@ struct
         end
 
         let am_stabilizing = am_stabilizing
-
         let%test _ = not (am_stabilizing ())
 
         let%expect_test _ =
@@ -1771,7 +1762,6 @@ struct
 
         let%expect_test _ = test exists List.exists
         let%expect_test _ = test for_all List.for_all
-
         let array_fold = array_fold
 
         let%expect_test _ =
@@ -4012,7 +4002,6 @@ struct
           ;;
 
           let equal = equal
-
           let%test _ = equal never never
           let%test _ = not (equal never always)
         end
@@ -4192,8 +4181,7 @@ struct
         let%expect_test _ =
           test_memoize_fun (fun hashable f ->
             let memo_f =
-              unstage
-                (weak_memoize_fun hashable (fun a -> Heap_block.create_exn (f a)))
+              unstage (weak_memoize_fun hashable (fun a -> Heap_block.create_exn (f a)))
             in
             stage (fun a -> Heap_block.value (memo_f a)))
         ;;

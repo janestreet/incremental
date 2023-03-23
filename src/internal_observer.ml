@@ -100,8 +100,7 @@ let invariant invariant_a t =
              assert (
                phys_equal
                  t
-                 (Uopt.value_exn
-                    (next_in_observing (Uopt.value_exn prev_in_observing))))))
+                 (Uopt.value_exn (next_in_observing (Uopt.value_exn prev_in_observing))))))
       ~next_in_observing:
         (check (fun next_in_observing ->
            (match t.state with
@@ -112,8 +111,7 @@ let invariant invariant_a t =
              assert (
                phys_equal
                  t
-                 (Uopt.value_exn
-                    (prev_in_observing (Uopt.value_exn next_in_observing)))))))
+                 (Uopt.value_exn (prev_in_observing (Uopt.value_exn next_in_observing)))))))
 ;;
 
 let value_exn t =

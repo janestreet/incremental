@@ -247,8 +247,7 @@ let invariant t =
       iter_observer_descendants t ~f:(fun (T node) ->
         Node.invariant ignore node;
         if not (am_stabilizing t) then assert (Uopt.is_none node.old_value_opt);
-        assert (
-          node.height <= Adjust_heights_heap.max_height_seen t.adjust_heights_heap));
+        assert (node.height <= Adjust_heights_heap.max_height_seen t.adjust_heights_heap));
       assert (
         Adjust_heights_heap.max_height_allowed t.adjust_heights_heap
         = Recompute_heap.max_height_allowed t.recompute_heap);
@@ -303,8 +302,7 @@ let invariant t =
                     assert (Uopt.is_some var.value_set_during_stabilization))
                  set_during_stabilization))
         ~handle_after_stabilization:(check (Stack.invariant Node.Packed.invariant))
-        ~run_on_update_handlers:
-          (check (Stack.invariant Run_on_update_handlers.invariant))
+        ~run_on_update_handlers:(check (Stack.invariant Run_on_update_handlers.invariant))
         ~only_in_debug:(check Only_in_debug.invariant)
         ~weak_hashtbls:ignore
         ~keep_node_creation_backtrace:ignore
@@ -525,7 +523,8 @@ let propagate_invalidity t =
            then (
              match kind with
              | Bind_main _ | If_then_else _ | Join_main _ -> ()
-             | _ -> assert false (* nodes with no children are never pushed on the stack *)));
+             | _ ->
+               assert false (* nodes with no children are never pushed on the stack *)));
         (* We do not check [Node.needs_to_be_computed node] here, because it should be
            true, and because computing it takes O(number of children), node can be pushed
            on the stack once per child, and expert nodes can have lots of children. *)

@@ -69,6 +69,5 @@ let invariant _invariant_a _invariant_b t =
         (check (fun _ ->
            iter_nodes_created_on_rhs t ~f:(fun (T node) ->
              assert (phys_equal node.created_in t.rhs_scope);
-             if Node.is_necessary node
-             then assert (t.lhs_change.height < node.height)))))
+             if Node.is_necessary node then assert (t.lhs_change.height < node.height)))))
 ;;

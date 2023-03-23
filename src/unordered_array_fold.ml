@@ -48,8 +48,7 @@ let invariant invariant_a invariant_acc t =
         (check (fun children ->
            Array.iter children ~f:(fun (child : _ Node.t) ->
              Uopt.invariant invariant_a child.value_opt;
-             if t.num_changes_since_last_full_compute
-                < t.full_compute_every_n_changes
+             if t.num_changes_since_last_full_compute < t.full_compute_every_n_changes
              then assert (Uopt.is_some child.value_opt))))
       ~fold_value:
         (check (fun fold_value ->
@@ -61,8 +60,7 @@ let invariant invariant_a invariant_acc t =
       ~num_changes_since_last_full_compute:
         (check (fun num_changes_since_last_full_compute ->
            assert (num_changes_since_last_full_compute >= 0);
-           assert (
-             num_changes_since_last_full_compute <= t.full_compute_every_n_changes)))
+           assert (num_changes_since_last_full_compute <= t.full_compute_every_n_changes)))
       ~full_compute_every_n_changes:
         (check (fun full_compute_every_n_changes ->
            assert (full_compute_every_n_changes > 0))))

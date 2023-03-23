@@ -139,8 +139,7 @@ module Generic = struct
         | Unnecessary ->
           failwiths
             ~here:[%here]
-            "Incremental bug -- Observer.on_update_exn got unexpected update \
-             Unnecessary"
+            "Incremental bug -- Observer.on_update_exn got unexpected update Unnecessary"
             t
             [%sexp_of: _ t])
     ;;

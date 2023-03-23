@@ -23,9 +23,7 @@ module Nodes_by_height = struct
           assert (node.height_in_adjust_heights_heap = height);
           assert (node.height > node.height_in_adjust_heights_heap);
           if Node.is_in_recompute_heap node
-          then
-            assert (
-              node.height_in_recompute_heap = node.height_in_adjust_heights_heap))))
+          then assert (node.height_in_recompute_heap = node.height_in_adjust_heights_heap))))
   ;;
 
   let create ~max_height_allowed =
@@ -55,8 +53,7 @@ let invariant t =
     let check f = Invariant.check_field t f in
     Fields.iter
       ~length:
-        (check (fun length ->
-           assert (length = Nodes_by_height.length t.nodes_by_height)))
+        (check (fun length -> assert (length = Nodes_by_height.length t.nodes_by_height)))
       ~height_lower_bound:
         (check (fun height_lower_bound ->
            assert (height_lower_bound >= 0);

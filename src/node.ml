@@ -316,9 +316,7 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
            Kind.invariant invariant_a kind;
            match kind with
            | Expert e ->
-             Expert.invariant_about_num_invalid_children
-               e
-               ~is_necessary:(is_necessary t)
+             Expert.invariant_about_num_invalid_children e ~is_necessary:(is_necessary t)
            | _ -> ()))
       ~cutoff:(check (Cutoff.invariant invariant_a))
       ~changed_at:
@@ -342,8 +340,7 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
            for parent_index = 1 to Uniform_array.length parent1_and_beyond do
              [%test_eq: bool]
                (parent_index < t.num_parents)
-               (Uopt.is_some
-                  (Uniform_array.get parent1_and_beyond (parent_index - 1)))
+               (Uopt.is_some (Uniform_array.get parent1_and_beyond (parent_index - 1)))
            done))
       ~parent0:
         (check (fun parent0 ->
@@ -390,8 +387,7 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
            then (
              let (T next) = Uopt.value_exn next_in_adjust_heights_heap in
              assert (is_in_adjust_heights_heap next);
-             assert (
-               t.height_in_adjust_heights_heap = next.height_in_adjust_heights_heap))))
+             assert (t.height_in_adjust_heights_heap = next.height_in_adjust_heights_heap))))
       ~old_value_opt:(check (Uopt.invariant invariant_a))
       ~observers:
         (check (fun _ ->
@@ -421,9 +417,7 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
                       child
                       ~index:my_parent_index_in_child_at_index.(child_index))));
            if debug && not (is_necessary t)
-           then
-             Array.iter my_parent_index_in_child_at_index ~f:(fun x ->
-               assert (x = -1))))
+           then Array.iter my_parent_index_in_child_at_index ~f:(fun x -> assert (x = -1))))
       ~my_child_index_in_parent_at_index:
         (check (fun my_child_index_in_parent_at_index ->
            [%test_result: int]
@@ -437,9 +431,7 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
                     parent.kind
                     ~index:my_child_index_in_parent_at_index.(parent_index))));
            if debug && not (is_necessary t)
-           then
-             Array.iter my_child_index_in_parent_at_index ~f:(fun x ->
-               assert (x = -1))))
+           then Array.iter my_child_index_in_parent_at_index ~f:(fun x -> assert (x = -1))))
       ~force_necessary:ignore
       ~creation_backtrace:ignore)
 ;;
