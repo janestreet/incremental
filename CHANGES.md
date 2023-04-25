@@ -1,3 +1,11 @@
+## Release v0.16.0
+
+- Add `incr_memoize` library for memoizing incremental binds. This library keeps the
+  incremental nodes of old binds alive by storing them in a data structure.
+  * Introduce `Store_params` submodule for configuring the memoization behavior.
+
+## Old pre-v0.15 changelogs (very likely stale and incomplete)
+
 ## 113.43.00
 
 - Adds a `Let_syntax` module to `Incremental_intf.S`. We've found things like this
