@@ -4336,20 +4336,20 @@ struct
           include Join (struct
               let join : type a. a t t -> a t =
                 fun t ->
-                  let prev_rhs = ref None in
-                  let join =
-                    E.Node.create (fun () ->
-                      E.Dependency.value (Option.value_exn !prev_rhs))
-                  in
-                  let lhs_change =
-                    map t ~f:(fun rhs ->
-                      let rhs_dep = E.Dependency.create rhs in
-                      E.Node.add_dependency join rhs_dep;
-                      Option.iter !prev_rhs ~f:(fun v -> E.Node.remove_dependency join v);
-                      prev_rhs := Some rhs_dep)
-                  in
-                  E.Node.add_dependency join (E.Dependency.create lhs_change);
-                  E.Node.watch join
+                let prev_rhs = ref None in
+                let join =
+                  E.Node.create (fun () ->
+                    E.Dependency.value (Option.value_exn !prev_rhs))
+                in
+                let lhs_change =
+                  map t ~f:(fun rhs ->
+                    let rhs_dep = E.Dependency.create rhs in
+                    E.Node.add_dependency join rhs_dep;
+                    Option.iter !prev_rhs ~f:(fun v -> E.Node.remove_dependency join v);
+                    prev_rhs := Some rhs_dep)
+                in
+                E.Node.add_dependency join (E.Dependency.create lhs_change);
+                E.Node.watch join
               ;;
             end)
 
@@ -4405,80 +4405,80 @@ struct
               -> (k, v2, 'comparator) Map.t t
             =
             fun ~on_event lhs ~f ->
-              let prev_map = ref None in
-              let prev_nodes = ref None in
-              let acc = ref None in
-              let result =
-                E.Node.create (fun () ->
-                  on_event `Main;
-                  Option.value_exn !acc)
-              in
-              let rec lhs_change =
-                lazy
-                  (map lhs ~f:(fun map ->
-                     on_event `Lhs_change;
-                     let empty_map =
-                       Map.Using_comparator.empty ~comparator:(Map.comparator map)
-                     in
-                     if Option.is_none !acc then acc := Some empty_map;
-                     let symmetric_diff =
-                       Map.symmetric_diff
-                         ~data_equal:phys_equal
-                         (Option.value !prev_map ~default:empty_map)
-                         map
-                     in
-                     let new_nodes =
-                       Sequence.fold
-                         symmetric_diff
-                         ~init:(Option.value !prev_nodes ~default:empty_map)
-                         ~f:(fun nodes (key, changed) ->
-                           match changed with
-                           | `Unequal _ ->
-                             on_event (`Unequal key);
-                             let node, _dep = Map.find_exn nodes key in
-                             E.Node.make_stale node;
-                             nodes
-                           | `Left _ ->
-                             on_event (`Left key);
-                             let node, dep = Map.find_exn nodes key in
-                             let nodes = Map.remove nodes key in
-                             E.Node.remove_dependency result dep;
-                             acc := Some (Map.remove (Option.value_exn !acc) key);
-                             E.Node.invalidate node;
-                             nodes
-                           | `Right _ ->
-                             on_event (`Right key);
-                             let node =
-                               E.Node.create (fun () ->
-                                 on_event (`Per_key key);
-                                 Map.find_exn (Option.value_exn !prev_map) key)
-                             in
-                             E.Node.add_dependency
-                               node
-                               (E.Dependency.create (force lhs_change));
-                             let user_function_dep =
-                               E.Dependency.create
-                                 (f key (E.Node.watch node))
-                                 ~on_change:(fun opt ->
-                                   on_event (`On_change (key, opt));
-                                   let old = Option.value_exn !acc in
-                                   acc
-                                   := Some
-                                        (match opt with
-                                         | None ->
-                                           if Map.mem old key
-                                           then Map.remove old key
-                                           else old
-                                         | Some v -> Map.set old ~key ~data:v))
-                             in
-                             E.Node.add_dependency result user_function_dep;
-                             Map.set nodes ~key ~data:(node, user_function_dep))
-                     in
-                     prev_nodes := Some new_nodes;
-                     prev_map := Some map))
-              in
-              E.Node.add_dependency result (E.Dependency.create (force lhs_change));
-              E.Node.watch result
+            let prev_map = ref None in
+            let prev_nodes = ref None in
+            let acc = ref None in
+            let result =
+              E.Node.create (fun () ->
+                on_event `Main;
+                Option.value_exn !acc)
+            in
+            let rec lhs_change =
+              lazy
+                (map lhs ~f:(fun map ->
+                   on_event `Lhs_change;
+                   let empty_map =
+                     Map.Using_comparator.empty ~comparator:(Map.comparator map)
+                   in
+                   if Option.is_none !acc then acc := Some empty_map;
+                   let symmetric_diff =
+                     Map.symmetric_diff
+                       ~data_equal:phys_equal
+                       (Option.value !prev_map ~default:empty_map)
+                       map
+                   in
+                   let new_nodes =
+                     Sequence.fold
+                       symmetric_diff
+                       ~init:(Option.value !prev_nodes ~default:empty_map)
+                       ~f:(fun nodes (key, changed) ->
+                         match changed with
+                         | `Unequal _ ->
+                           on_event (`Unequal key);
+                           let node, _dep = Map.find_exn nodes key in
+                           E.Node.make_stale node;
+                           nodes
+                         | `Left _ ->
+                           on_event (`Left key);
+                           let node, dep = Map.find_exn nodes key in
+                           let nodes = Map.remove nodes key in
+                           E.Node.remove_dependency result dep;
+                           acc := Some (Map.remove (Option.value_exn !acc) key);
+                           E.Node.invalidate node;
+                           nodes
+                         | `Right _ ->
+                           on_event (`Right key);
+                           let node =
+                             E.Node.create (fun () ->
+                               on_event (`Per_key key);
+                               Map.find_exn (Option.value_exn !prev_map) key)
+                           in
+                           E.Node.add_dependency
+                             node
+                             (E.Dependency.create (force lhs_change));
+                           let user_function_dep =
+                             E.Dependency.create
+                               (f key (E.Node.watch node))
+                               ~on_change:(fun opt ->
+                                 on_event (`On_change (key, opt));
+                                 let old = Option.value_exn !acc in
+                                 acc
+                                 := Some
+                                      (match opt with
+                                       | None ->
+                                         if Map.mem old key
+                                         then Map.remove old key
+                                         else old
+                                       | Some v -> Map.set old ~key ~data:v))
+                           in
+                           E.Node.add_dependency result user_function_dep;
+                           Map.set nodes ~key ~data:(node, user_function_dep))
+                   in
+                   prev_nodes := Some new_nodes;
+                   prev_map := Some map))
+            in
+            E.Node.add_dependency result (E.Dependency.create (force lhs_change));
+            E.Node.watch result
           ;;
 
           let%expect_test _ =
@@ -4636,41 +4636,41 @@ struct
               -> (a -> bool t) Staged.t
             =
             fun ~on_event hashable incr ->
-              let last = ref None in
-              let reverse_dependencies = Hashtbl.Using_hashable.create ~hashable () in
-              let scheduling_node =
-                I.map incr ~f:(fun v ->
-                  on_event `Scheduling;
-                  Option.iter !last ~f:(fun old_v ->
-                    Option.iter
-                      (Hashtbl.find reverse_dependencies old_v)
-                      ~f:E.Node.make_stale);
-                  Option.iter (Hashtbl.find reverse_dependencies v) ~f:E.Node.make_stale;
-                  last := Some v)
+            let last = ref None in
+            let reverse_dependencies = Hashtbl.Using_hashable.create ~hashable () in
+            let scheduling_node =
+              I.map incr ~f:(fun v ->
+                on_event `Scheduling;
+                Option.iter !last ~f:(fun old_v ->
+                  Option.iter
+                    (Hashtbl.find reverse_dependencies old_v)
+                    ~f:E.Node.make_stale);
+                Option.iter (Hashtbl.find reverse_dependencies v) ~f:E.Node.make_stale;
+                last := Some v)
+            in
+            Staged.stage (fun a ->
+              let rec result =
+                lazy
+                  (E.Node.create
+                     (fun () ->
+                        let v = Option.value_exn !last in
+                        on_event (`Is_eq a);
+                        hashable.compare a v = 0)
+                     ~on_observability_change:(fun ~is_now_observable ->
+                       if is_now_observable
+                       then (
+                         on_event (`Add_reverse_dep a);
+                         Hashtbl.add_exn
+                           reverse_dependencies
+                           ~key:a
+                           ~data:(force result))
+                       else (
+                         on_event (`Remove_reverse_dep a);
+                         Hashtbl.remove reverse_dependencies a)))
               in
-              Staged.stage (fun a ->
-                let rec result =
-                  lazy
-                    (E.Node.create
-                       (fun () ->
-                          let v = Option.value_exn !last in
-                          on_event (`Is_eq a);
-                          hashable.compare a v = 0)
-                       ~on_observability_change:(fun ~is_now_observable ->
-                         if is_now_observable
-                         then (
-                           on_event (`Add_reverse_dep a);
-                           Hashtbl.add_exn
-                             reverse_dependencies
-                             ~key:a
-                             ~data:(force result))
-                         else (
-                           on_event (`Remove_reverse_dep a);
-                           Hashtbl.remove reverse_dependencies a)))
-                in
-                let dep = E.Dependency.create scheduling_node in
-                E.Node.add_dependency (force result) dep;
-                E.Node.watch (force result))
+              let dep = E.Dependency.create scheduling_node in
+              E.Node.add_dependency (force result) dep;
+              E.Node.watch (force result))
           ;;
 
           let%expect_test _ =
@@ -4758,52 +4758,52 @@ struct
                  that the caller can make it call add_dependency or remove_dependency as
                  desired. And we can check the correctness of the results. *)
               fun t f ->
-                let f_result = ref None in
-                let fs1 = ref None in
-                let fs2 = ref None in
-                let parent1 = E.Node.create (fun () -> Option.value_exn !fs1 ()) in
-                let parent2 = E.Node.create (fun () -> Option.value_exn !fs2 ()) in
-                let lhs_change =
-                  map t ~f:(fun l ->
-                    (match !f_result with
-                     | Some (len, (deps1, deps2)) when len <> List.length l ->
-                       (* remove_dependency does something different for the last
-                          child. So iterate in different orders so we cover both cases. *)
-                       List.iter deps1 ~f:(E.Node.remove_dependency parent1);
-                       List.iter (List.rev deps2) ~f:(E.Node.remove_dependency parent2);
-                       f_result := None
-                     | _ -> ());
-                    match !f_result with
-                    | Some _ -> ()
-                    | None ->
-                      let deps, new_refs =
-                        List.unzip
-                          (List.init (List.length l) ~f:(fun i ->
-                             let incr = f (map t ~f:(fun l -> List.nth_exn l i)) in
-                             let r1 = ref None in
-                             let dep1 =
-                               E.Dependency.create incr ~on_change:(fun x ->
-                                 r1 := Some (fst x))
-                             in
-                             let r2 = ref None in
-                             let dep2 =
-                               E.Dependency.create incr ~on_change:(fun x ->
-                                 r2 := Some (snd x))
-                             in
-                             E.Node.add_dependency parent1 dep1;
-                             E.Node.add_dependency parent2 dep2;
-                             (dep1, dep2), (r1, r2)))
-                      in
-                      let compute_result l f () =
-                        List.map l ~f:(fun r -> Option.value_exn !(f r))
-                      in
-                      fs1 := Some (compute_result new_refs fst);
-                      fs2 := Some (compute_result new_refs snd);
-                      f_result := Some (List.length l, List.unzip deps))
-                in
-                E.Node.add_dependency parent1 (E.Dependency.create lhs_change);
-                E.Node.add_dependency parent2 (E.Dependency.create lhs_change);
-                E.Node.watch parent1, E.Node.watch parent2
+              let f_result = ref None in
+              let fs1 = ref None in
+              let fs2 = ref None in
+              let parent1 = E.Node.create (fun () -> Option.value_exn !fs1 ()) in
+              let parent2 = E.Node.create (fun () -> Option.value_exn !fs2 ()) in
+              let lhs_change =
+                map t ~f:(fun l ->
+                  (match !f_result with
+                   | Some (len, (deps1, deps2)) when len <> List.length l ->
+                     (* remove_dependency does something different for the last
+                        child. So iterate in different orders so we cover both cases. *)
+                     List.iter deps1 ~f:(E.Node.remove_dependency parent1);
+                     List.iter (List.rev deps2) ~f:(E.Node.remove_dependency parent2);
+                     f_result := None
+                   | _ -> ());
+                  match !f_result with
+                  | Some _ -> ()
+                  | None ->
+                    let deps, new_refs =
+                      List.unzip
+                        (List.init (List.length l) ~f:(fun i ->
+                           let incr = f (map t ~f:(fun l -> List.nth_exn l i)) in
+                           let r1 = ref None in
+                           let dep1 =
+                             E.Dependency.create incr ~on_change:(fun x ->
+                               r1 := Some (fst x))
+                           in
+                           let r2 = ref None in
+                           let dep2 =
+                             E.Dependency.create incr ~on_change:(fun x ->
+                               r2 := Some (snd x))
+                           in
+                           E.Node.add_dependency parent1 dep1;
+                           E.Node.add_dependency parent2 dep2;
+                           (dep1, dep2), (r1, r2)))
+                    in
+                    let compute_result l f () =
+                      List.map l ~f:(fun r -> Option.value_exn !(f r))
+                    in
+                    fs1 := Some (compute_result new_refs fst);
+                    fs2 := Some (compute_result new_refs snd);
+                    f_result := Some (List.length l, List.unzip deps))
+              in
+              E.Node.add_dependency parent1 (E.Dependency.create lhs_change);
+              E.Node.add_dependency parent2 (E.Dependency.create lhs_change);
+              E.Node.watch parent1, E.Node.watch parent2
             in
             Ref.set_temporarily sexp_style To_string_hum ~f:(fun () ->
               let v1 = Var.create [ 2 ] in
