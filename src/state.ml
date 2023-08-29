@@ -32,7 +32,7 @@ module Only_in_debug = struct
     { mutable currently_running_node : Node.Packed.t option
     ; mutable expert_nodes_created_by_current_node : Node.Packed.t list
     }
-  [@@deriving fields, sexp_of]
+  [@@deriving fields ~iterators:iter, sexp_of]
 
   let invariant t =
     Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
@@ -129,7 +129,7 @@ type t = Types.State.t =
   ; mutable num_nodes_recomputed_directly_because_min_height : int
   ; mutable num_var_sets : int
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~iterators:iter, sexp_of]
 
 module Clock = struct
   type t = Types.Clock.t =
@@ -145,7 +145,7 @@ module Clock = struct
     ; handle_fired : Alarm.t -> unit
     ; mutable fired_alarm_values : Alarm_value.t Uopt.t
     }
-  [@@deriving fields, sexp_of]
+  [@@deriving fields ~iterators:iter, sexp_of]
 
   let invariant t =
     Invariant.invariant [%here] t [%sexp_of: t] (fun () ->

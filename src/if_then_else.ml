@@ -11,7 +11,7 @@ type 'a t = 'a Types.If_then_else.t =
   ; then_ : 'a Node.t
   ; else_ : 'a Node.t
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~iterators:iter, sexp_of]
 
 let same (t1 : _ t) (t2 : _ t) = phys_same t1 t2
 

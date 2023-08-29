@@ -14,7 +14,7 @@ type 'a t = 'a Types.Step_function_node.t =
   ; mutable alarm_value : (Alarm_value.t[@sexp.opaque])
   ; clock : (Types.Clock.t[@sexp.opaque])
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~iterators:iter, sexp_of]
 
 let phys_same (t1 : _ t) (t2 : _ t) = phys_same t1 t2
 

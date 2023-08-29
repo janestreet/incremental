@@ -10,7 +10,7 @@ type 'a t = 'a Types.Snapshot.t =
   ; value_at : 'a Node.t
   ; clock : (Types.Clock.t[@sexp.opaque])
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~iterators:iter, sexp_of]
 
 let invariant invariant_a t =
   Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->

@@ -7,7 +7,7 @@ type ('a, 'acc) t = ('a, 'acc) Types.Array_fold.t =
   ; f : 'acc -> 'a -> 'acc
   ; children : 'a Node.t array
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~iterators:iter, sexp_of]
 
 let invariant invariant_a invariant_acc t =
   Invariant.invariant [%here] t [%sexp_of: (_, _) t] (fun () ->

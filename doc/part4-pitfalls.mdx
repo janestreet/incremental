@@ -154,7 +154,7 @@ pattern and data.  Here's the definition of the model:
 type model = { pattern: String.Search_pattern.t
              ; data: int Map.M(String).t
              }
-[@@deriving fields];;
+[@@deriving fields ~getters];;
 ```
 
 And here's a way of filtering the model based on the pattern.

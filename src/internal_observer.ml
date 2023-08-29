@@ -42,7 +42,7 @@ type 'a t = 'a Types.Internal_observer.t =
     mutable prev_in_observing : ('a t[@sexp.opaque]) Uopt.t
   ; mutable next_in_observing : ('a t[@sexp.opaque]) Uopt.t
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~getters ~iterators:iter, sexp_of]
 
 type 'a internal_observer = 'a t [@@deriving sexp_of]
 

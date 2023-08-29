@@ -8,7 +8,7 @@ type 'a t = 'a Types.Freeze.t =
   ; child : 'a Node.t
   ; only_freeze_when : 'a -> bool
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~iterators:iter, sexp_of]
 
 let invariant _invariant_a t =
   Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->

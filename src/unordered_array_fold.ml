@@ -27,7 +27,7 @@ type ('a, 'acc) t = ('a, 'acc) Types.Unordered_array_fold.t =
   ; mutable fold_value : 'acc Uopt.t
   ; mutable num_changes_since_last_full_compute : int
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~iterators:iter, sexp_of]
 
 let same (t1 : (_, _) t) (t2 : (_, _) t) = phys_same t1 t2
 

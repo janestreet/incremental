@@ -76,7 +76,7 @@ module Model = struct
     { orders : Order.t Map.M(Order.Id).t
     ; execs : Exec.t Map.M(Exec.Id).t
     }
-  [@@deriving fields]
+  [@@deriving fields ~getters]
 end
 ```
 
@@ -217,7 +217,7 @@ module Enriched_model = struct
     { orders_and_execs :
         (Order.t option * Exec.t Map.M(Exec.Id).t) Map.M(Order.Id).t
     ; execs : Exec.t Map.M(Exec.Id).t
-    } [@@deriving fields]
+    } [@@deriving fields ~getters]
 end
 ```
 

@@ -10,7 +10,7 @@ type t = Types.At_intervals.t =
   ; mutable alarm : Alarm.t
   ; clock : (Types.Clock.t[@sexp.opaque])
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~iterators:iter, sexp_of]
 
 let invariant t =
   Invariant.invariant [%here] t [%sexp_of: t] (fun () ->

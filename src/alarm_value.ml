@@ -24,7 +24,7 @@ type t = Types.Alarm_value.t =
        [advance_clock]. *)
     mutable next_fired : (t Uopt.t[@sexp.opaque])
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~iterators:iter, sexp_of]
 
 let invariant t =
   Invariant.invariant [%here] t [%sexp_of: t] (fun () ->

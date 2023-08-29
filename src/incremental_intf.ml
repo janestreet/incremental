@@ -1501,8 +1501,7 @@ module type Incremental = sig
     val disallow_future_use : _ t -> unit
   end
 
-  (** [observe t] returns a new observer for [t].  [observe] raises if called during
-      stabilization.
+  (** [observe t] returns a new observer for [t].
 
       By default, an observer has a finalizer that calls [disallow_future_use] when the
       observer is no longer referenced.  One can use [~should_finalize:false] to cause the

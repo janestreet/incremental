@@ -9,7 +9,7 @@ type 'a t = 'a Types.Join.t =
   ; lhs_change : unit Node.t
   ; mutable rhs : 'a Node.t Uopt.t
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~iterators:iter, sexp_of]
 
 let same (t1 : _ t) (t2 : _ t) = phys_same t1 t2
 

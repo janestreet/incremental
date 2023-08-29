@@ -18,7 +18,7 @@ type z =
   { a: int list
   ; b: (int * int)
   }
-[@@deriving fields]
+[@@deriving fields ~getters]
 ```
 
 ```ocaml

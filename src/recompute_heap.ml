@@ -21,7 +21,7 @@ type t = Types.Recompute_heap.t =
   ; mutable height_lower_bound : int
   ; mutable nodes_by_height : Nodes_by_height.t
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~getters ~iterators:iter, sexp_of]
 
 let max_height_allowed t = Uniform_array.length t.nodes_by_height - 1
 let is_empty t = t.length = 0

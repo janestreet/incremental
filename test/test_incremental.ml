@@ -1905,7 +1905,6 @@ struct
               ; update2 : int option
               ; update3 : int option
               }
-            [@@deriving fields]
 
             let quickcheck_generator =
               let open Quickcheck.Generator.Let_syntax in

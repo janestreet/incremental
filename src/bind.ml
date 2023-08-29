@@ -22,7 +22,7 @@ type ('a, 'b) t = ('a, 'b) Bind.t =
        the right-hand side of [t], i.e. in [t.rhs_scope]. *)
     mutable all_nodes_created_on_rhs : Node.Packed.t Uopt.t
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~iterators:iter, sexp_of]
 
 let same (t1 : (_, _) t) (t2 : (_, _) t) = phys_same t1 t2
 

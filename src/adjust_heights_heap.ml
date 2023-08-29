@@ -43,7 +43,7 @@ type t = Types.Adjust_heights_heap.t =
   ; mutable max_height_seen : int
   ; mutable nodes_by_height : Nodes_by_height.t
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~getters ~iterators:iter, sexp_of]
 
 let is_empty t = length t = 0
 let max_height_allowed t = Uniform_array.length t.nodes_by_height - 1

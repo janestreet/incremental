@@ -10,7 +10,7 @@ type 'a t =
   { init : 'a
   ; steps : (Time_ns.t * 'a) Sequence.t
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~getters, sexp_of]
 
 let invariant invariant_a { init; steps = _ } = invariant_a init
 

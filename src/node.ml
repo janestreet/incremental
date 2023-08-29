@@ -96,7 +96,7 @@ type 'a t = 'a Types.Node.t =
   ; mutable user_info : Dot_user_info.t option
   ; creation_backtrace : Backtrace.t option
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~iterators:iter, sexp_of]
 
 let same (t1 : _ t) (t2 : _ t) = phys_same t1 t2
 let packed_same (Packed.T t1) (Packed.T t2) = same t1 t2

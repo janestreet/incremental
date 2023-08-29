@@ -16,7 +16,7 @@ type 'a t = 'a Types.Var.t =
     mutable set_at : Stabilization_num.t
   ; watch : 'a Node.t
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~iterators:iter, sexp_of]
 
 let invariant invariant_a t =
   Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
