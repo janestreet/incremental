@@ -75,7 +75,7 @@ let create ~init ~f ~update ~full_compute_every_n_changes ~children ~main =
   ; main
   ; fold_value =
       Uopt.none
-  (* We make [num_changes_since_last_full_compute = full_compute_every_n_changes]
+      (* We make [num_changes_since_last_full_compute = full_compute_every_n_changes]
      so that there will be a full computation the next time the node is computed. *)
   ; num_changes_since_last_full_compute = full_compute_every_n_changes
   }
@@ -103,12 +103,12 @@ let force_full_compute t =
 ;;
 
 let child_changed
-      (type a b)
-      (t : (a, _) t)
-      ~(child : b Node.t)
-      ~child_index
-      ~(old_value_opt : b Uopt.t)
-      ~(new_value : b)
+  (type a b)
+  (t : (a, _) t)
+  ~(child : b Node.t)
+  ~child_index
+  ~(old_value_opt : b Uopt.t)
+  ~(new_value : b)
   =
   let child_at_index = t.children.(child_index) in
   match Node.type_equal_if_phys_same child child_at_index with
@@ -126,11 +126,11 @@ let child_changed
       (* We only reach this case if we have already done a full compute, in which case
          [Uopt.is_some t.fold_value] and [Uopt.is_some old_value_opt]. *)
       t.fold_value
-      <- Uopt.some
-           (t.update
-              (Uopt.value_exn t.fold_value)
-              ~old_value:(Uopt.value_exn old_value_opt)
-              ~new_value))
+        <- Uopt.some
+             (t.update
+                (Uopt.value_exn t.fold_value)
+                ~old_value:(Uopt.value_exn old_value_opt)
+                ~new_value))
     else if t.num_changes_since_last_full_compute < t.full_compute_every_n_changes
     then force_full_compute t
 ;;

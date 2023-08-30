@@ -40,15 +40,15 @@ type 'a t = 'a Types.Expert.t =
 [@@deriving sexp_of]
 
 let invariant
-      _invariant_a
-      { f = _
-      ; children
-      ; num_children
-      ; force_stale = _
-      ; num_invalid_children
-      ; on_observability_change = _
-      ; will_fire_all_callbacks = _
-      }
+  _invariant_a
+  { f = _
+  ; children
+  ; num_children
+  ; force_stale = _
+  ; num_invalid_children
+  ; on_observability_change = _
+  ; will_fire_all_callbacks = _
+  }
   =
   assert (num_children <= Uniform_array.length children);
   ignore num_invalid_children;

@@ -426,8 +426,7 @@ and Node : sig
     ; mutable changed_at : Stabilization_num.t
     ; mutable num_on_update_handlers : int
     ; mutable num_parents : int
-    ;
-      mutable parent1_and_beyond : Node.Packed.t Uopt.t Uniform_array.t
+    ; mutable parent1_and_beyond : Node.Packed.t Uopt.t Uniform_array.t
     ; mutable parent0 : Node.Packed.t Uopt.t
     ; mutable created_in : Scope.t
     ; mutable next_node_in_same_scope : Node.Packed.t Uopt.t
@@ -461,9 +460,9 @@ end = struct
   include (
     Node :
       module type of struct
-      include Node
-    end
-    with module Packed := Node.Packed)
+        include Node
+      end
+      with module Packed := Node.Packed)
 
   let sexp_of_t _ t = concat [ "n"; Node_id.to_string t.id ] |> [%sexp_of: string]
 
@@ -486,8 +485,8 @@ end = struct
     t.num_parents > 0
     || Uopt.is_some t.observers
     || (match t.kind with
-      | Freeze _ -> true
-      | _ -> false)
+        | Freeze _ -> true
+        | _ -> false)
     || t.force_necessary
   ;;
 

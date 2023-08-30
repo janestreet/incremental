@@ -31,9 +31,9 @@ module Store_params = struct
   let with_hooks inner ~if_found ~if_added = With_hooks { inner; if_found; if_added }
 
   let hash_based__lru
-        (type key)
-        ~max_size
-        (module Key : Hashtbl.Key_plain with type t = key)
+    (type key)
+    ~max_size
+    (module Key : Hashtbl.Key_plain with type t = key)
     : key t
     =
     let module Key : Lru_cache.H with type t = Key.t = struct

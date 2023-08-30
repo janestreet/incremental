@@ -66,7 +66,7 @@ let to_string ~name { label; attributes } =
     label
     |> Set.to_list
     |> List.map ~f:(fun cols ->
-      "{" ^ String.concat (List.map cols ~f:escape_record_label) ~sep:"|" ^ "}")
+         "{" ^ String.concat (List.map cols ~f:escape_record_label) ~sep:"|" ^ "}")
     |> String.concat ~sep:"|"
     |> fun s -> "{" ^ s ^ "}"
   in
@@ -74,7 +74,7 @@ let to_string ~name { label; attributes } =
     attributes
     |> Map.to_alist
     |> List.map ~f:(fun (k, v) ->
-      sprintf {| %s=%s|} (escape_dot_string k) (escape_dot_string v))
+         sprintf {| %s=%s|} (escape_dot_string k) (escape_dot_string v))
     |> String.concat ~sep:" "
   in
   sprintf {|  %s [shape=Mrecord label=%s %s]|} name (escape_dot_string label) attributes

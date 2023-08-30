@@ -3,8 +3,8 @@ open Import
 open Types.Kind
 
 module As_adjust_heights_list = Node.Packed.As_list (struct
-    let next (Node.Packed.T node) = node.next_in_adjust_heights_heap
-  end)
+  let next (Node.Packed.T node) = node.next_in_adjust_heights_heap
+end)
 
 module Nodes_by_height = struct
   type t = As_adjust_heights_list.t Uniform_array.t [@@deriving sexp_of]
@@ -154,11 +154,11 @@ let ensure_height_requirement t ~original_child ~original_parent ~child ~parent 
 ;;
 
 let adjust_heights
-      (type a b)
-      t
-      recompute_heap
-      ~child:(original_child : a Node.t)
-      ~parent:(original_parent : b Node.t)
+  (type a b)
+  t
+  recompute_heap
+  ~child:(original_child : a Node.t)
+  ~parent:(original_parent : b Node.t)
   =
   if debug then assert (is_empty t);
   if debug then assert (original_child.height >= original_parent.height);

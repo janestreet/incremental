@@ -63,8 +63,8 @@ let invariant _invariant_a _invariant_b t =
       ~rhs:ignore
       ~rhs_scope:
         (check (function
-           | Scope.Top -> assert false
-           | Bind t' -> assert (same t t')))
+          | Scope.Top -> assert false
+          | Bind t' -> assert (same t t')))
       ~all_nodes_created_on_rhs:
         (check (fun _ ->
            iter_nodes_created_on_rhs t ~f:(fun (T node) ->

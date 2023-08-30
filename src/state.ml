@@ -299,7 +299,7 @@ let invariant t =
              | Stabilizing ->
                Stack.invariant
                  (fun (Var.Packed.T var) ->
-                    assert (Uopt.is_some var.value_set_during_stabilization))
+                   assert (Uopt.is_some var.value_set_during_stabilization))
                  set_during_stabilization))
         ~handle_after_stabilization:(check (Stack.invariant Node.Packed.invariant))
         ~run_on_update_handlers:(check (Stack.invariant Run_on_update_handlers.invariant))
@@ -615,8 +615,8 @@ let add_parent ~child ~parent ~child_index =
   if debug then assert (Node.is_necessary parent);
   (* we only add necessary parents *)
   if (not (Node.is_in_recompute_heap parent))
-  && (Stabilization_num.is_none parent.recomputed_at
-      || Node.edge_is_stale ~child ~parent)
+     && (Stabilization_num.is_none parent.recomputed_at
+         || Node.edge_is_stale ~child ~parent)
   then Recompute_heap.add t.recompute_heap parent
 ;;
 
@@ -992,11 +992,11 @@ and maybe_change_value : type a. a Node.t -> a -> unit =
   let t = node.state in
   let old_value_opt = node.value_opt in
   if Uopt.is_none old_value_opt
-  || not
-       (Cutoff.should_cutoff
-          node.cutoff
-          ~old_value:(Uopt.unsafe_value old_value_opt)
-          ~new_value)
+     || not
+          (Cutoff.should_cutoff
+             node.cutoff
+             ~old_value:(Uopt.unsafe_value old_value_opt)
+             ~new_value)
   then (
     node.value_opt <- Uopt.some new_value;
     node.changed_at <- t.stabilization_num;
@@ -1107,7 +1107,7 @@ and maybe_change_value : type a. a Node.t -> a -> unit =
         if can_recompute_now
         then (
           t.num_nodes_recomputed_directly_because_one_child
-          <- t.num_nodes_recomputed_directly_because_one_child + 1;
+            <- t.num_nodes_recomputed_directly_because_one_child + 1;
           recompute parent)
         else if parent.height <= Recompute_heap.min_height t.recompute_heap
         then (
@@ -1116,7 +1116,7 @@ and maybe_change_value : type a. a Node.t -> a -> unit =
              [parent] immediately and save adding it to and then removing it from the
              recompute heap. *)
           t.num_nodes_recomputed_directly_because_min_height
-          <- t.num_nodes_recomputed_directly_because_min_height + 1;
+            <- t.num_nodes_recomputed_directly_because_min_height + 1;
           recompute parent)
         else (
           if debug then assert (Node.needs_to_be_computed parent);
@@ -1223,8 +1223,8 @@ let add_new_observers t =
       let observing = internal_observer.observing in
       let was_necessary = Node.is_necessary observing in
       observing.num_on_update_handlers
-      <- observing.num_on_update_handlers
-         + List.length internal_observer.on_update_handlers;
+        <- observing.num_on_update_handlers
+           + List.length internal_observer.on_update_handlers;
       let old_observers = observing.observers in
       if Uopt.is_some old_observers
       then (
@@ -1603,11 +1603,11 @@ let lazy_from_fun t ~f =
 let default_hash_table_initial_size = 4
 
 let memoize_fun_by_key
-      ?(initial_size = default_hash_table_initial_size)
-      t
-      hashable
-      project_key
-      f
+  ?(initial_size = default_hash_table_initial_size)
+  t
+  hashable
+  project_key
+  f
   =
   (* Here's an explanation of why we get [t.current_scope] here, and then call
      [within_scope] below.  Consider this (impossible) alternate implementation of
@@ -1651,12 +1651,12 @@ let all t ts = array_fold t (Array.of_list_rev ts) ~init:[] ~f:(fun ac a -> a ::
 module Unordered_array_fold_update = Unordered_array_fold.Update
 
 let unordered_array_fold
-      t
-      ?(full_compute_every_n_changes = Int.max_value)
-      children
-      ~init
-      ~f
-      ~update
+  t
+  ?(full_compute_every_n_changes = Int.max_value)
+  children
+  ~init
+  ~f
+  ~update
   =
   if Array.length children = 0
   then const t init
@@ -1806,10 +1806,10 @@ let at_intervals (clock : Clock.t) interval =
      recomputed. *)
   Node.set_cutoff main Cutoff.never;
   at_intervals.alarm
-  <- add_alarm
-       clock
-       ~at:(next_interval_alarm_strict clock ~base ~interval)
-       (Alarm_value.create (At_intervals at_intervals));
+    <- add_alarm
+         clock
+         ~at:(next_interval_alarm_strict clock ~base ~interval)
+         (Alarm_value.create (At_intervals at_intervals));
   main
 ;;
 
@@ -1881,10 +1881,10 @@ let advance_clock (clock : Clock.t) ~to_ =
         if Node.is_valid main
         then (
           at_intervals.alarm
-          <- add_alarm
-               clock
-               ~at:(next_interval_alarm_strict clock ~base ~interval)
-               alarm_value;
+            <- add_alarm
+                 clock
+                 ~at:(next_interval_alarm_strict clock ~base ~interval)
+                 alarm_value;
           make_stale main)
       | Snapshot { main; value_at; _ } ->
         if debug then assert (Node.is_valid main);
@@ -1948,11 +1948,11 @@ let create (module Config : Config.Incremental_config) ~max_height_allowed =
 ;;
 
 let weak_memoize_fun_by_key
-      ?(initial_size = default_hash_table_initial_size)
-      t
-      hashable
-      project_key
-      f
+  ?(initial_size = default_hash_table_initial_size)
+  t
+  hashable
+  project_key
+  f
   =
   let scope = t.current_scope in
   let table = Weak_hashtbl.create ~size:initial_size hashable in
@@ -1988,7 +1988,7 @@ module Expert = struct
       if Option.is_some state.only_in_debug.currently_running_node
       then
         state.only_in_debug.expert_nodes_created_by_current_node
-        <- T node :: state.only_in_debug.expert_nodes_created_by_current_node;
+          <- T node :: state.only_in_debug.expert_nodes_created_by_current_node;
     node
   ;;
 
@@ -2008,8 +2008,8 @@ module Expert = struct
       raise_s
         [%sexp
           ("can only call " ^ name ^ " on parent nodes" : string)
-        , ~~(node.kind : _ Kind.t)
-        , ~~(current.kind : _ Kind.t)]
+          , ~~(node.kind : _ Kind.t)
+          , ~~(current.kind : _ Kind.t)]
   ;;
 
   let assert_currently_running_node_is_parent state node name =
@@ -2019,8 +2019,8 @@ module Expert = struct
       raise_s
         [%sexp
           ("can only call " ^ name ^ " on children nodes" : string)
-        , ~~(node.kind : _ Kind.t)
-        , ~~(current.kind : _ Kind.t)]
+          , ~~(node.kind : _ Kind.t)
+          , ~~(current.kind : _ Kind.t)]
   ;;
 
   let make_stale (node : _ Node.t) =
@@ -2052,11 +2052,11 @@ module Expert = struct
       if debug
       then
         if am_stabilizing state
-        && not
-             (List.mem
-                ~equal:phys_equal
-                state.only_in_debug.expert_nodes_created_by_current_node
-                (T node))
+           && not
+                (List.mem
+                   ~equal:phys_equal
+                   state.only_in_debug.expert_nodes_created_by_current_node
+                   (T node))
         then assert_currently_running_node_is_child state node "add_dependency";
       let e = Uopt.unsafe_value e_opt in
       let new_child_index = Expert.add_child_edge e (E dep) in

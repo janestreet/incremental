@@ -1612,7 +1612,6 @@ module type Incremental = sig
 
   val default_hash_table_initial_size : int
 
-
   (** [memoize_fun f hashable] returns a function [m] that is a memoized version of [f]
       that will run [f a] on each distinct [a] that [m] is applied to, memoize the result
       (in a hash table), and thereafter for [a], [m] will return the memoized result.
@@ -1946,7 +1945,6 @@ module type Incremental = sig
       [@@deriving sexp_of]
     end
 
-
     (** [do_one_step_of_stabilize state] runs a part of stabilization. This can be used as
         a replacement for [stabilize], to split up potentially long calls to [stabilize].
 
@@ -1966,23 +1964,23 @@ module type Incremental = sig
 
     include
       S_gen
-      with type 'a t = ('a, state_witness) incremental
-      with type Before_or_after.t = Before_or_after.t
-      with type Clock.t = state_witness Clock.t
-      with type 'a Cutoff.t = 'a Cutoff.t
-      with type 'a Expert.Dependency.t = ('a, state_witness) Expert.Dependency.t
-      with type 'a Expert.Node.t = ('a, state_witness) Expert.Node.t
-      with type Expert.Step_result.t = Expert.Step_result.t
-      with type 'a Observer.t = ('a, state_witness) Observer.t
-      with type 'a Observer.Update.t = 'a Observer.Update.t
-      with type Packed.t = Packed.t
-      with type Scope.t = state_witness Scope.t
-      with type State.t = state_witness State.t
-      with type State.Stats.t = State.Stats.t
-      with type ('a, 'b) Unordered_array_fold_update.t =
-             ('a, 'b) Unordered_array_fold_update.t
-      with type 'a Update.t = 'a Update.t
-      with type 'a Var.t = ('a, state_witness) Var.t
+        with type 'a t = ('a, state_witness) incremental
+        with type Before_or_after.t = Before_or_after.t
+        with type Clock.t = state_witness Clock.t
+        with type 'a Cutoff.t = 'a Cutoff.t
+        with type 'a Expert.Dependency.t = ('a, state_witness) Expert.Dependency.t
+        with type 'a Expert.Node.t = ('a, state_witness) Expert.Node.t
+        with type Expert.Step_result.t = Expert.Step_result.t
+        with type 'a Observer.t = ('a, state_witness) Observer.t
+        with type 'a Observer.Update.t = 'a Observer.Update.t
+        with type Packed.t = Packed.t
+        with type Scope.t = state_witness Scope.t
+        with type State.t = state_witness State.t
+        with type State.Stats.t = State.Stats.t
+        with type ('a, 'b) Unordered_array_fold_update.t =
+          ('a, 'b) Unordered_array_fold_update.t
+        with type 'a Update.t = 'a Update.t
+        with type 'a Var.t = ('a, state_witness) Var.t
   end
 
   (** [Make] returns a new incremental implementation.  [Make] uses [Config.Default
@@ -2002,4 +2000,3 @@ module type Incremental = sig
     val debug : bool
   end
 end
-

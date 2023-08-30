@@ -36,8 +36,8 @@ module Packed : sig
       contained within it.  The recompute heap uses this with [next_in_recompute_heap],
       and the adjust-heights heap uses this with [next_in_adjust_heights_heap]. *)
   module As_list (M : sig
-      val next : t -> t Uopt.t
-    end) : sig
+    val next : t -> t Uopt.t
+  end) : sig
     type t = Types.Node.Packed.t Uopt.t [@@deriving sexp_of]
 
     include Invariant.S with type t := t
@@ -61,9 +61,9 @@ module Packed : sig
 end
 
 include module type of struct
-  include Types.Node
-end
-with module Packed := Types.Node.Packed
+    include Types.Node
+  end
+  with module Packed := Types.Node.Packed
 
 include Invariant.S1 with type 'a t := 'a t
 
