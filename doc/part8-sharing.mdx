@@ -380,7 +380,3 @@ module Model_with_memo :
     val create : Enriched_model.t Incr.t -> t
   end
 ```
-
-One thing to note is that weak pointers basically don't work in
-JavaScript, so if you run this kind of code in the browser you'll find
-that it leaks memory.
