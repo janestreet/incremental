@@ -2,7 +2,7 @@ open Core
 open! Import
 
 module String_list = struct
-  type t = string list [@@deriving compare, sexp_of]
+  type t = string list [@@deriving compare, sexp]
 
   include (val Comparator.make ~sexp_of_t ~compare)
 end
@@ -11,7 +11,7 @@ type dot =
   { label : Set.M(String_list).t
   ; attributes : string String.Map.t
   }
-[@@deriving sexp_of]
+[@@deriving sexp]
 
 type t =
   | Dot of dot
@@ -20,7 +20,7 @@ type t =
       { prior : t
       ; new_ : t
       }
-[@@deriving sexp_of]
+[@@deriving sexp]
 
 let info info = Info info
 let append prior new_ = Append { prior; new_ }
@@ -61,7 +61,7 @@ let escape_record_label s =
     | c -> String.of_char c)
 ;;
 
-let to_string ~name { label; attributes } =
+let to_string ?(shape = "Mrecord") ~name { label; attributes } =
   let label =
     label
     |> Set.to_list
@@ -77,5 +77,5 @@ let to_string ~name { label; attributes } =
          sprintf {| %s=%s|} (escape_dot_string k) (escape_dot_string v))
     |> String.concat ~sep:" "
   in
-  sprintf {|  %s [shape=Mrecord label=%s %s]|} name (escape_dot_string label) attributes
+  sprintf {|  %s [shape=%s label=%s %s]|} name shape (escape_dot_string label) attributes
 ;;

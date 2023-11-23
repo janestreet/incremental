@@ -53,3 +53,28 @@ let equal t1 t2 =
 ;;
 
 let phys_equal = Phys_equal
+
+module For_analyzer = struct
+  type 'a t' = 'a t
+
+  type t =
+    | Always
+    | Never
+    | Phys_equal
+    | Compare
+    | Equal
+    | F
+  [@@deriving sexp, equal]
+
+  let of_cutoff (c : _ t') =
+    match c with
+    | Always -> Always
+    | Never -> Never
+    | Phys_equal -> Phys_equal
+    | Compare _ -> Compare
+    | Equal _ -> Equal
+    | F _ -> F
+  ;;
+
+  let to_string t = Sexp.to_string ([%sexp_of: t] t)
+end

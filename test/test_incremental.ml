@@ -4039,6 +4039,7 @@ struct
             type nonrec t = t
 
             let top = top
+            let is_top = is_top
 
             let%expect_test _ =
               let t = current () in
@@ -4096,6 +4097,25 @@ struct
               disallow_future_use o2;
               stabilize_ [%here];
               disallow_future_use o1
+            ;;
+
+            let%test "top is top" = is_top top
+
+            let%expect_test "scope inside bind is not top" =
+              let i = Var.create_ [%here] true in
+              let o =
+                observe
+                  (bind (watch i) ~f:(fun b ->
+                     assert (not (is_top (current ())));
+                     return b))
+              in
+              stabilize_ [%here];
+              print_s [%sexp (value o : bool)];
+              [%expect {| true |}];
+              Var.set i false;
+              stabilize_ [%here];
+              print_s [%sexp (value o : bool)];
+              [%expect {| false |}]
             ;;
           end
 

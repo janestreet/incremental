@@ -800,6 +800,7 @@ module type S_gen = sig
     val top : t
     val current : unit -> t
     val within : t -> f:(unit -> 'a) -> 'a
+    val is_top : t -> bool
   end
 
   module Var : sig
@@ -1394,6 +1395,9 @@ module type Incremental = sig
         scope [t].  An exception raised by [f] will be raised by [within] in the usual
         way. *)
     val within : 'w State.t -> 'w t -> f:(unit -> 'a) -> 'a
+
+    (** [is_scope t] returns [true] iff [t] is the toplevel scope. *)
+    val is_top : _ t -> bool
   end
 
   module Var : sig
@@ -1999,4 +2003,9 @@ module type Incremental = sig
   module Private : sig
     val debug : bool
   end
+
+  (** Exposes the [traverse] function, which takes a callback to crawl the list of [Incr]
+      nodes (and their descendants) provided, used for analyzing [Incr] graphs **)
+  module For_analyzer :
+    For_analyzer_intf.S with type packed_node := Packed.t and type 'a state := 'a State.t
 end

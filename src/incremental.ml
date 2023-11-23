@@ -7,6 +7,7 @@ include Incremental_intf
 module type Incremental_config = Config.Incremental_config
 
 module Config = Config
+module For_analyzer = For_analyzer
 
 let default_max_height_allowed = 128
 
@@ -42,6 +43,13 @@ module Generic = struct
   end
 
   include Node
+
+  module Packed = struct
+    include Packed
+
+    let save_dot = Node_to_dot.save_dot
+    let save_dot_to_file = Node_to_dot.save_dot_to_file
+  end
 
   let state t = t.state
   let pack t = Packed.T t
@@ -219,8 +227,8 @@ module Generic = struct
   let on_update = State.node_on_update
   let stabilize state = State.stabilize state
   let am_stabilizing state = State.am_stabilizing state
-  let save_dot = State.save_dot
-  let save_dot_to_file = State.save_dot_to_file
+  let save_dot t out = Packed.save_dot out (State.directly_observed t)
+  let save_dot_to_file t file = Packed.save_dot_to_file file (State.directly_observed t)
 
   module Node_value = struct
     type 'a t =

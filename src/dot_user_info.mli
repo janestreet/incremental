@@ -26,10 +26,10 @@ type t =
       { prior : t
       ; new_ : t
       }
-[@@deriving sexp_of]
+[@@deriving sexp]
 
 val info : Info.t -> t
 val dot : label:string list -> attributes:string Core.String.Map.t -> t
 val to_dot : t -> dot
 val append : t -> t -> t
-val to_string : name:string -> dot -> string
+val to_string : ?shape:string -> name:string -> dot -> string

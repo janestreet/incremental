@@ -683,57 +683,5 @@ module Packed = struct
   ;;
 
   let iter_descendants ts ~f = ignore (iter_descendants_internal ts ~f : _ Hash_set.t)
-
-  module Dot_user_info = struct
-    include Dot_user_info
-
-    let default ~name t =
-      Dot_user_info.dot
-        ~label:[ name; Kind.name t.kind; sprintf "height=%d" t.height ]
-        ~attributes:String.Map.empty
-    ;;
-  end
-
   let append_user_info_graphviz (T t) = append_user_info_graphviz t
-
-  let print_node out ~name t =
-    let default = Dot_user_info.default ~name t in
-    let info =
-      match t.user_info with
-      | None -> default
-      | Some user_info -> Dot_user_info.append default user_info
-    in
-    fprintf out "%s\n" (Dot_user_info.to_string ~name (Dot_user_info.to_dot info))
-  ;;
-
-  let save_dot out ts =
-    let node_name =
-      if am_running_test
-      then fun _ -> "n###"
-      else fun node -> "n" ^ Node_id.to_string node.id
-    in
-    fprintf out "digraph G {\n";
-    fprintf out "  rankdir = BT\n";
-    let bind_edges = ref [] in
-    let seen =
-      iter_descendants_internal ts ~f:(fun (T t) ->
-        let name = node_name t in
-        print_node out ~name t;
-        iteri_children t ~f:(fun _ (T from_) ->
-          fprintf out "  %s -> %s\n" (node_name from_) name);
-        match t.kind with
-        | Bind_lhs_change bind ->
-          Bind.iter_nodes_created_on_rhs bind ~f:(fun to_ ->
-            bind_edges := (T t, to_) :: !bind_edges)
-        | _ -> ())
-    in
-    List.iter !bind_edges ~f:(fun (T from, T to_) ->
-      if Hash_set.mem seen to_.id
-      then fprintf out "  %s -> %s [style=dashed]\n" (node_name from) (node_name to_));
-    fprintf out "}\n%!"
-  ;;
-
-  let save_dot_to_file file ts =
-    Out_channel.with_file file ~f:(fun out -> save_dot out ts)
-  ;;
 end

@@ -50,9 +50,6 @@ module Packed : sig
       descendants exactly once per node. *)
   val iter_descendants : t list -> f:(t -> unit) -> unit
 
-  val save_dot : Out_channel.t -> t list -> unit
-  val save_dot_to_file : string -> t list -> unit
-
   val append_user_info_graphviz
     :  t
     -> label:string list

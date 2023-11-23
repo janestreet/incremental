@@ -19,3 +19,19 @@ val phys_equal : _ t
 val poly_equal : _ t
 val equal : 'a t -> 'a t -> bool
 val should_cutoff : 'a t -> old_value:'a -> new_value:'a -> bool
+
+module For_analyzer : sig
+  type 'a t' := 'a t
+
+  type t =
+    | Always
+    | Never
+    | Phys_equal
+    | Compare
+    | Equal
+    | F
+  [@@deriving sexp, equal]
+
+  val of_cutoff : _ t' -> t
+  val to_string : t -> string
+end

@@ -203,8 +203,8 @@ function, `index_by`, to do it.
     in
     Incr_map.unordered_fold map ~init:(Map.empty outer_comparator) ~add ~remove
 val index_by :
-  ('a, 'b) Set.comparator ->
-  ('c, 'd) Set.comparator ->
+  ('a, 'b) Comparator.Module.t ->
+  ('c, 'd) Comparator.Module.t ->
   ('a, 'e, 'f) Map.t Incr.t ->
   ('e -> 'c) -> ('c, ('a, 'e, 'b) Map.t, 'd) Map.t Incr.t = <fun>
 ```

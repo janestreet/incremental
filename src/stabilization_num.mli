@@ -22,3 +22,11 @@ val is_none : t -> bool
 val is_some : t -> bool
 val add1 : t -> t
 val to_int : t -> int
+
+module For_analyzer : sig
+  type nonrec t = t [@@deriving sexp, compare]
+
+  include Comparable.S with type t := t
+
+  val to_string : t -> string
+end

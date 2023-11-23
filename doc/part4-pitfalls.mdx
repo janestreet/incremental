@@ -220,8 +220,8 @@ there:
       ~update:(fun ~key ~old_data:_ ~new_data:data -> add ~key ~data)
       ~remove
 val index_by :
-  ('a, 'b) Set.comparator ->
-  ('c, 'd) Set.comparator ->
+  ('a, 'b) Comparator.Module.t ->
+  ('c, 'd) Comparator.Module.t ->
   ('a, 'e, 'f) Map.t Incr.t ->
   ('e -> 'c) -> ('c, ('a, 'e, 'b) Map.t, 'd) Map.t Incr.t = <fun>
 ```
@@ -257,7 +257,7 @@ using `Map.comparator_s`.
       ~update:(fun ~key ~old_data:_ ~new_data:data -> add ~key ~data)
       ~remove
 val index_by :
-  ('a, 'b) Set.comparator ->
+  ('a, 'b) Comparator.Module.t ->
   ('c, 'd, 'e) Map.t Incr.t ->
   ('d -> 'a) -> ('a, ('c, 'd, 'e) Map.t, 'b) Map.t Incr.t = <fun>
 ```
@@ -305,7 +305,7 @@ reflects the fact that the comparator can't actually change.
       ~update:(fun ~key ~old_data:_ ~new_data:data -> add ~key ~data)
       ~remove
 val index_by :
-  ('a, 'b) Set.comparator ->
+  ('a, 'b) Comparator.Module.t ->
   ('c, 'd, 'e) Map.t Incr.t ->
   ('d -> 'a) -> ('a, ('c, 'd, 'e) Map.t, 'b) Map.t Incr.t = <fun>
 ```
