@@ -1,2 +1,2 @@
 (library (name incr_memoize) (public_name incremental.memoize)
- (libraries core incremental lru_cache) (preprocess (pps ppx_jane)))
+ (libraries core incremental janestreet_lru_cache) (preprocess (pps ppx_jane)))
