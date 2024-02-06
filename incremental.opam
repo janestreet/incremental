@@ -13,11 +13,11 @@ depends: [
   "ocaml" {>= "4.14.0"}
   "core"
   "core_kernel"
-  "lru_cache"
+  "janestreet_lru_cache"
   "ppx_jane"
   "ppx_optcomp"
   "uopt"
-  "dune"        {>= "2.0.0"}
+  "dune"                 {>= "2.0.0"}
 ]
 available: arch != "arm32" & arch != "x86_32"
 synopsis: "Library for incremental computations"

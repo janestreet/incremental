@@ -3,8 +3,9 @@ open! Import
 
 module String_list = struct
   type t = string list [@@deriving compare, sexp]
+  type comparator_witness = String.comparator_witness List.comparator_witness
 
-  include (val Comparator.make ~sexp_of_t ~compare)
+  let comparator = List.comparator String.comparator
 end
 
 type dot =

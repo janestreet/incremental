@@ -118,7 +118,7 @@ module Hostname : Core.Identifiable
              }
   end
 module Host :
-  sig type t = { addr : UnixLabels.inet_addr; status : Status.t; } end
+  sig type t = { addr : Unix/2.inet_addr; status : Status.t; } end
 # module Service = struct
     module Id : Identifiable = String
     type t = { host : Hostname.t

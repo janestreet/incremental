@@ -7,17 +7,11 @@
 open Core
 open! Import
 
-module String_list : sig
-  type t = string list
-
-  include Comparator.S with type t := t
-end
-
 type dot =
-  { label : Set.M(String_list).t
+  { label : (string list, String.comparator_witness List.comparator_witness) Set.t
   ; attributes : string String.Map.t
   }
-[@@deriving sexp_of]
+[@@deriving sexp]
 
 type t =
   | Dot of dot

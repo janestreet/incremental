@@ -1,3 +1,5 @@
-(library (name incremental_test)
+(library
+ (name incremental_test)
  (libraries core expect_test_helpers_core incremental core_unix.time_ns_unix)
- (preprocess (pps ppx_jane)))
+ (preprocess
+  (pps ppx_jane)))

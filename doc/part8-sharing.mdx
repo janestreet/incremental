@@ -268,7 +268,7 @@ at how to use one of them:
 ```ocaml
 # let _ = Incr.weak_memoize_fun_by_key
 - : ?initial_size:int ->
-    'a Base.Hashtbl.Key.t ->
+    'a Hashtbl_intf.Hashtbl.Key.t ->
     ('b -> 'a) -> ('b -> 'c Heap_block.t) -> ('b -> 'c Heap_block.t) Staged.t
 = <fun>
 ```

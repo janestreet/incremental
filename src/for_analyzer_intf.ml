@@ -59,7 +59,12 @@ module type S = sig
 
   module Dot_user_info : sig
     type t [@@deriving sexp]
-    type dot
+
+    type dot =
+      { label : (string list, String.comparator_witness List.comparator_witness) Set.t
+      ; attributes : string String.Map.t
+      }
+    [@@deriving sexp]
 
     val dot : label:string list -> attributes:string Core.String.Map.t -> t
     val to_dot : t -> dot

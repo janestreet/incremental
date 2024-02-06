@@ -1,3 +1,6 @@
-(library (name incremental_step_function)
- (public_name incremental.incremental_step_function) (libraries core)
- (preprocess (pps ppx_jane)))
+(library
+ (name incremental_step_function)
+ (public_name incremental.incremental_step_function)
+ (libraries core)
+ (preprocess
+  (pps ppx_jane)))

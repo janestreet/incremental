@@ -1,6 +1,6 @@
 The MIT License
 
-Copyright (c) 2008--2023 Jane Street Group, LLC <opensource-contacts@janestreet.com>
+Copyright (c) 2008--2024 Jane Street Group, LLC <opensource-contacts@janestreet.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
