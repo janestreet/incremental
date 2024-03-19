@@ -22,9 +22,11 @@ let%expect_test "simple examples of [let%map] and [let%bind]" =
   print_s
     [%message
       "" (Observer.value o1 : int Or_error.t) (Observer.value o2 : int Or_error.t)];
-  [%expect {|
+  [%expect
+    {|
     (("Observer.value o1" (Ok 26))
-     ("Observer.value o2" (Ok 17))) |}]
+     ("Observer.value o2" (Ok 17)))
+    |}]
 ;;
 
 let%expect_test "simple example of using map3 via [let%mapn]" =

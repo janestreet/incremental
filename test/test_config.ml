@@ -27,7 +27,8 @@ let%expect_test "default timing-wheel precision and level durations" =
        6671d23h59m12.303423488s
        13343d23h58m24.606846976s
        26687d23h56m49.213693952s
-       53375d23h53m38.427387903s))) |}]
+       53375d23h53m38.427387903s)))
+    |}]
 ;;
 
 let%expect_test "default timing wheel can handle the full range of times" =
@@ -38,11 +39,9 @@ let%expect_test "default timing wheel can handle the full range of times" =
   let show_o () = print_s [%sexp (o : Before_or_after.t Observer.t)] in
   stabilize ();
   show_o ();
-  [%expect {|
-    Before |}];
+  [%expect {| Before |}];
   Clock.advance_clock clock ~to_:Time_ns.max_value_representable;
   stabilize ();
   show_o ();
-  [%expect {|
-    After |}]
+  [%expect {| After |}]
 ;;

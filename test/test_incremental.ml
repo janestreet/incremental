@@ -802,7 +802,8 @@ struct
             digraph G {
               rankdir = BT
               n### [shape=Mrecord label="{{n###|Const|height=-1}}" ]
-            } |}]
+            }
+            |}]
           ;;
 
           let%expect_test "annotated with info" =
@@ -814,7 +815,8 @@ struct
             digraph G {
               rankdir = BT
               n### [shape=Mrecord label="{{hello\ world}|{n###|Const|height=-1}}" ]
-            } |}]
+            }
+            |}]
           ;;
 
           let%expect_test "annotated with label and attributes" =
@@ -829,7 +831,8 @@ struct
             digraph G {
               rankdir = BT
               n### [shape=Mrecord label="{{hello|world}|{n###|Const|height=-1}}"  "fillcolor"="green"]
-            } |}]
+            }
+            |}]
           ;;
 
           let%expect_test _ =
@@ -2278,19 +2281,22 @@ struct
             [%expect
               {|
             ((1969-12-31 19:00:00.000000000-05:00)
-             (1969-12-31 19:00:00.000000000-05:00)) |}];
+             (1969-12-31 19:00:00.000000000-05:00))
+            |}];
             Clock.advance_clock clock ~to_:(Time_ns.add Time_ns.epoch (sec 1.));
             show_now ();
             [%expect
               {|
             ((1969-12-31 19:00:01.000000000-05:00)
-             (1969-12-31 19:00:01.000000000-05:00)) |}];
+             (1969-12-31 19:00:01.000000000-05:00))
+            |}];
             Clock.advance_clock clock ~to_:Time_ns.epoch;
             show_now ();
             [%expect
               {|
             ((1969-12-31 19:00:01.000000000-05:00)
-             (1969-12-31 19:00:01.000000000-05:00)) |}]
+             (1969-12-31 19:00:01.000000000-05:00))
+            |}]
           ;;
 
           let is observer v = Poly.equal (value observer) v
@@ -2303,16 +2309,13 @@ struct
               print_s [%sexp (value o : Before_or_after.t)]
             in
             show ();
-            [%expect {|
-            Before |}];
+            [%expect {| Before |}];
             Clock.advance_clock_by clock (sec 1.);
             show ();
-            [%expect {|
-            After |}];
+            [%expect {| After |}];
             Clock.advance_clock_by clock (Clock.alarm_precision clock);
             show ();
-            [%expect {|
-            After |}]
+            [%expect {| After |}]
           ;;
 
           let%test _ =
@@ -2796,7 +2799,8 @@ struct
             17
             18
             19
-            20 |}];
+            20
+            |}];
             disallow_future_use o
           ;;
 
@@ -2971,7 +2975,8 @@ struct
             (5 5)
             (6 6)
             (7 7)
-            (7 7) |}];
+            (7 7)
+            |}];
             disallow_future_use o1;
             disallow_future_use o2
           ;;
@@ -3018,7 +3023,8 @@ struct
             (unfold (i 19))
             (unfold (i 20))
             (unfold (i 20))
-            19 |}];
+            19
+            |}];
             disallow_future_use o
           ;;
 
@@ -3079,8 +3085,7 @@ struct
               let t = observe (watch (Var.create 13)) in
               let show_t () = print_s [%sexp (t : int t)] in
               show_t ();
-              [%expect {|
-              <unstabilized> |}];
+              [%expect {| <unstabilized> |}];
               stabilize_ [%here];
               show_t ();
               [%expect {| 13 |}];

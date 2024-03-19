@@ -19,17 +19,14 @@ let%expect_test "[constant]" =
   let t = constant 13 in
   invariant ignore t;
   show t;
-  [%expect {|
-    ((init 13) (steps ())) |}];
+  [%expect {| ((init 13) (steps ())) |}];
   value t ~at:0;
-  [%expect {|
-    13 |}]
+  [%expect {| 13 |}]
 ;;
 
 let%expect_test "empty [~steps] is same as constant" =
   show (create_exn ~init:13 ~steps:[]);
-  [%expect {|
-    ((init 13) (steps ())) |}]
+  [%expect {| ((init 13) (steps ())) |}]
 ;;
 
 let%expect_test "[create_exn] raise" =
@@ -38,7 +35,8 @@ let%expect_test "[create_exn] raise" =
   [%expect
     {|
     ("[Step_function.create_exn] got unsorted times"
-     (steps ("1970-01-01 00:00:00.000000001Z" "1970-01-01 00:00:00Z"))) |}]
+     (steps ("1970-01-01 00:00:00.000000001Z" "1970-01-01 00:00:00Z")))
+    |}]
 ;;
 
 let%expect_test "steps" =
@@ -51,17 +49,14 @@ let%expect_test "steps" =
      (steps (
        ("1970-01-01 00:00:00.000000001Z" 14)
        ("1970-01-01 00:00:00.000000001Z" 15)
-       ("1970-01-01 00:00:00.000000002Z" 16)))) |}];
+       ("1970-01-01 00:00:00.000000002Z" 16))))
+    |}];
   value t ~at:0;
-  [%expect {|
-    13 |}];
+  [%expect {| 13 |}];
   value t ~at:1;
-  [%expect {|
-    15 |}];
+  [%expect {| 15 |}];
   value t ~at:2;
-  [%expect {|
-    16 |}];
+  [%expect {| 16 |}];
   value t ~at:3;
-  [%expect {|
-    16 |}]
+  [%expect {| 16 |}]
 ;;

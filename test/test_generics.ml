@@ -18,7 +18,7 @@ let%expect_test _ =
       (I.Expert.Node.create Fn.id)
       (I.Expert.Dependency.create i)
   in
-  [%expect {||}]
+  [%expect {| |}]
 ;;
 
 let%expect_test "[State.create]" =

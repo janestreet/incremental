@@ -76,15 +76,16 @@ let%expect_test "traverses basic" =
   print_nodes [ n ] Incr.pack print_node;
   [%expect
     {|
-            (node (
-              (id     1)
-              (kind   Const)
-              (cutoff Phys_equal)
-              (children      ())
-              (bind_children ())
-              (recomputed_at -1)
-              (changed_at    -1)
-              (height        -1))) |}]
+    (node (
+      (id     1)
+      (kind   Const)
+      (cutoff Phys_equal)
+      (children      ())
+      (bind_children ())
+      (recomputed_at -1)
+      (changed_at    -1)
+      (height        -1)))
+    |}]
 ;;
 
 let%expect_test "traverses map" =
@@ -94,24 +95,25 @@ let%expect_test "traverses map" =
   print_nodes [ r ] Incr.pack print_node;
   [%expect
     {|
-            (node (
-              (id     1)
-              (kind   Const)
-              (cutoff Phys_equal)
-              (children      ())
-              (bind_children ())
-              (recomputed_at -1)
-              (changed_at    -1)
-              (height        -1)))
-            (node (
-              (id     2)
-              (kind   Map)
-              (cutoff Phys_equal)
-              (children (1))
-              (bind_children ())
-              (recomputed_at -1)
-              (changed_at    -1)
-              (height        -1))) |}]
+    (node (
+      (id     1)
+      (kind   Const)
+      (cutoff Phys_equal)
+      (children      ())
+      (bind_children ())
+      (recomputed_at -1)
+      (changed_at    -1)
+      (height        -1)))
+    (node (
+      (id     2)
+      (kind   Map)
+      (cutoff Phys_equal)
+      (children (1))
+      (bind_children ())
+      (recomputed_at -1)
+      (changed_at    -1)
+      (height        -1)))
+    |}]
 ;;
 
 let%expect_test "traverses bind" =
@@ -126,42 +128,43 @@ let%expect_test "traverses bind" =
   print_nodes [ c ] Incr.pack print_node;
   [%expect
     {|
-            (node (
-              (id     1)
-              (kind   Var)
-              (cutoff Phys_equal)
-              (children      ())
-              (bind_children ())
-              (recomputed_at -1)
-              (changed_at    -1)
-              (height        -1)))
-            (node (
-              (id     4)
-              (kind   Map)
-              (cutoff Phys_equal)
-              (children (1))
-              (bind_children ())
-              (recomputed_at -1)
-              (changed_at    -1)
-              (height        -1)))
-            (node (
-              (id     5)
-              (kind   Bind_lhs_change)
-              (cutoff Never)
-              (children (4))
-              (bind_children ())
-              (recomputed_at -1)
-              (changed_at    -1)
-              (height        -1)))
-            (node (
-              (id     6)
-              (kind   Bind_main)
-              (cutoff Phys_equal)
-              (children (5))
-              (bind_children ())
-              (recomputed_at -1)
-              (changed_at    -1)
-              (height        -1))) |}];
+    (node (
+      (id     1)
+      (kind   Var)
+      (cutoff Phys_equal)
+      (children      ())
+      (bind_children ())
+      (recomputed_at -1)
+      (changed_at    -1)
+      (height        -1)))
+    (node (
+      (id     4)
+      (kind   Map)
+      (cutoff Phys_equal)
+      (children (1))
+      (bind_children ())
+      (recomputed_at -1)
+      (changed_at    -1)
+      (height        -1)))
+    (node (
+      (id     5)
+      (kind   Bind_lhs_change)
+      (cutoff Never)
+      (children (4))
+      (bind_children ())
+      (recomputed_at -1)
+      (changed_at    -1)
+      (height        -1)))
+    (node (
+      (id     6)
+      (kind   Bind_main)
+      (cutoff Phys_equal)
+      (children (5))
+      (bind_children ())
+      (recomputed_at -1)
+      (changed_at    -1)
+      (height        -1)))
+    |}];
   let observer_so_that_stabilization_performs_work = Incr.observe c in
   Incr.stabilize ();
   let (_ : _ Incr.Observer.t) =
@@ -170,60 +173,61 @@ let%expect_test "traverses bind" =
   print_nodes [ c ] Incr.pack print_node;
   [%expect
     {|
-            (node (
-              (id     3)
-              (kind   Const)
-              (cutoff Phys_equal)
-              (children      ())
-              (bind_children ())
-              (recomputed_at 0)
-              (changed_at    0)
-              (height        0)))
-            (node (
-              (id     7)
-              (kind   Map)
-              (cutoff Phys_equal)
-              (children (3))
-              (bind_children ())
-              (recomputed_at 0)
-              (changed_at    0)
-              (height        3)))
-            (node (
-              (id     1)
-              (kind   Var)
-              (cutoff Phys_equal)
-              (children      ())
-              (bind_children ())
-              (recomputed_at 0)
-              (changed_at    0)
-              (height        0)))
-            (node (
-              (id     4)
-              (kind   Map)
-              (cutoff Phys_equal)
-              (children (1))
-              (bind_children ())
-              (recomputed_at 0)
-              (changed_at    0)
-              (height        1)))
-            (node (
-              (id     5)
-              (kind   Bind_lhs_change)
-              (cutoff Never)
-              (children      (4))
-              (bind_children (7))
-              (recomputed_at 0)
-              (changed_at    0)
-              (height        2)))
-            (node (
-              (id     6)
-              (kind   Bind_main)
-              (cutoff Phys_equal)
-              (children (5 7))
-              (bind_children ())
-              (recomputed_at 0)
-              (changed_at    0)
-              (height        4))) |}]
+    (node (
+      (id     3)
+      (kind   Const)
+      (cutoff Phys_equal)
+      (children      ())
+      (bind_children ())
+      (recomputed_at 0)
+      (changed_at    0)
+      (height        0)))
+    (node (
+      (id     7)
+      (kind   Map)
+      (cutoff Phys_equal)
+      (children (3))
+      (bind_children ())
+      (recomputed_at 0)
+      (changed_at    0)
+      (height        3)))
+    (node (
+      (id     1)
+      (kind   Var)
+      (cutoff Phys_equal)
+      (children      ())
+      (bind_children ())
+      (recomputed_at 0)
+      (changed_at    0)
+      (height        0)))
+    (node (
+      (id     4)
+      (kind   Map)
+      (cutoff Phys_equal)
+      (children (1))
+      (bind_children ())
+      (recomputed_at 0)
+      (changed_at    0)
+      (height        1)))
+    (node (
+      (id     5)
+      (kind   Bind_lhs_change)
+      (cutoff Never)
+      (children      (4))
+      (bind_children (7))
+      (recomputed_at 0)
+      (changed_at    0)
+      (height        2)))
+    (node (
+      (id     6)
+      (kind   Bind_main)
+      (cutoff Phys_equal)
+      (children (5 7))
+      (bind_children ())
+      (recomputed_at 0)
+      (changed_at    0)
+      (height        4)))
+    |}]
 ;;
 
 let%expect_test "different recomputed_at and changed_at" =
@@ -241,7 +245,8 @@ let%expect_test "different recomputed_at and changed_at" =
      (changed_at    0))
     ((id            2)
      (recomputed_at 0)
-     (changed_at    0)) |}];
+     (changed_at    0))
+    |}];
   Incr.Var.set a 1;
   Incr.stabilize ();
   (* NOTE: The reason that [recomputed_at] and [changed_at] are different here, is that -
@@ -264,7 +269,8 @@ let%expect_test "different recomputed_at and changed_at" =
      (changed_at    1))
     ((id            2)
      (recomputed_at 1)
-     (changed_at    0)) |}]
+     (changed_at    0))
+    |}]
 ;;
 
 let%expect_test "directly observes all observers" =
@@ -276,7 +282,7 @@ let%expect_test "directly observes all observers" =
   let b_observer = Incr.observe b in
   let b'_observer = Incr.observe b' in
   print_nodes (directly_observed Incr.State.t) Fn.id print_node;
-  [%expect];
+  [%expect {| |}];
   Incr.stabilize ();
   let (_ : _ Incr.Observer.t) = Sys.opaque_identity b_observer in
   let (_ : _ Incr.Observer.t) = Sys.opaque_identity b'_observer in
@@ -318,5 +324,6 @@ let%expect_test "directly observes all observers" =
       (bind_children ())
       (recomputed_at 0)
       (changed_at    0)
-      (height        1))) |}]
+      (height        1)))
+    |}]
 ;;

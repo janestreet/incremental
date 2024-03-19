@@ -43,23 +43,27 @@ let%expect_test "exception handling / re-throwing" =
     {|
     (exn.ml.Reraised
      "cannot stabilize -- stabilize previously raised"
-     test_exceptional_behavior.ml.My_exn) |}];
+     test_exceptional_behavior.ml.My_exn)
+    |}];
   require_does_raise [%here] (fun () -> I.stabilize ());
   [%expect
     {|
     (exn.ml.Reraised
      "cannot stabilize -- stabilize previously raised"
-     test_exceptional_behavior.ml.My_exn) |}];
+     test_exceptional_behavior.ml.My_exn)
+    |}];
   require_does_raise [%here] (fun () -> I.Observer.value_exn o);
   [%expect
     {|
     (exn.ml.Reraised
      "Observer.value_exn called after stabilize previously raised"
-     test_exceptional_behavior.ml.My_exn) |}];
+     test_exceptional_behavior.ml.My_exn)
+    |}];
   require_does_raise [%here] (fun () -> I.Var.set x ());
   [%expect
     {|
     (exn.ml.Reraised
      "cannot set var -- stabilization previously raised"
-     test_exceptional_behavior.ml.My_exn) |}]
+     test_exceptional_behavior.ml.My_exn)
+    |}]
 ;;
