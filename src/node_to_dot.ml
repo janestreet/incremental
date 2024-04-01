@@ -13,7 +13,7 @@ let print_node out ~name ~kind ~height ~user_info =
     (For_analyzer.Dot_user_info.to_string ~name (For_analyzer.Dot_user_info.to_dot info))
 ;;
 
-let save_dot out ts =
+let save_dot ~emit_bind_edges out ts =
   let node_name =
     if am_running_test
     then fun _ -> "n###"
@@ -44,11 +44,15 @@ let save_dot out ts =
       fprintf out "  %s -> %s\n" (node_name child_id) name);
     List.iter bind_children ~f:(fun bind_child_id ->
       bind_edges := (bind_child_id, id) :: !bind_edges));
-  List.iter !bind_edges ~f:(fun (bind_child_id, id) ->
-    if Hash_set.mem seen bind_child_id
-    then
-      fprintf out "  %s -> %s [style=dashed]\n" (node_name id) (node_name bind_child_id));
+  if emit_bind_edges
+  then
+    List.iter !bind_edges ~f:(fun (bind_child_id, id) ->
+      if Hash_set.mem seen bind_child_id
+      then
+        fprintf out "  %s -> %s [style=dashed]\n" (node_name id) (node_name bind_child_id));
   fprintf out "}\n%!"
 ;;
 
-let save_dot_to_file file ts = Out_channel.with_file file ~f:(fun out -> save_dot out ts)
+let save_dot_to_file ~emit_bind_edges file ts =
+  Out_channel.with_file file ~f:(fun out -> save_dot ~emit_bind_edges out ts)
+;;

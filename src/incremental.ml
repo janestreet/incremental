@@ -47,8 +47,11 @@ module Generic = struct
   module Packed = struct
     include Packed
 
-    let save_dot = Node_to_dot.save_dot
-    let save_dot_to_file = Node_to_dot.save_dot_to_file
+    let save_dot ?(emit_bind_edges = true) = Node_to_dot.save_dot ~emit_bind_edges
+
+    let save_dot_to_file ?(emit_bind_edges = true) =
+      Node_to_dot.save_dot_to_file ~emit_bind_edges
+    ;;
   end
 
   let state t = t.state
@@ -227,8 +230,14 @@ module Generic = struct
   let on_update = State.node_on_update
   let stabilize state = State.stabilize state
   let am_stabilizing state = State.am_stabilizing state
-  let save_dot t out = Packed.save_dot out (State.directly_observed t)
-  let save_dot_to_file t file = Packed.save_dot_to_file file (State.directly_observed t)
+
+  let save_dot ?(emit_bind_edges = true) t out =
+    Packed.save_dot ~emit_bind_edges out (State.directly_observed t)
+  ;;
+
+  let save_dot_to_file ?(emit_bind_edges = true) t file =
+    Packed.save_dot_to_file ~emit_bind_edges file (State.directly_observed t)
+  ;;
 
   module Node_value = struct
     type 'a t =
@@ -378,8 +387,12 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
   let sum_float ts = sum_float State.t ts
   let stabilize () = stabilize State.t
   let am_stabilizing () = am_stabilizing State.t
-  let save_dot out = save_dot State.t out
-  let save_dot_to_file file = Out_channel.with_file file ~f:save_dot
+  let save_dot ?(emit_bind_edges = true) out = save_dot ~emit_bind_edges State.t out
+
+  let save_dot_to_file ?(emit_bind_edges = true) file =
+    Out_channel.with_file file ~f:(save_dot ~emit_bind_edges)
+  ;;
+
   let lazy_from_fun f = lazy_from_fun State.t f
 
   let weak_memoize_fun_by_key ?initial_size hashable project_key f =

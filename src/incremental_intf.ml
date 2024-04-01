@@ -923,8 +923,8 @@ module type S_gen = sig
   module Packed : sig
     type t
 
-    val save_dot : Out_channel.t -> t list -> unit
-    val save_dot_to_file : string -> t list -> unit
+    val save_dot : ?emit_bind_edges:bool -> Out_channel.t -> t list -> unit
+    val save_dot_to_file : ?emit_bind_edges:bool -> string -> t list -> unit
 
     val append_user_info_graphviz
       :  t
@@ -934,8 +934,8 @@ module type S_gen = sig
   end
 
   val pack : _ t -> Packed.t
-  val save_dot : Out_channel.t -> unit
-  val save_dot_to_file : string -> unit
+  val save_dot : ?emit_bind_edges:bool -> Out_channel.t -> unit
+  val save_dot_to_file : ?emit_bind_edges:bool -> string -> unit
 
   module Let_syntax : sig
     val return : 'a -> 'a t
@@ -1693,17 +1693,17 @@ module type Incremental = sig
 
     (** [save_dot out_channel ts] outputs to [out_channel] the DAG of nodes in [ts] and
         all their descendants, in dot format. *)
-    val save_dot : Out_channel.t -> t list -> unit
+    val save_dot : ?emit_bind_edges:bool -> Out_channel.t -> t list -> unit
 
-    val save_dot_to_file : string -> t list -> unit
+    val save_dot_to_file : ?emit_bind_edges:bool -> string -> t list -> unit
   end
 
   val pack : _ t -> Packed.t
 
   (** [save_dot file] outputs to [file] the DAG of all necessary nodes, in dot format. *)
-  val save_dot : _ State.t -> Out_channel.t -> unit
+  val save_dot : ?emit_bind_edges:bool -> _ State.t -> Out_channel.t -> unit
 
-  val save_dot_to_file : _ State.t -> string -> unit
+  val save_dot_to_file : ?emit_bind_edges:bool -> _ State.t -> string -> unit
 
   (** This [Let_syntax] allows you to write expressions like
 
