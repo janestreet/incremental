@@ -10,7 +10,7 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "4.14.0"}
+  "ocaml" {>= "5.1.0"}
   "core"
   "core_kernel"
   "janestreet_lru_cache"
