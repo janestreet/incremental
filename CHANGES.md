@@ -1,8 +1,17 @@
+## Release v0.17.0
+- Added `Scope.is_top` to determine if the scope is the top-level scope (outside of any
+  binds)
+- Add an optional `emit_bind_edges` parameter to all `save_dot` graphviz functions
+  which you can use to omit the dashed lines connecting bind nodes to nodes allocated in
+  their scope
+- Expose `For_analyzer` module in the `Incremental` interface for traversal of `Incr`
+  nodes for analysis purposes.
+
 ## Release v0.16.0
 
 - Add `incr_memoize` library for memoizing incremental binds. This library keeps the
   incremental nodes of old binds alive by storing them in a data structure.
-  * Introduce `Store_params` submodule for configuring the memoization behavior.
+  - Introduce `Store_params` submodule for configuring the memoization behavior.
 
 ## Old pre-v0.15 changelogs (very likely stale and incomplete)
 
