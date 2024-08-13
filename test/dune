@@ -1,5 +1,8 @@
 (library
  (name incremental_test)
- (libraries core expect_test_helpers_core incremental core_unix.time_ns_unix)
+ (libraries core core_unix expect_test_helpers_core.expect_test_helpers_base
+   expect_test_helpers_core patdiff.expect_test_patdiff expect_test_graphviz
+   expect_test_sexp_diff incremental incremental_skeleton
+   core_unix.time_ns_unix core_kernel.timing_wheel)
  (preprocess
   (pps ppx_jane)))

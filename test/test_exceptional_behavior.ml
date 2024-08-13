@@ -16,17 +16,17 @@ let require_does_raise here f =
   Expect_test_helpers_base.require_does_raise
     ~show_backtrace:true
     ~hide_positions:false
-    here
+    ~here
     f;
   (* check it to see that our function is in the backtrace, but don't print *)
-  let with_backtrace = Expect_test_helpers_base.expect_test_output [%here] in
+  let with_backtrace = Expect_test_helpers_base.expect_test_output () in
   if not (String.is_substring with_backtrace ~substring:"my_function_that_fails")
   then print_endline with_backtrace;
   (* re-run the function, this time just printing the message *)
   Expect_test_helpers_base.require_does_raise
     ~show_backtrace:false
     ~hide_positions:true
-    here
+    ~here
     f
 ;;
 

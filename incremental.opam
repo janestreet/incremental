@@ -16,6 +16,7 @@ depends: [
   "janestreet_lru_cache"
   "ppx_jane"
   "ppx_optcomp"
+  "textutils_kernel"
   "uopt"
   "dune"                 {>= "3.11.0"}
 ]

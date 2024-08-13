@@ -33,9 +33,9 @@ let%expect_test "stabilization that propagates values through an existing graph 
      stabilization, either on purpose or by accident. *)
   stabilize ();
   Var.set v' 4;
-  Expect_test_helpers_core.require_no_allocation [%here] stabilize;
+  Expect_test_helpers_core.require_no_allocation stabilize;
   Var.set v' 5;
   Var.set w' 5;
-  Expect_test_helpers_core.require_no_allocation [%here] stabilize;
+  Expect_test_helpers_core.require_no_allocation stabilize;
   Observer.disallow_future_use o
 ;;

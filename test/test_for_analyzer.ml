@@ -29,8 +29,8 @@ let print_nodes node_list pack output_node =
         ~recomputed_at
         ~changed_at
         ~height
-        ->
-    nodes
+      ->
+      nodes
       := { id; kind; cutoff; children; bind_children; recomputed_at; changed_at; height }
          :: !nodes);
   let min_id_opt =

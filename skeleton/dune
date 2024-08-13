@@ -1,0 +1,7 @@
+(library
+ (name incremental_skeleton)
+ (public_name incremental.skeleton)
+ (libraries core incremental textutils_kernel.text_block
+   core_kernel.reversed_list)
+ (preprocess
+  (pps ppx_jane)))

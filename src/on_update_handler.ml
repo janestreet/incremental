@@ -31,11 +31,11 @@ let create f ~at:created_at = { f; previous_update_kind = Never_been_updated; cr
 
 let really_run t (node_update : _ Node_update.t) =
   t.previous_update_kind
-    <- (match node_update with
-        | Necessary _ -> Necessary
-        | Changed _ -> Changed
-        | Invalidated -> Invalidated
-        | Unnecessary -> Unnecessary);
+  <- (match node_update with
+      | Necessary _ -> Necessary
+      | Changed _ -> Changed
+      | Invalidated -> Invalidated
+      | Unnecessary -> Unnecessary);
   t.f node_update
 ;;
 

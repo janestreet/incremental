@@ -163,7 +163,7 @@ let unlink_from_observing t =
   let observing = t.observing in
   if phys_equal t (Uopt.value_exn observing.observers) then observing.observers <- next;
   observing.num_on_update_handlers
-    <- observing.num_on_update_handlers - List.length t.on_update_handlers;
+  <- observing.num_on_update_handlers - List.length t.on_update_handlers;
   t.on_update_handlers <- []
 ;;
 

@@ -1105,7 +1105,7 @@ and maybe_change_value : type a. a Node.t -> a -> unit =
         if can_recompute_now
         then (
           t.num_nodes_recomputed_directly_because_one_child
-            <- t.num_nodes_recomputed_directly_because_one_child + 1;
+          <- t.num_nodes_recomputed_directly_because_one_child + 1;
           recompute parent)
         else if parent.height <= Recompute_heap.min_height t.recompute_heap
         then (
@@ -1114,7 +1114,7 @@ and maybe_change_value : type a. a Node.t -> a -> unit =
              [parent] immediately and save adding it to and then removing it from the
              recompute heap. *)
           t.num_nodes_recomputed_directly_because_min_height
-            <- t.num_nodes_recomputed_directly_because_min_height + 1;
+          <- t.num_nodes_recomputed_directly_because_min_height + 1;
           recompute parent)
         else (
           if debug then assert (Node.needs_to_be_computed parent);
@@ -1169,11 +1169,13 @@ let disallow_future_use internal_observer =
 ;;
 
 let disallow_finalized_observers t =
-  while Thread_safe_queue.length t.finalized_observers > 0 do
-    let (T internal_observer) = Thread_safe_queue.dequeue_exn t.finalized_observers in
+  let disallow_if_finalized (Internal_observer.Packed.T internal_observer) =
     if List.is_empty internal_observer.on_update_handlers
     then disallow_future_use internal_observer
-  done
+  in
+  Thread_safe_queue.dequeue_until_empty
+    ~f:disallow_if_finalized
+    t.finalized_observers [@nontail]
 ;;
 
 let observer_finalizer t =
@@ -1221,8 +1223,8 @@ let add_new_observers t =
       let observing = internal_observer.observing in
       let was_necessary = Node.is_necessary observing in
       observing.num_on_update_handlers
-        <- observing.num_on_update_handlers
-           + List.length internal_observer.on_update_handlers;
+      <- observing.num_on_update_handlers
+         + List.length internal_observer.on_update_handlers;
       let old_observers = observing.observers in
       if Uopt.is_some old_observers
       then (
@@ -1300,10 +1302,10 @@ let set_var var value =
 ;;
 
 let reclaim_space_in_weak_hashtbls t =
-  while Thread_safe_queue.length t.weak_hashtbls > 0 do
-    let (T weak_hashtbl) = Thread_safe_queue.dequeue_exn t.weak_hashtbls in
+  let reclaim (Packed_weak_hashtbl.T weak_hashtbl) =
     Weak_hashtbl.reclaim_space_for_keys_with_unused_data weak_hashtbl
-  done
+  in
+  Thread_safe_queue.dequeue_until_empty ~f:reclaim t.weak_hashtbls [@nontail]
 ;;
 
 let stabilize_start t =
@@ -1804,10 +1806,10 @@ let at_intervals (clock : Clock.t) interval =
      recomputed. *)
   Node.set_cutoff main Cutoff.never;
   at_intervals.alarm
-    <- add_alarm
-         clock
-         ~at:(next_interval_alarm_strict clock ~base ~interval)
-         (Alarm_value.create (At_intervals at_intervals));
+  <- add_alarm
+       clock
+       ~at:(next_interval_alarm_strict clock ~base ~interval)
+       (Alarm_value.create (At_intervals at_intervals));
   main
 ;;
 
@@ -1879,10 +1881,10 @@ let advance_clock (clock : Clock.t) ~to_ =
         if Node.is_valid main
         then (
           at_intervals.alarm
-            <- add_alarm
-                 clock
-                 ~at:(next_interval_alarm_strict clock ~base ~interval)
-                 alarm_value;
+          <- add_alarm
+               clock
+               ~at:(next_interval_alarm_strict clock ~base ~interval)
+               alarm_value;
           make_stale main)
       | Snapshot { main; value_at; _ } ->
         if debug then assert (Node.is_valid main);
@@ -1986,7 +1988,7 @@ module Expert = struct
       if Option.is_some state.only_in_debug.currently_running_node
       then
         state.only_in_debug.expert_nodes_created_by_current_node
-          <- T node :: state.only_in_debug.expert_nodes_created_by_current_node;
+        <- T node :: state.only_in_debug.expert_nodes_created_by_current_node;
     node
   ;;
 

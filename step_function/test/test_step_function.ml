@@ -30,7 +30,7 @@ let%expect_test "empty [~steps] is same as constant" =
 ;;
 
 let%expect_test "[create_exn] raise" =
-  require_does_raise [%here] ~hide_positions:true (fun () ->
+  require_does_raise ~hide_positions:true (fun () ->
     create_exn ~init:13 ~steps:[ 1, 14; 0, 15 ]);
   [%expect
     {|

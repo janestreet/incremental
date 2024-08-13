@@ -115,17 +115,17 @@ let user_info t =
 
 let set_user_info t info =
   t.user_info
-    <- (match info with
-        | None -> None
-        | Some i -> Some (Info i))
+  <- (match info with
+      | None -> None
+      | Some i -> Some (Info i))
 ;;
 
 let append_user_info_graphviz t ~label ~attrs =
   let new_ = Dot_user_info.dot ~label ~attributes:attrs in
   t.user_info
-    <- (match t.user_info with
-        | None -> Some new_
-        | Some other -> Some (Dot_user_info.append other new_))
+  <- (match t.user_info with
+      | None -> Some new_
+      | Some other -> Some (Dot_user_info.append other new_))
 ;;
 
 let edge_is_stale ~child ~parent =
@@ -330,7 +330,7 @@ let invariant (type a) (invariant_a : a -> unit) (t : a t) =
               ~expect:
                 (List.length t.on_update_handlers
                  + fold_observers t ~init:0 ~f:(fun n { on_update_handlers; _ } ->
-                     n + List.length on_update_handlers))))
+                   n + List.length on_update_handlers))))
       ~num_parents:
         (check (fun num_parents ->
            assert (num_parents >= 0);
@@ -491,7 +491,7 @@ let run_on_update_handlers t node_update ~now =
 let set_kind t kind =
   t.kind <- kind;
   t.my_parent_index_in_child_at_index
-    <- Array.create ~len:(Kind.initial_num_children kind) (-1)
+  <- Array.create ~len:(Kind.initial_num_children kind) (-1)
 ;;
 
 let create state created_in kind =
@@ -543,9 +543,9 @@ let make_space_for_parent_if_necessary t =
   then (
     let new_max_num_parents = 2 * max_num_parents t in
     t.parent1_and_beyond
-      <- Uniform_array.realloc t.parent1_and_beyond ~len:(new_max_num_parents - 1);
+    <- Uniform_array.realloc t.parent1_and_beyond ~len:(new_max_num_parents - 1);
     t.my_child_index_in_parent_at_index
-      <- Array.realloc t.my_child_index_in_parent_at_index ~len:new_max_num_parents (-1));
+    <- Array.realloc t.my_child_index_in_parent_at_index ~len:new_max_num_parents (-1));
   if debug then assert (t.num_parents < max_num_parents t)
 ;;
 
@@ -556,7 +556,7 @@ let make_space_for_child_if_necessary t ~child_index =
     if debug then assert (child_index = max_num_children);
     let new_max_num_children = Int.max 2 (2 * max_num_children) in
     t.my_parent_index_in_child_at_index
-      <- Array.realloc t.my_parent_index_in_child_at_index ~len:new_max_num_children (-1));
+    <- Array.realloc t.my_parent_index_in_child_at_index ~len:new_max_num_children (-1));
   if debug then assert (child_index < Array.length t.my_parent_index_in_child_at_index)
 ;;
 
@@ -646,8 +646,8 @@ module Packed = struct
   let invariant (T t) = invariant ignore t
 
   module As_list (M : sig
-    val next : Packed.t -> Packed.t Uopt.t
-  end) =
+      val next : Packed.t -> Packed.t Uopt.t
+    end) =
   struct
     type t = Packed.t Uopt.t
 

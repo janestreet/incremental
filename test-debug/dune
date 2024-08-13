@@ -1,7 +1,9 @@
 (library
  (name incremental_debug_test)
- (libraries core expect_test_helpers_core incremental incremental_debug
-   core_unix.time_ns_unix)
+ (libraries core core_unix expect_test_helpers_core.expect_test_helpers_base
+   expect_test_helpers_core patdiff.expect_test_patdiff expect_test_graphviz
+   expect_test_sexp_diff incremental incremental_skeleton incremental_debug
+   core_unix.time_ns_unix core_kernel.timing_wheel)
  (flags :standard -w -60)
  (preprocess
   (pps ppx_jane)))
@@ -10,7 +12,8 @@
  (targets import.ml test_config.ml test_config.mli test_for_analyzer.ml
    test_for_analyzer.mli test_generics.ml test_generics.mli
    test_incremental.ml test_incremental.mli test_exceptional_behavior.ml
-   test_exceptional_behavior.mli test_let_syntax.ml test_let_syntax.mli)
+   test_exceptional_behavior.mli test_let_syntax.ml test_let_syntax.mli
+   test_skeleton.ml test_skeleton.mli)
  (deps
   (:first_dep generate_debug_test_lib.sh)
   (glob_files ../test/*.ml)

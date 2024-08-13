@@ -126,11 +126,11 @@ let child_changed
       (* We only reach this case if we have already done a full compute, in which case
          [Uopt.is_some t.fold_value] and [Uopt.is_some old_value_opt]. *)
       t.fold_value
-        <- Uopt.some
-             (t.update
-                (Uopt.value_exn t.fold_value)
-                ~old_value:(Uopt.value_exn old_value_opt)
-                ~new_value))
+      <- Uopt.some
+           (t.update
+              (Uopt.value_exn t.fold_value)
+              ~old_value:(Uopt.value_exn old_value_opt)
+              ~new_value))
     else if t.num_changes_since_last_full_compute < t.full_compute_every_n_changes
     then force_full_compute t
 ;;

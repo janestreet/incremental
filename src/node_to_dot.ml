@@ -36,14 +36,14 @@ let save_dot ~emit_bind_edges out ts =
         ~recomputed_at:_
         ~changed_at:_
         ~height
-        ->
-    let name = node_name id in
-    Hash_set.add seen id;
-    print_node out ~name ~kind ~height ~user_info;
-    List.iter children ~f:(fun child_id ->
-      fprintf out "  %s -> %s\n" (node_name child_id) name);
-    List.iter bind_children ~f:(fun bind_child_id ->
-      bind_edges := (bind_child_id, id) :: !bind_edges));
+      ->
+      let name = node_name id in
+      Hash_set.add seen id;
+      print_node out ~name ~kind ~height ~user_info;
+      List.iter children ~f:(fun child_id ->
+        fprintf out "  %s -> %s\n" (node_name child_id) name);
+      List.iter bind_children ~f:(fun bind_child_id ->
+        bind_edges := (bind_child_id, id) :: !bind_edges));
   if emit_bind_edges
   then
     List.iter !bind_edges ~f:(fun (bind_child_id, id) ->

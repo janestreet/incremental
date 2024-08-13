@@ -3,8 +3,8 @@ open Import
 open Types.Kind
 
 module As_adjust_heights_list = Node.Packed.As_list (struct
-  let next (Node.Packed.T node) = node.next_in_adjust_heights_heap
-end)
+    let next (Node.Packed.T node) = node.next_in_adjust_heights_heap
+  end)
 
 module Nodes_by_height = struct
   type t = As_adjust_heights_list.t Uniform_array.t [@@deriving sexp_of]

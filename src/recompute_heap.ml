@@ -2,8 +2,8 @@ open Core
 open Import
 
 module As_recompute_list = Node.Packed.As_list (struct
-  let next (Node.Packed.T node) = node.next_in_recompute_heap
-end)
+    let next (Node.Packed.T node) = node.next_in_recompute_heap
+  end)
 
 module Nodes_by_height = struct
   type t = As_recompute_list.t Uniform_array.t [@@deriving sexp_of]

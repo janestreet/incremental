@@ -220,9 +220,9 @@
     So, all necessary nodes are kept alive, from the perspective of the garbage collector.
 
     If an observer has no on-update handlers and user code no longer holds on to it,
-    incremental (via a finalizer on the observer), detects this and disallows future use
-    of the observer, making the node it observed unnecessary if it is not necessary for
-    another reason.  One can eagerly remove an observer by calling [disallow_future_use].
+    incremental (via a finalizer on the observer) detects this and disallows future use of
+    the observer, making the node it observed unnecessary if it is not necessary for
+    another reason. One can eagerly remove an observer by calling [disallow_future_use].
     Because finalizers may be called much later than when an observer actually becomes
     unreachable, it is preferable to disable observers using [disallow_future_use] to
     avoid useless propagation during stabilizations.
@@ -1066,7 +1066,9 @@ module type Incremental = sig
         finalization). *)
     val num_active_observers : _ t -> int
 
-    (** {2 constant-time stats} These are counters that are constant time to read, and
+    (** {2 constant-time stats}
+
+        These are counters that are constant time to read, and
         that are automatically updated in the ordinary course.  *)
 
     val max_height_seen : _ t -> int
@@ -1968,23 +1970,23 @@ module type Incremental = sig
 
     include
       S_gen
-        with type 'a t = ('a, state_witness) incremental
-        with type Before_or_after.t = Before_or_after.t
-        with type Clock.t = state_witness Clock.t
-        with type 'a Cutoff.t = 'a Cutoff.t
-        with type 'a Expert.Dependency.t = ('a, state_witness) Expert.Dependency.t
-        with type 'a Expert.Node.t = ('a, state_witness) Expert.Node.t
-        with type Expert.Step_result.t = Expert.Step_result.t
-        with type 'a Observer.t = ('a, state_witness) Observer.t
-        with type 'a Observer.Update.t = 'a Observer.Update.t
-        with type Packed.t = Packed.t
-        with type Scope.t = state_witness Scope.t
-        with type State.t = state_witness State.t
-        with type State.Stats.t = State.Stats.t
-        with type ('a, 'b) Unordered_array_fold_update.t =
-          ('a, 'b) Unordered_array_fold_update.t
-        with type 'a Update.t = 'a Update.t
-        with type 'a Var.t = ('a, state_witness) Var.t
+      with type 'a t = ('a, state_witness) incremental
+      with type Before_or_after.t = Before_or_after.t
+      with type Clock.t = state_witness Clock.t
+      with type 'a Cutoff.t = 'a Cutoff.t
+      with type 'a Expert.Dependency.t = ('a, state_witness) Expert.Dependency.t
+      with type 'a Expert.Node.t = ('a, state_witness) Expert.Node.t
+      with type Expert.Step_result.t = Expert.Step_result.t
+      with type 'a Observer.t = ('a, state_witness) Observer.t
+      with type 'a Observer.Update.t = 'a Observer.Update.t
+      with type Packed.t = Packed.t
+      with type Scope.t = state_witness Scope.t
+      with type State.t = state_witness State.t
+      with type State.Stats.t = State.Stats.t
+      with type ('a, 'b) Unordered_array_fold_update.t =
+        ('a, 'b) Unordered_array_fold_update.t
+      with type 'a Update.t = 'a Update.t
+      with type 'a Var.t = ('a, state_witness) Var.t
   end
 
   (** [Make] returns a new incremental implementation.  [Make] uses [Config.Default

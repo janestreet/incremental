@@ -1,6 +1,6 @@
 (library
  (name incremental_step_function_test)
- (libraries expect_test_helpers_core.expect_test_helpers_base
+ (libraries core expect_test_helpers_core.expect_test_helpers_base
    incremental_step_function)
  (preprocess
   (pps ppx_jane)))

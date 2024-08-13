@@ -408,10 +408,10 @@ module Make () = Make_with_config (Config.Default ()) ()
 include Generic
 
 module Add_witness0 (M : sig
-  type t [@@deriving sexp_of]
+    type t [@@deriving sexp_of]
 
-  include Invariant.S with type t := t
-end) : sig
+    include Invariant.S with type t := t
+  end) : sig
   type 'w t = M.t [@@deriving sexp_of]
 
   include Invariant.S1 with type 'a t := 'a t
@@ -423,10 +423,10 @@ end = struct
 end
 
 module Add_witness1 (M : sig
-  type 'a t [@@deriving sexp_of]
+    type 'a t [@@deriving sexp_of]
 
-  include Invariant.S1 with type 'a t := 'a t
-end) : sig
+    include Invariant.S1 with type 'a t := 'a t
+  end) : sig
   type ('a, 'w) t = 'a M.t [@@deriving sexp_of]
 
   include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
@@ -449,20 +449,20 @@ module Expert = struct
     include Dependency
 
     include Add_witness1 (struct
-      include Dependency
+        include Dependency
 
-      let invariant _ _ = ()
-    end)
+        let invariant _ _ = ()
+      end)
   end
 
   module Node = struct
     include Node
 
     include Add_witness1 (struct
-      include Node
+        include Node
 
-      let invariant _ _ = ()
-    end)
+        let invariant _ _ = ()
+      end)
   end
 
   module Step_result = State.Step_result
@@ -505,23 +505,23 @@ module type S = sig
 
   include
     S_gen
-      with type 'a t = ('a, state_witness) incremental
-      with type Before_or_after.t = Before_or_after.t
-      with type Clock.t = state_witness Clock.t
-      with type 'a Cutoff.t = 'a Cutoff.t
-      with type 'a Expert.Dependency.t = ('a, state_witness) Expert.Dependency.t
-      with type 'a Expert.Node.t = ('a, state_witness) Expert.Node.t
-      with type Expert.Step_result.t = Expert.Step_result.t
-      with type 'a Observer.t = ('a, state_witness) Observer.t
-      with type 'a Observer.Update.t = 'a Observer.Update.t
-      with type Packed.t = Packed.t
-      with type Scope.t = state_witness Scope.t
-      with type State.t = state_witness State.t
-      with type State.Stats.t = State.Stats.t
-      with type ('a, 'b) Unordered_array_fold_update.t =
-        ('a, 'b) Unordered_array_fold_update.t
-      with type 'a Update.t = 'a Update.t
-      with type 'a Var.t = ('a, state_witness) Var.t
+    with type 'a t = ('a, state_witness) incremental
+    with type Before_or_after.t = Before_or_after.t
+    with type Clock.t = state_witness Clock.t
+    with type 'a Cutoff.t = 'a Cutoff.t
+    with type 'a Expert.Dependency.t = ('a, state_witness) Expert.Dependency.t
+    with type 'a Expert.Node.t = ('a, state_witness) Expert.Node.t
+    with type Expert.Step_result.t = Expert.Step_result.t
+    with type 'a Observer.t = ('a, state_witness) Observer.t
+    with type 'a Observer.Update.t = 'a Observer.Update.t
+    with type Packed.t = Packed.t
+    with type Scope.t = state_witness Scope.t
+    with type State.t = state_witness State.t
+    with type State.Stats.t = State.Stats.t
+    with type ('a, 'b) Unordered_array_fold_update.t =
+      ('a, 'b) Unordered_array_fold_update.t
+    with type 'a Update.t = 'a Update.t
+    with type 'a Var.t = ('a, state_witness) Var.t
 end
 
 module Private = struct
