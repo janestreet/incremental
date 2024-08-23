@@ -123,7 +123,7 @@ module Make (Incr : Incremental.S) = struct
     =
     let scope = Incr.Scope.current () in
     let store = Store.create store_params in
-    let%bind.Incr x = x in
+    let%bind.Incr x in
     let default () = Incr.Scope.within scope ~f:(fun () -> f x) in
     let (`Found | `Added), graph = Store.find_or_add store ~key:x ~default in
     graph
