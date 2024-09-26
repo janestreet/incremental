@@ -6,10 +6,10 @@ let%expect_test "render dot file" =
   let n1 = Incr.const 1 in
   let n2 = Incr.const 2 in
   let res =
-    let%bind n1 = n1 in
+    let%bind n1 in
     if n1 % 2 = 0
     then (
-      let%map n2 = n2 in
+      let%map n2 in
       n1 * n2)
     else n2
   in
@@ -115,15 +115,14 @@ let%expect_test "with binds" =
   let c, _ci = mk_incr 4 in
   let node =
     let is_even =
-      let%map a = a in
+      let%map a in
       a % 2 = 0
     in
-    let%bind is_even = is_even in
+    let%bind is_even in
     if is_even
     then return 0
     else (
-      let%map b = b
-      and c = c in
+      let%map b and c in
       b * c)
   in
   let observer = Incr.observe node in
