@@ -215,9 +215,9 @@ val sum_sq : int Incr.Observer.t = <abstr>
 val print : unit -> unit = <fun>
 # let () = print ()
 500500
-((created    2008)
- (recomputed 2008)
- (changed    2008))
+((created    2004)
+ (recomputed 2004)
+ (changed    2004))
 ```
 
 Here we can see that we're creating a bunch more incremental
@@ -236,8 +236,8 @@ val change :
     print ()
 500501
 ((created    0)
- (recomputed 7)
- (changed    6))
+ (recomputed 6)
+ (changed    5))
 ```
 
 Now if we add a new key that wasn't in the map, we'll see nodes being
@@ -249,8 +249,8 @@ created as well.
     print ()
 501503
 ((created    2)
- (recomputed 7)
- (changed    6))
+ (recomputed 6)
+ (changed    5))
 ```
 
 Grabbing statistics like this from incremental is useful because it
