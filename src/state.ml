@@ -1199,7 +1199,7 @@ let create_observer ?(should_finalize = true) (observing : _ Node.t) =
   Stack.push t.new_observers (T internal_observer);
   let observer = ref internal_observer in
   if should_finalize
-  then Gc.Expert.add_finalizer_exn observer (unstage (observer_finalizer t));
+  then Gc.Expert.add_finalizer_ignore observer (unstage (observer_finalizer t));
   t.num_active_observers <- t.num_active_observers + 1;
   observer
 ;;

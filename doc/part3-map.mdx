@@ -261,11 +261,10 @@ Compare the types of each function:
 = <fun>
 # let _ = Incr_map.mapi'
 - : ?instrumentation:Incr_map.Instrumentation.t ->
-    ?comparator:('a, 'b) Comparator.Module.t ->
-    ?cutoff:'c Incr.Cutoff.t ->
-    ?data_equal:('c -> 'c -> bool) ->
-    ('a, 'c, 'b) Map.t Incr.t ->
-    f:(key:'a -> data:'c Incr.t -> 'd Incr.t) -> ('a, 'd, 'b) Map.t Incr.t
+    ?cutoff:'a Incr.Cutoff.t ->
+    ?data_equal:('a -> 'a -> bool) ->
+    ('b, 'a, 'c) Map.t Incr.t ->
+    f:(key:'b -> data:'a Incr.t -> 'd Incr.t) -> ('b, 'd, 'c) Map.t Incr.t
 = <fun>
 ```
 

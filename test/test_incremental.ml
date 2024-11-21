@@ -3190,7 +3190,7 @@ struct
           stabilize_ [%here];
           Gc.keep_alive o;
           let r = ref None in
-          Gc.Expert.add_finalizer_exn o (fun o -> r := Some o);
+          Gc.Expert.add_finalizer_ignore o (fun o -> r := Some o);
           Gc.full_major ();
           stabilize_ [%here];
           let o = Option.value_exn !r in
