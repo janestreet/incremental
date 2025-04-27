@@ -32,7 +32,7 @@ type ('a, 'acc) t = ('a, 'acc) Types.Unordered_array_fold.t =
 let same (t1 : (_, _) t) (t2 : (_, _) t) = phys_same t1 t2
 
 let invariant invariant_a invariant_acc t =
-  Invariant.invariant [%here] t [%sexp_of: (_, _) t] (fun () ->
+  Invariant.invariant t [%sexp_of: (_, _) t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~main:

@@ -19,7 +19,7 @@ type 'a t = 'a Types.Step_function_node.t =
 let phys_same (t1 : _ t) (t2 : _ t) = phys_same t1 t2
 
 let invariant invariant_a t =
-  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
+  Invariant.invariant t [%sexp_of: _ t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~main:

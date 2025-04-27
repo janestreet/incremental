@@ -598,9 +598,5 @@ let slow_get_child : type a. a t -> index:_ -> Node.Packed.t =
   | _ ->
     with_return (fun r ->
       iteri_children t ~f:(fun i child -> if i = index then r.return child);
-      failwiths
-        ~here:[%here]
-        "Kind.slow_get_child got invalid index"
-        (index, t)
-        [%sexp_of: int * _ t])
+      failwiths "Kind.slow_get_child got invalid index" (index, t) [%sexp_of: int * _ t])
 ;;

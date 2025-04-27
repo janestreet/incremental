@@ -1,4 +1,4 @@
-(** A module internal to Incremental.  Users should see {!Incremental_intf}.
+(** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     An [Expert.t] is the only kind of node that can update its value and set of children
     incrementally. The operations to change the set of children and to react to various

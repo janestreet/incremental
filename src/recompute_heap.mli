@@ -1,9 +1,8 @@
-(** A module internal to Incremental.  Users should see {!Incremental_intf}.
+(** A module internal to Incremental. Users should see {!Incremental_intf}.
 
-    The recompute heap holds the set of nodes such that [Node.needs_to_be_computed].  It
-    is used during stabilization to visit the nodes that need to be computed in
-    topological order, using the recompute heap to visit them in increasing order of
-    height. *)
+    The recompute heap holds the set of nodes such that [Node.needs_to_be_computed]. It is
+    used during stabilization to visit the nodes that need to be computed in topological
+    order, using the recompute heap to visit them in increasing order of height. *)
 
 open! Core
 open! Import
@@ -30,7 +29,7 @@ val min_height : t -> int
 (** [add t node] should only be called iff:
 
     {[
-      not (Node.is_in_recompute_heap node)
+      (not (Node.is_in_recompute_heap node))
       && Node.needs_to_be_computed node
       && node.height <= max_height_allowed t
     ]} *)
@@ -39,12 +38,11 @@ val add : t -> _ Node.t -> unit
 (** [remove t node] should only be called iff:
 
     {[
-      Node.is_in_recompute_heap node
-      && not (Node.needs_to_be_computed node)
+      Node.is_in_recompute_heap node && not (Node.needs_to_be_computed node)
     ]} *)
 val remove : t -> _ Node.t -> unit
 
-(** [remove_min t] removes and returns a node in [t] with minimum height.  [remove_min]
+(** [remove_min t] removes and returns a node in [t] with minimum height. [remove_min]
     should only be called if [length t > 0]. *)
 val remove_min : t -> Node.Packed.t
 

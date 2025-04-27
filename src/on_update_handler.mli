@@ -1,4 +1,4 @@
-(** A module internal to Incremental.  Users should see {!Incremental_intf}.
+(** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     An on-update handler is stored in a node or an observer, and is run at the end of a
     stabilization either when the value of the node changes, when the handler is

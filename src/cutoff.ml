@@ -14,7 +14,7 @@ type 'a t =
 [@@deriving sexp_of]
 
 let invariant _ t =
-  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
+  Invariant.invariant t [%sexp_of: _ t] (fun () ->
     match t with
     | Always | Never | Phys_equal | Compare _ | Equal _ | F _ -> ())
 ;;

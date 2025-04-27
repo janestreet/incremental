@@ -773,7 +773,10 @@ struct
         disallow_future_use o
       ;;
 
-      let print_dot_file node = Packed.save_dot Out_channel.stdout [ pack node ]
+      let print_dot_file node =
+        let out = Format.formatter_of_out_channel Out_channel.stdout in
+        Packed.save_dot out [ pack node ]
+      ;;
 
       let%expect_test "plain node graphviz" =
         let n = return "hello" in
@@ -3190,7 +3193,7 @@ struct
           stabilize_ [%here];
           Gc.keep_alive o;
           let r = ref None in
-          Gc.Expert.add_finalizer_exn o (fun o -> r := Some o);
+          Gc.Expert.add_finalizer_ignore o (fun o -> r := Some o);
           Gc.full_major ();
           stabilize_ [%here];
           let o = Option.value_exn !r in
