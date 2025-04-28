@@ -19,7 +19,7 @@ type 'a t = 'a Types.Var.t =
 [@@deriving fields ~iterators:iter, sexp_of]
 
 let invariant invariant_a t =
-  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
+  Invariant.invariant t [%sexp_of: _ t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~value:(check invariant_a)

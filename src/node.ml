@@ -289,7 +289,7 @@ let fold_observers (t : _ t) ~init ~f =
 let iter_observers t ~f = fold_observers t ~init:() ~f:(fun () observer -> f observer)
 
 let invariant (type a) (invariant_a : a -> unit) (t : a t) =
-  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
+  Invariant.invariant t [%sexp_of: _ t] (fun () ->
     [%test_eq: bool] (needs_to_be_computed t) (is_in_recompute_heap t);
     if is_necessary t
     then (
@@ -441,7 +441,7 @@ let unsafe_value t = Uopt.unsafe_value t.value_opt
 let value_exn t =
   if Uopt.is_some t.value_opt
   then Uopt.unsafe_value t.value_opt
-  else failwiths ~here:[%here] "attempt to get value of an invalid node" t [%sexp_of: _ t]
+  else failwiths "attempt to get value of an invalid node" t [%sexp_of: _ t]
 ;;
 
 let get_cutoff t = t.cutoff

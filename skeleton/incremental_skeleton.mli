@@ -18,7 +18,7 @@ end
 (** Creates a static snapshot of the current incremental graph.
 
     If [?normalize] is true (default false), node IDs will be normalized relative to the
-    minimum node ID in the graph. This is primarily useful for tests.  *)
+    minimum node ID in the graph. This is primarily useful for tests. *)
 val snapshot : ?normalize:bool -> _ Incremental.State.t -> t
 
 (** Converts a [t] to a dot string that can be rendered by graphviz. *)

@@ -15,8 +15,8 @@ val constant : 'a -> 'a t
 
 (** [create_exn ~init ~steps:[(t_1, v_1); ...; (t_n, vn)]] is the step function [t] with
     [value t ~at = init] for [at < t_1], [value t ~at = vi] for [t_i <= at < t_i+1].
-    [create_exn] raises if the times aren't in nondecreasing order, i.e.  if for some [i <
-    j], [ti > tj]. *)
+    [create_exn] raises if the times aren't in nondecreasing order, i.e. if for some
+    [i < j], [ti > tj]. *)
 val create_exn : init:'a -> steps:(Time_ns.t * 'a) list -> 'a t
 
 val create_from_sequence : init:'a -> steps:(Time_ns.t * 'a) Sequence.t -> 'a t

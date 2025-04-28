@@ -1,4 +1,4 @@
-(** A module internal to Incremental.  Users should see {!Incremental_intf}.
+(** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     An ['a If_then_else.t] is a kind of DAG node. *)
 

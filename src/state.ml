@@ -22,7 +22,7 @@ module Run_on_update_handlers = struct
   [@@deriving sexp_of]
 
   let invariant (T (node, _node_update) as t) =
-    Invariant.invariant [%here] t [%sexp_of: t] (fun () -> Node.invariant ignore node)
+    Invariant.invariant t [%sexp_of: t] (fun () -> Node.invariant ignore node)
   ;;
 end
 
@@ -35,7 +35,7 @@ module Only_in_debug = struct
   [@@deriving fields ~iterators:iter, sexp_of]
 
   let invariant t =
-    Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
+    Invariant.invariant t [%sexp_of: t] (fun () ->
       Fields.iter
         ~currently_running_node:ignore
         ~expert_nodes_created_by_current_node:ignore)
@@ -148,7 +148,7 @@ module Clock = struct
   [@@deriving fields ~iterators:iter, sexp_of]
 
   let invariant t =
-    Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
+    Invariant.invariant t [%sexp_of: t] (fun () ->
       let check f = Invariant.check_field t f in
       Fields.iter
         ~now:
@@ -230,14 +230,13 @@ let invariant t =
   match t.status with
   | Stabilize_previously_raised _ -> ()
   | Running_on_update_handlers | Stabilizing | Not_stabilizing ->
-    Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
+    Invariant.invariant t [%sexp_of: t] (fun () ->
       let check f = Invariant.check_field t f in
       iter_observers t ~f:(fun (T internal_observer) ->
         (match internal_observer.state with
          | In_use | Disallowed -> ()
          | Created | Unlinked ->
            failwiths
-             ~here:[%here]
              "member of all_observers with unexpected state"
              internal_observer
              [%sexp_of: _ Internal_observer.t]);
@@ -323,7 +322,6 @@ let ensure_not_stabilizing t ~name ~allow_in_update_handler =
     then (
       let backtrace = Backtrace.get () in
       failwiths
-        ~here:[%here]
         (sprintf "cannot %s during on-update handlers" name)
         backtrace
         [%sexp_of: Backtrace.t])
@@ -334,7 +332,6 @@ let ensure_not_stabilizing t ~name ~allow_in_update_handler =
   | Stabilizing ->
     let backtrace = Backtrace.get () in
     failwiths
-      ~here:[%here]
       (sprintf "cannot %s during stabilization" name)
       backtrace
       [%sexp_of: Backtrace.t]
@@ -557,7 +554,6 @@ and became_necessary : type a. a Node.t -> unit =
   if Node.is_valid node && not (Scope.is_necessary node.created_in)
   then
     failwiths
-      ~here:[%here]
       "Trying to make a node necessary whose defining bind is not necessary"
       node
       [%sexp_of: _ Node.t];
@@ -633,7 +629,7 @@ let run_with_scope t scope ~f =
 
 let within_scope t scope ~f =
   if not (Scope.is_valid scope)
-  then failwiths ~here:[%here] "attempt to run within an invalid scope" t [%sexp_of: t];
+  then failwiths "attempt to run within an invalid scope" t [%sexp_of: t];
   run_with_scope t scope ~f
 ;;
 
@@ -1127,11 +1123,7 @@ let[@inline always] recompute_first_node_that_is_necessary r =
   let (T node) = Recompute_heap.remove_min r in
   if debug && not (Node.needs_to_be_computed node)
   then
-    failwiths
-      ~here:[%here]
-      "node unexpectedly does not need to be computed"
-      node
-      [%sexp_of: _ Node.t];
+    failwiths "node unexpectedly does not need to be computed" node [%sexp_of: _ Node.t];
   recompute node
 ;;
 
@@ -1250,7 +1242,6 @@ let observer_value_exn observer =
       "Observer.value_exn called after stabilize previously raised"
   | Stabilizing ->
     failwiths
-      ~here:[%here]
       "Observer.value_exn called during stabilization"
       observer
       [%sexp_of: _ Observer.t]
@@ -1663,7 +1654,6 @@ let unordered_array_fold
   else if full_compute_every_n_changes <= 0
   then
     failwiths
-      ~here:[%here]
       "unordered_array_fold got non-positive full_compute_every_n_changes"
       full_compute_every_n_changes
       [%sexp_of: int]
@@ -1792,12 +1782,7 @@ let next_interval_alarm_strict (clock : Clock.t) ~base ~interval =
 let at_intervals (clock : Clock.t) interval =
   let t = Clock.incr_state clock in
   if Time_ns.Span.( < ) interval (Timing_wheel.alarm_precision clock.timing_wheel)
-  then
-    failwiths
-      ~here:[%here]
-      "at_intervals got too small interval"
-      interval
-      [%sexp_of: Time_ns.Span.t];
+  then failwiths "at_intervals got too small interval" interval [%sexp_of: Time_ns.Span.t];
   let main = create_node t Uninitialized in
   let base = now clock in
   let at_intervals = { At_intervals.main; base; interval; alarm = Alarm.null; clock } in

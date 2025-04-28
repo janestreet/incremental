@@ -1,4 +1,4 @@
-(** A module internal to Incremental.  Users should see {!Incremental_intf}.
+(** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     A type describing user-controlled metadata optionally attached to nodes, usually for
     the purpose of debugging or inspecting the incremental graph. The core of incremental

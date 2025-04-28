@@ -42,7 +42,7 @@ let iter_nodes_created_on_rhs t ~(f : Node.Packed.t -> unit) =
 ;;
 
 let invariant _invariant_a _invariant_b t =
-  Invariant.invariant [%here] t [%sexp_of: (_, _) t] (fun () ->
+  Invariant.invariant t [%sexp_of: (_, _) t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~main:

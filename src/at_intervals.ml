@@ -13,7 +13,7 @@ type t = Types.At_intervals.t =
 [@@deriving fields ~iterators:iter, sexp_of]
 
 let invariant t =
-  Invariant.invariant [%here] t [%sexp_of: t] (fun () ->
+  Invariant.invariant t [%sexp_of: t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~main:

@@ -58,7 +58,7 @@ let same (t1 : _ t) (t2 : _ t) = phys_same t1 t2
 let same_as_packed (t1 : _ t) (Packed_.T t2) = same t1 t2
 
 let invariant invariant_a t =
-  Invariant.invariant [%here] t [%sexp_of: _ t] (fun () ->
+  Invariant.invariant t [%sexp_of: _ t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~state:ignore
@@ -116,30 +116,19 @@ let invariant invariant_a t =
 
 let value_exn t =
   match t.state with
-  | Created ->
-    failwiths
-      ~here:[%here]
-      "Observer.value_exn called without stabilizing"
-      t
-      [%sexp_of: _ t]
+  | Created -> failwiths "Observer.value_exn called without stabilizing" t [%sexp_of: _ t]
   | Disallowed | Unlinked ->
-    failwiths
-      ~here:[%here]
-      "Observer.value_exn called after disallow_future_use"
-      t
-      [%sexp_of: _ t]
+    failwiths "Observer.value_exn called after disallow_future_use" t [%sexp_of: _ t]
   | In_use ->
     let uopt = t.observing.value_opt in
     if Uopt.is_none uopt
-    then
-      failwiths ~here:[%here] "attempt to get value of an invalid node" t [%sexp_of: _ t];
+    then failwiths "attempt to get value of an invalid node" t [%sexp_of: _ t];
     Uopt.unsafe_value uopt
 ;;
 
 let on_update_exn t on_update_handler =
   match t.state with
-  | Disallowed | Unlinked ->
-    failwiths ~here:[%here] "on_update disallowed" t [%sexp_of: _ t]
+  | Disallowed | Unlinked -> failwiths "on_update disallowed" t [%sexp_of: _ t]
   | Created | In_use ->
     t.on_update_handlers <- on_update_handler :: t.on_update_handlers;
     (match t.state with

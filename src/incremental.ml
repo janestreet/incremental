@@ -47,10 +47,12 @@ module Generic = struct
   module Packed = struct
     include Packed
 
-    let save_dot ?(emit_bind_edges = true) = Node_to_dot.save_dot ~emit_bind_edges
+    let save_dot ?(emit_bind_edges = true) formatter =
+      Node_to_dot.save_dot ~emit_bind_edges formatter
+    ;;
 
-    let save_dot_to_file ?(emit_bind_edges = true) =
-      Node_to_dot.save_dot_to_file ~emit_bind_edges
+    let save_dot_to_file ?(emit_bind_edges = true) file =
+      Node_to_dot.save_dot_to_file ~emit_bind_edges file
     ;;
   end
 
@@ -149,7 +151,6 @@ module Generic = struct
         | Invalidated -> f Invalidated
         | Unnecessary ->
           failwiths
-            ~here:[%here]
             "Incremental bug -- Observer.on_update_exn got unexpected update Unnecessary"
             t
             [%sexp_of: _ t])
@@ -390,7 +391,9 @@ module Make_with_config (Incremental_config : Incremental_config) () = struct
   let save_dot ?(emit_bind_edges = true) out = save_dot ~emit_bind_edges State.t out
 
   let save_dot_to_file ?(emit_bind_edges = true) file =
-    Out_channel.with_file file ~f:(save_dot ~emit_bind_edges)
+    Out_channel.with_file file ~f:(fun output_channel ->
+      let formatter = Format.formatter_of_out_channel output_channel in
+      save_dot ~emit_bind_edges formatter)
   ;;
 
   let lazy_from_fun f = lazy_from_fun State.t f

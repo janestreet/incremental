@@ -1,15 +1,15 @@
-(** A module internal to Incremental.  Users should see {!Incremental_intf}.
+(** A module internal to Incremental. Users should see {!Incremental_intf}.
 
-    An [('a, 'b) Bind.t] is stored inside a bind node where the left-hand side is
-    of type ['a], and the right-hand side is of type ['b Node.t].
+    An [('a, 'b) Bind.t] is stored inside a bind node where the left-hand side is of type
+    ['a], and the right-hand side is of type ['b Node.t].
 
     Each bind [t] has [t.lhs_change : unit Node.t] that is used to detect when [t.lhs]
-    changes.  Computing [t.lhs_change] restructures the graph by calling [t.f] and
+    changes. Computing [t.lhs_change] restructures the graph by calling [t.f] and
     replacing [t.rhs] with the result.
 
     Each bind tracks the set of nodes created on its right-hand side, as a singly-linked
-    list [t.all_nodes_created_on_rhs].  This is used to invalidate all those nodes when
-    the [t.lhs] changes.
+    list [t.all_nodes_created_on_rhs]. This is used to invalidate all those nodes when the
+    [t.lhs] changes.
 
     The key invariant of a bind node [t] is:
 

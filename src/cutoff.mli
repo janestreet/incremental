@@ -1,4 +1,4 @@
-(** A module internal to Incremental.  Users should see {!Incremental_intf}.
+(** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     An ['a Cutoff.t] is a function that returns [true] if propagation of changes should be
     cutoff at a node based on the old value and the (possible) new value of the node. *)

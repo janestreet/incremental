@@ -1,6 +1,6 @@
-(** A module internal to Incremental.  Users should see {!Incremental_intf}.
+(** A module internal to Incremental. Users should see {!Incremental_intf}.
 
-    A [Node.t] is one node in the incremental DAG.  The key invariants of a node [t] are:
+    A [Node.t] is one node in the incremental DAG. The key invariants of a node [t] are:
 
     - if [is_necessary t], then [t.height > c.height], for all children [c] of [t].
     - if [is_necessary t], then [t.height > Scope.height t.created_in].
@@ -10,7 +10,7 @@
 
     Outside of stabilization, when the recompute heap is empty, the invariant implies that
     if [is_necessary t], then [t.recomputed_at >= c.changed_at] for all children [c] of
-    [t].  I.e. it implies that all necessary nodes aren't stale. *)
+    [t]. I.e. it implies that all necessary nodes aren't stale. *)
 
 open! Core
 open! Import
@@ -24,7 +24,7 @@ open! Import
     The extra indirection when following pointers to packed nodes would be too slow.
 
     Consequently, there is a possible bug in which we mix the ['a] from two packed nodes
-    with different types.  We reduce the chance of this bug by minimizing the scopes in
+    with different types. We reduce the chance of this bug by minimizing the scopes in
     which we deal with packed nodes. *)
 module Packed : sig
   type t = Types.Node.Packed.t = T : _ Types.Node.t -> t
@@ -33,8 +33,8 @@ module Packed : sig
   include Invariant.S with type t := t
 
   (** [As_list] allows one to view a node as a list w.r.t. a particular [next] pointer
-      contained within it.  The recompute heap uses this with [next_in_recompute_heap],
-      and the adjust-heights heap uses this with [next_in_adjust_heights_heap]. *)
+      contained within it. The recompute heap uses this with [next_in_recompute_heap], and
+      the adjust-heights heap uses this with [next_in_adjust_heights_heap]. *)
   module As_list (M : sig
       val next : t -> t Uopt.t
     end) : sig
@@ -104,15 +104,15 @@ val is_necessary : _ t -> bool
 val is_valid : _ t -> bool
 
 (** [should_be_invalidated t] returns [true] iff [t] has an invalid child that implies
-    that [t] should be invalid.  It doesn't take into account [t.created_in]. *)
+    that [t] should be invalid. It doesn't take into account [t.created_in]. *)
 val should_be_invalidated : _ t -> bool
 
 (** [edge_is_stale] returns [true] iff [child] has changed since [parent] was computed,
-    and implies [is_stale parent].  [edge_is_stale] is constant-time. *)
+    and implies [is_stale parent]. [edge_is_stale] is constant-time. *)
 val edge_is_stale : child:_ t -> parent:_ t -> bool
 
 (** [is_stale t] is true if [t] has never been computed or if some child changed since [t]
-    was last computed.  [is_stale] doesn't take into account [t.created_in]. *)
+    was last computed. [is_stale] doesn't take into account [t.created_in]. *)
 val is_stale : _ t -> bool
 
 (** [needs_to_be_computed] is [is_necessary t && is_stale t] *)
@@ -120,8 +120,8 @@ val needs_to_be_computed : _ t -> bool
 
 (** Getting the value of a node.
 
-    [value_exn t] raises iff [Uopt.is_none t.value_opt].
-    [unsafe_value t] is safe iff [Uopt.is_some t.value_opt]. *)
+    [value_exn t] raises iff [Uopt.is_none t.value_opt]. [unsafe_value t] is safe iff
+    [Uopt.is_some t.value_opt]. *)
 val value_exn : 'a t -> 'a
 
 val unsafe_value : 'a t -> 'a

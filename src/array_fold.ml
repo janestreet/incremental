@@ -10,7 +10,7 @@ type ('a, 'acc) t = ('a, 'acc) Types.Array_fold.t =
 [@@deriving fields ~iterators:iter, sexp_of]
 
 let invariant invariant_a invariant_acc t =
-  Invariant.invariant [%here] t [%sexp_of: (_, _) t] (fun () ->
+  Invariant.invariant t [%sexp_of: (_, _) t] (fun () ->
     let check f = Invariant.check_field t f in
     Fields.iter
       ~init:(check invariant_acc)

@@ -1,7 +1,7 @@
-(** A module internal to Incremental.  Users should see {!Incremental_intf}.
+(** A module internal to Incremental. Users should see {!Incremental_intf}.
 
-    This module is almost the external interface of the [Expert], but
-    defunctorized, so it's easier to use from the inside of incremental. *)
+    This module is almost the external interface of the [Expert], but defunctorized, so
+    it's easier to use from the inside of incremental. *)
 
 module Dependency : sig
   type 'a t [@@deriving sexp_of]
