@@ -9,9 +9,10 @@
   (pps ppx_jane)))
 
 (rule
- (targets import.ml test_config.ml test_config.mli test_for_analyzer.ml
-   test_for_analyzer.mli test_generics.ml test_generics.mli
-   test_incremental.ml test_incremental.mli test_exceptional_behavior.ml
+ (targets import.ml incremental_test.ml incremental_test.mli test_config.ml
+   test_config.mli test_for_analyzer.ml test_for_analyzer.mli
+   test_generics.ml test_generics.mli test_incremental.ml
+   test_incremental.mli test_exceptional_behavior.ml
    test_exceptional_behavior.mli test_let_syntax.ml test_let_syntax.mli
    test_skeleton.ml test_skeleton.mli)
  (deps
