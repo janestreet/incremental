@@ -797,7 +797,7 @@ module type S_gen = sig
 
     val top : t
     val current : unit -> t
-    val within : t -> f:(unit -> 'a) -> 'a
+    val within : t -> f:(unit -> 'a) @ local -> 'a
     val is_top : t -> bool
   end
 
@@ -1395,7 +1395,7 @@ module type Incremental = sig
 
     (** [within t f] runs [f] in scope [t], which causes all nodes created by [f] to be in
         scope [t]. An exception raised by [f] will be raised by [within] in the usual way. *)
-    val within : 'w State.t -> 'w t -> f:(unit -> 'a) -> 'a
+    val within : 'w State.t -> 'w t -> f:(unit -> 'a) @ local -> 'a
 
     (** [is_scope t] returns [true] iff [t] is the toplevel scope. *)
     val is_top : _ t -> bool

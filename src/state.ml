@@ -614,7 +614,7 @@ let add_parent ~child ~parent ~child_index =
   then Recompute_heap.add t.recompute_heap parent
 ;;
 
-let run_with_scope t scope ~f =
+let run_with_scope t scope ~(f @ local) =
   let saved = t.current_scope in
   t.current_scope <- scope;
   try
@@ -627,7 +627,7 @@ let run_with_scope t scope ~f =
     raise exn
 ;;
 
-let within_scope t scope ~f =
+let within_scope t scope ~(f @ local) =
   if not (Scope.is_valid scope)
   then failwiths "attempt to run within an invalid scope" t [%sexp_of: t];
   run_with_scope t scope ~f
