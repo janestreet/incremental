@@ -145,8 +145,8 @@ let on_update_exn t on_update_handler =
 let unlink_from_observing t =
   let prev = t.prev_in_observing in
   let next = t.next_in_observing in
-  t.prev_in_observing <- Uopt.none;
-  t.next_in_observing <- Uopt.none;
+  t.prev_in_observing <- Uopt.get_none ();
+  t.next_in_observing <- Uopt.get_none ();
   if Uopt.is_some next then (Uopt.unsafe_value next).prev_in_observing <- prev;
   if Uopt.is_some prev then (Uopt.unsafe_value prev).next_in_observing <- next;
   let observing = t.observing in
@@ -159,8 +159,8 @@ let unlink_from_observing t =
 let unlink_from_all t =
   let prev = t.prev_in_all in
   let next = t.next_in_all in
-  t.prev_in_all <- Uopt.none;
-  t.next_in_all <- Uopt.none;
+  t.prev_in_all <- Uopt.get_none ();
+  t.next_in_all <- Uopt.get_none ();
   if Uopt.is_some next then Packed_.set_prev_in_all (Uopt.unsafe_value next) prev;
   if Uopt.is_some prev then Packed_.set_next_in_all (Uopt.unsafe_value prev) next
 ;;

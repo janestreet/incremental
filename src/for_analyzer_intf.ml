@@ -1,6 +1,6 @@
 open! Core
 
-module type S = sig
+module type S = sig @@ portable
   module Cutoff : sig
     type t =
       | Always
@@ -98,6 +98,7 @@ module type S = sig
   type packed_node
   type _ state
 
+  val node_id : packed_node -> Node_id.t
   val directly_observed : _ state -> packed_node list
 
   val traverse

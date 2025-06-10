@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     An [('a, 'b) Bind.t] is stored inside a bind node where the left-hand side is of type

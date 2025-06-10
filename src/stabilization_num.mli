@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     A stabilization number is an int that corresponds to one round of stabilization (think

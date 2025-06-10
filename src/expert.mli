@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     An [Expert.t] is the only kind of node that can update its value and set of children

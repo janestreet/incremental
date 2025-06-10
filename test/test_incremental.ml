@@ -4201,12 +4201,9 @@ struct
         let num_calls = ref 0 in
         let f =
           unstage
-            (weak_memoize_fun
-               (module Int)
-               (function
-                 | i ->
-                   incr num_calls;
-                   Heap_block.create_exn (ref i)))
+            (weak_memoize_fun (module Int) (function i ->
+               incr num_calls;
+               Heap_block.create_exn (ref i)))
         in
         let f i = Heap_block.value (f i) in
         let x0 = f 13 in

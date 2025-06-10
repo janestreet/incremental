@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     An observer is a "handle" to an {!Internal_observer} that is given to user code -- the

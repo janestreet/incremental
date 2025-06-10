@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     Node ids are consecutive integers assigned to nodes as they are created. *)

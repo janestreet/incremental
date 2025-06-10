@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     [Kind.t] is a variant type with one constructor for each kind of node (const, var,

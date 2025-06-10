@@ -33,6 +33,8 @@ module Generic = struct
         let t = create (module Config.Default ()) ~max_height_allowed
       end)
     ;;
+
+    let create = Portability_hacks.magic_portable__needs_portable_functors create
   end
 
   module Scope = struct
@@ -61,6 +63,7 @@ module Generic = struct
   let const state a = State.const state a
   let return = const
   let observe = State.create_observer
+  let observe_no_finalization = State.create_observer_no_finalization
   let map = State.map
   let bind = State.bind
 
@@ -190,6 +193,8 @@ module Generic = struct
           (Timing_wheel.Level_bits.create_exn level_bits ~extend_to_max_num_bits:true)
         ()
     ;;
+
+    let get_default_timing_wheel_config () = default_timing_wheel_config
 
     let create state ?(timing_wheel_config = default_timing_wheel_config) ~start () =
       (* Make sure [start] is rounded to the nearest microsecond.  Otherwise, if you
@@ -411,13 +416,15 @@ module Make () = Make_with_config (Config.Default ()) ()
 include Generic
 
 module Add_witness0 (M : sig
+  @@ portable
     type t [@@deriving sexp_of]
 
-    include Invariant.S with type t := t
+    include Invariant.S with type t := t @@ nonportable
   end) : sig
+  @@ portable
   type 'w t = M.t [@@deriving sexp_of]
 
-  include Invariant.S1 with type 'a t := 'a t
+  include Invariant.S1 with type 'a t := 'a t @@ nonportable
 end = struct
   type 'w t = M.t
 
@@ -426,13 +433,15 @@ end = struct
 end
 
 module Add_witness1 (M : sig
+  @@ portable
     type 'a t [@@deriving sexp_of]
 
-    include Invariant.S1 with type 'a t := 'a t
+    include Invariant.S1 with type 'a t := 'a t @@ nonportable
   end) : sig
+  @@ portable
   type ('a, 'w) t = 'a M.t [@@deriving sexp_of]
 
-  include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
+  include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t @@ nonportable
 end = struct
   type ('a, 'w) t = 'a M.t
 

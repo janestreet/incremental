@@ -52,7 +52,7 @@ let invariant t =
 ;;
 
 let create_nodes_by_height ~max_height_allowed =
-  Uniform_array.create ~len:(max_height_allowed + 1) Uopt.none
+  Uniform_array.create ~len:(max_height_allowed + 1) (Uopt.get_none ())
 ;;
 
 let set_max_height_allowed t max_height_allowed =
@@ -113,7 +113,7 @@ let unlink (type a) t (node : a Node.t) =
   then Uniform_array.unsafe_set t.nodes_by_height node.height_in_recompute_heap next;
   set_prev next ~prev;
   set_next prev ~next;
-  node.prev_in_recompute_heap <- Uopt.none
+  node.prev_in_recompute_heap <- Uopt.get_none ()
 ;;
 
 (* We don't set [node.next_in_recompute_heap] here, but rather after calling [unlink]. *)
@@ -134,7 +134,7 @@ let remove (type a) t (node : a Node.t) =
   then
     failwiths "incorrect [remove] of node from recompute heap" node [%sexp_of: _ Node.t];
   unlink t node;
-  node.next_in_recompute_heap <- Uopt.none;
+  node.next_in_recompute_heap <- Uopt.get_none ();
   node.height_in_recompute_heap <- -1;
   t.length <- t.length - 1
 ;;
@@ -179,8 +179,8 @@ let remove_min t : Node.Packed.t =
   t.length <- t.length - 1;
   let next = node.next_in_recompute_heap in
   Uniform_array.set t.nodes_by_height t.height_lower_bound next;
-  set_prev next ~prev:Uopt.none;
+  set_prev next ~prev:(Uopt.get_none ());
   if debug then assert (Uopt.is_none node.prev_in_recompute_heap);
-  node.next_in_recompute_heap <- Uopt.none;
+  node.next_in_recompute_heap <- Uopt.get_none ();
   T node
 ;;

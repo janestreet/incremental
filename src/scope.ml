@@ -4,6 +4,7 @@ module Node = Types.Node
 include Types.Scope
 
 let top = Top
+let get_top () = Top
 
 let is_top = function
   | Top -> true

@@ -32,4 +32,4 @@ let invariant t =
     Fields.iter ~action:(check Action.invariant) ~next_fired:ignore)
 ;;
 
-let create action = { action; next_fired = Uopt.none }
+let create action = { action; next_fired = Uopt.get_none () }

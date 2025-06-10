@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     A [Node.t] is one node in the incremental DAG. The key invariants of a node [t] are:
@@ -26,7 +28,7 @@ open! Import
     Consequently, there is a possible bug in which we mix the ['a] from two packed nodes
     with different types. We reduce the chance of this bug by minimizing the scopes in
     which we deal with packed nodes. *)
-module Packed : sig
+module (Packed @@ nonportable) : sig @@ portable
   type t = Types.Node.Packed.t = T : _ Types.Node.t -> t
   [@@unboxed] [@@deriving sexp_of]
 
@@ -36,8 +38,10 @@ module Packed : sig
       contained within it. The recompute heap uses this with [next_in_recompute_heap], and
       the adjust-heights heap uses this with [next_in_adjust_heights_heap]. *)
   module As_list (M : sig
+    @@ portable
       val next : t -> t Uopt.t
     end) : sig
+    @@ portable
     type t = Types.Node.Packed.t Uopt.t [@@deriving sexp_of]
 
     include Invariant.S with type t := t

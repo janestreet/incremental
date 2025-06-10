@@ -391,7 +391,7 @@
 open Core
 open! Import
 
-module type Map_n_gen = sig
+module type Map_n_gen = sig @@ portable
   type ('a, 'w) t
 
   val map2 : ('a1, 'w) t -> ('a2, 'w) t -> f:('a1 -> 'a2 -> 'b) -> ('b, 'w) t
@@ -738,7 +738,7 @@ module type S_gen = sig
   val if_ : bool t -> then_:'a t -> else_:'a t -> 'a t
   val freeze : ?when_:('a -> bool) -> 'a t -> 'a t
   val depend_on : 'a t -> depend_on:_ t -> 'a t
-  val necessary_if_alive : 'a t -> 'a t
+  val necessary_if_alive : 'a t -> 'a t @@ nonportable
   val for_all : bool t array -> bool t
   val exists : bool t array -> bool t
   val all : 'a t list -> 'a list t
@@ -812,7 +812,7 @@ module type S_gen = sig
     val replace : 'a t -> f:('a -> 'a) -> unit
   end
 
-  module Observer : sig
+  module (Observer @@ nonportable) : sig @@ portable
     type 'a t [@@deriving sexp_of]
 
     include Invariant.S1 with type 'a t := 'a t
@@ -888,6 +888,7 @@ module type S_gen = sig
     -> 'a Base.Hashtbl.Key.t
     -> ('a -> 'b Heap_block.t)
     -> ('a -> 'b Heap_block.t) Staged.t
+    @@ nonportable
 
   val weak_memoize_fun_by_key
     :  ?initial_size:int
@@ -895,6 +896,7 @@ module type S_gen = sig
     -> ('a -> 'key)
     -> ('a -> 'b Heap_block.t)
     -> ('a -> 'b Heap_block.t) Staged.t
+    @@ nonportable
 
   val user_info : _ t -> Info.t option
   val set_user_info : _ t -> Info.t option -> unit
@@ -970,7 +972,8 @@ module type S_gen = sig
   module Clock : sig
     type t [@@deriving sexp_of]
 
-    val default_timing_wheel_config : Timing_wheel.Config.t
+    val default_timing_wheel_config : Timing_wheel.Config.t @@ nonportable
+    val get_default_timing_wheel_config : unit -> Timing_wheel.Config.t
 
     val create
       :  ?timing_wheel_config:Timing_wheel.Config.t
@@ -1032,7 +1035,7 @@ module type S_gen = sig
   end
 end
 
-module type Incremental = sig
+module type Incremental = sig @@ portable
   (** A [State.t] holds shared state used by all the incremental functions. *)
   module State : sig
     type 'w t [@@deriving sexp_of]
@@ -1109,7 +1112,7 @@ module type Incremental = sig
 
   type ('a, 'w) incremental := ('a, 'w) t
 
-  include Invariant.S2 with type ('a, 'w) t := ('a, 'w) t
+  include Invariant.S2 with type ('a, 'w) t := ('a, 'w) t @@ nonportable
 
   val state : (_, 'w) t -> 'w State.t
 
@@ -1216,7 +1219,7 @@ module type Incremental = sig
 
   (** [necessary_if_alive input] returns [output] that has the same value and cutoff as
       [input], such that as long as [output] is alive, [input] is necessary. *)
-  val necessary_if_alive : ('a, 'w) t -> ('a, 'w) t
+  val necessary_if_alive : ('a, 'w) t -> ('a, 'w) t @@ nonportable
 
   (** [for_all ts] returns an incremental that is [true] iff all [ts] are [true]. *)
   val for_all : 'w State.t -> (bool, 'w) t array -> (bool, 'w) t
@@ -1445,10 +1448,10 @@ module type Incremental = sig
     val replace : ('a, _) t -> f:('a -> 'a) -> unit
   end
 
-  module Observer : sig
+  module (Observer @@ nonportable) : sig @@ portable
     type ('a, 'w) t [@@deriving sexp_of]
 
-    include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t
+    include Invariant.S2 with type ('a, 'b) t := ('a, 'b) t @@ nonportable
 
     val observing : ('a, 'w) t -> ('a, 'w) incremental
     val use_is_allowed : _ t -> bool
@@ -1515,6 +1518,11 @@ module type Incremental = sig
     :  ?should_finalize:bool (** default is [true] *)
     -> ('a, 'w) t
     -> ('a, 'w) Observer.t
+    @@ nonportable
+
+  (** [observe_no_finalization t] behaves exactly like [observe ~should_finalize:false t]
+      but unlike [observe], [observe_no_finalization] is portable. *)
+  val observe_no_finalization : ('a, 'w) t -> ('a, 'w) Observer.t
 
   module Update : sig
     type 'a t =
@@ -1574,6 +1582,8 @@ module type Incremental = sig
     val of_equal : ('a -> 'a -> bool) -> 'a t
     val always : _ t
     val never : _ t
+    val get_always : unit -> _ t
+    val get_never : unit -> _ t
     val phys_equal : _ t
     val poly_equal : _ t
     val should_cutoff : 'a t -> old_value:'a -> new_value:'a -> bool
@@ -1653,6 +1663,7 @@ module type Incremental = sig
     -> 'a Base.Hashtbl.Key.t
     -> ('a -> 'b Heap_block.t)
     -> ('a -> 'b Heap_block.t) Staged.t
+    @@ nonportable
 
   val weak_memoize_fun_by_key
     :  ?initial_size:int (** default is [4]. *)
@@ -1661,6 +1672,7 @@ module type Incremental = sig
     -> ('a -> 'key)
     -> ('a -> 'b Heap_block.t)
     -> ('a -> 'b Heap_block.t) Staged.t
+    @@ nonportable
 
   (** For debugging purposes, one can store an arbitrary [Info.t] in a node. This will be
       displayed as part of a node in error messages. *)
@@ -1752,12 +1764,14 @@ module type Incremental = sig
   (** Incremental has a timing-wheel-based clock, and lets one build incremental values
       that change as its time passes. One must explicitly call [advance_clock] to change
       incremental's clock; there is no implicit call based on the passage of time. *)
-  module Clock : sig
+  module (Clock @@ nonportable) : sig @@ portable
     type 'w t [@@deriving sexp_of]
 
     (** The default timing-wheel configuration, with one millisecond precision, and alarms
         allowed arbitrarily far in the future. *)
-    val default_timing_wheel_config : Timing_wheel.Config.t
+    val default_timing_wheel_config : Timing_wheel.Config.t @@ nonportable
+
+    val get_default_timing_wheel_config : unit -> Timing_wheel.Config.t
 
     val create
       :  'w State.t

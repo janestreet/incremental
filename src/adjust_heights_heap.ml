@@ -27,7 +27,7 @@ module Nodes_by_height = struct
   ;;
 
   let create ~max_height_allowed =
-    Uniform_array.create ~len:(max_height_allowed + 1) Uopt.none
+    Uniform_array.create ~len:(max_height_allowed + 1) (Uopt.get_none ())
   ;;
 
   let length t =
@@ -115,7 +115,7 @@ let remove_min_exn t : Node.Packed.t =
   node.height_in_adjust_heights_heap <- -1;
   t.length <- t.length - 1;
   Uniform_array.unsafe_set t.nodes_by_height height node.next_in_adjust_heights_heap;
-  node.next_in_adjust_heights_heap <- Uopt.none;
+  node.next_in_adjust_heights_heap <- Uopt.get_none ();
   T node
 ;;
 

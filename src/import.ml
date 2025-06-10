@@ -75,7 +75,7 @@ module Uniform_array = struct
 
   (* Requires [len >= length t]. *)
   let realloc t ~len =
-    let new_t = create ~len Uopt.none in
+    let new_t = create ~len (Uopt.get_none ()) in
     blit ~src:t ~src_pos:0 ~dst:new_t ~dst_pos:0 ~len:(length t);
     new_t
   ;;

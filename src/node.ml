@@ -499,24 +499,24 @@ let create state created_in kind =
     { id = Node_id.next ()
     ; state
     ; recomputed_at = Stabilization_num.none
-    ; value_opt = Uopt.none
+    ; value_opt = Uopt.get_none ()
     ; kind
     ; cutoff = Cutoff.phys_equal
     ; changed_at = Stabilization_num.none
     ; num_on_update_handlers = 0
     ; num_parents = 0
-    ; parent1_and_beyond = Uniform_array.empty
-    ; parent0 = Uopt.none
+    ; parent1_and_beyond = Uniform_array.get_empty ()
+    ; parent0 = Uopt.get_none ()
     ; created_in
-    ; next_node_in_same_scope = Uopt.none
+    ; next_node_in_same_scope = Uopt.get_none ()
     ; height = -1
     ; height_in_recompute_heap = -1
-    ; prev_in_recompute_heap = Uopt.none
-    ; next_in_recompute_heap = Uopt.none
+    ; prev_in_recompute_heap = Uopt.get_none ()
+    ; next_in_recompute_heap = Uopt.get_none ()
     ; height_in_adjust_heights_heap = -1
-    ; next_in_adjust_heights_heap = Uopt.none
-    ; old_value_opt = Uopt.none
-    ; observers = Uopt.none
+    ; next_in_adjust_heights_heap = Uopt.get_none ()
+    ; old_value_opt = Uopt.get_none ()
+    ; observers = Uopt.get_none ()
     ; is_in_handle_after_stabilization = false
     ; on_update_handlers = []
     ; my_parent_index_in_child_at_index =
@@ -580,7 +580,7 @@ let unlink
   : type a b. child:a t -> child_index:int -> parent:b t -> parent_index:int -> unit
   =
   fun ~child ~child_index ~parent ~parent_index ->
-  set_parent ~child ~parent:Uopt.none ~parent_index;
+  set_parent ~child ~parent:(Uopt.get_none ()) ~parent_index;
   if debug
   then (
     child.my_child_index_in_parent_at_index.(parent_index) <- -1;
@@ -642,10 +642,11 @@ let swap_children_except_in_kind parent ~child1 ~child_index1 ~child2 ~child_ind
 module Packed = struct
   type t = Packed.t = T : _ Types.Node.t -> t [@@unboxed]
 
-  let sexp_of_t (T t) = t |> [%sexp_of: _ t]
+  let sexp_of_t (T t) = Types.Node.sexp_of_t sexp_of_opaque t
   let invariant (T t) = invariant ignore t
 
   module As_list (M : sig
+    @@ portable
       val next : Packed.t -> Packed.t Uopt.t
     end) =
   struct

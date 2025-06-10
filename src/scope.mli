@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     A scope is a bind in which nodes are created. It is either [top], for nodes not in a
@@ -13,6 +15,7 @@ end
 include Invariant.S with type t := t
 
 val top : t
+val get_top : unit -> t
 val is_top : t -> bool
 val height : t -> int
 val is_valid : t -> bool

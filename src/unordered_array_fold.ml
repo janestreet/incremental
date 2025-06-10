@@ -74,7 +74,7 @@ let create ~init ~f ~update ~full_compute_every_n_changes ~children ~main =
   ; children
   ; main
   ; fold_value =
-      Uopt.none
+      Uopt.get_none ()
       (* We make [num_changes_since_last_full_compute = full_compute_every_n_changes]
      so that there will be a full computation the next time the node is computed. *)
   ; num_changes_since_last_full_compute = full_compute_every_n_changes
@@ -98,7 +98,7 @@ let compute t =
 ;;
 
 let force_full_compute t =
-  t.fold_value <- Uopt.none;
+  t.fold_value <- Uopt.get_none ();
   t.num_changes_since_last_full_compute <- t.full_compute_every_n_changes
 ;;
 

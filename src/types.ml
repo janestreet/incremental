@@ -415,7 +415,7 @@ and Kind : sig
 end =
   Kind
 
-and Node : sig
+and Node : sig @@ portable
   type 'a t =
     { id : Node_id.t
     ; state : State.t
@@ -544,7 +544,7 @@ and Run_on_update_handlers : sig
 end =
   Run_on_update_handlers
 
-and Scope : sig
+and Scope : sig @@ portable
   type t =
     | Top
     | Bind : (_, _) Bind.t -> t

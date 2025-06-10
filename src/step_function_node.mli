@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     An ['a Step_function.t] is a kind of DAG node that represents a function from

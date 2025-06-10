@@ -1,3 +1,5 @@
+@@ portable
+
 open! Core
 
 val save_dot : emit_bind_edges:bool -> Format.formatter -> Node.Packed.t list -> unit

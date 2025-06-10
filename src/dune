@@ -2,7 +2,7 @@
  (name incremental)
  (public_name incremental)
  (libraries core_kernel.balanced_reducer core incremental_step_function
-   core_kernel.thread_safe_queue core_kernel.timing_wheel uopt
+   core_kernel.thread_safe_queue basement core_kernel.timing_wheel uopt
    core_kernel.weak_hashtbl)
  (preprocess
   (pps ppx_jane ppx_optcomp))

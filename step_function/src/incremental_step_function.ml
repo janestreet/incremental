@@ -22,7 +22,7 @@ let rec value_internal init steps ~at =
 ;;
 
 let value t ~at = value_internal t.init t.steps ~at
-let constant init = { init; steps = Sequence.empty }
+let constant init = { init; steps = Sequence.get_empty () }
 
 let create_exn ~init ~steps =
   if not

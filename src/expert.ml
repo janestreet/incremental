@@ -77,7 +77,7 @@ let invariant_about_num_invalid_children t ~is_necessary =
 let create ~f ~on_observability_change =
   { f
   ; on_observability_change
-  ; children = Uniform_array.empty
+  ; children = Uniform_array.get_empty ()
   ; num_children = 0
   ; force_stale = false
   ; num_invalid_children = 0
@@ -134,7 +134,7 @@ let last_child_edge_exn t =
 let remove_last_child_edge_exn t =
   let last_index = t.num_children - 1 in
   let packed_edge_opt = Uniform_array.get t.children last_index in
-  Uniform_array.set t.children last_index Uopt.none;
+  Uniform_array.set t.children last_index (Uopt.get_none ());
   t.num_children <- last_index;
   t.force_stale <- true;
   assert (Uopt.is_some packed_edge_opt);

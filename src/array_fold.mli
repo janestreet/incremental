@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     An [Array_fold.t] is a kind of DAG node. It is an immutable value that holds the

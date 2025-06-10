@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     The adjust-heights heap is used after an edge is added to the graph from a child node

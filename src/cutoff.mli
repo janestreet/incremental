@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     An ['a Cutoff.t] is a function that returns [true] if propagation of changes should be
@@ -6,7 +8,7 @@
 open! Core
 open! Import
 
-type 'a t [@@deriving sexp_of]
+type 'a t : value mod contended [@@deriving sexp_of]
 
 include Invariant.S1 with type 'a t := 'a t
 
@@ -15,6 +17,8 @@ val of_compare : ('a -> 'a -> int) -> 'a t
 val of_equal : ('a -> 'a -> bool) -> 'a t
 val always : _ t
 val never : _ t
+val get_always : unit -> _ t
+val get_never : unit -> _ t
 val phys_equal : _ t
 val poly_equal : _ t
 val equal : 'a t -> 'a t -> bool

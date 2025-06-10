@@ -13,16 +13,17 @@
    at_intervals.ml at_intervals.mli at.ml at.mli before_or_after.ml
    before_or_after.mli bind.ml bind.mli config_intf.ml config.ml config.mli
    cutoff.ml cutoff.mli dot_user_info.ml dot_user_info.mli expert1.ml
-   expert1.mli expert.ml expert.mli for_analyzer.ml for_analyzer.mli
-   for_analyzer_intf.ml freeze.ml freeze.mli if_then_else.ml if_then_else.mli
+   expert1.mli expert.ml expert.mli for_analyzer_intf.ml for_analyzer.ml
+   for_analyzer.mli freeze.ml freeze.mli if_then_else.ml if_then_else.mli
    import.ml incremental_debug_intf.ml incremental_debug.ml
    incremental_debug.mli internal_observer.ml internal_observer.mli join.ml
    join.mli kind.ml kind.mli node_id.ml node_id.mli node.ml node.mli
    node_to_dot.ml node_to_dot.mli observer.ml observer.mli
-   on_update_handler.ml on_update_handler.mli raised_exn.ml raised_exn.mli
-   recompute_heap.ml recompute_heap.mli reduce_balanced.ml
-   reduce_balanced.mli scope.ml scope.mli sexp_of.ml snapshot.ml snapshot.mli
-   stabilization_num.ml stabilization_num.mli state.ml step_function_node.ml
+   on_update_handler.ml on_update_handler.mli ppx_assert_lib.ml
+   ppx_assert_lib.mli raised_exn.ml raised_exn.mli recompute_heap.ml
+   recompute_heap.mli reduce_balanced.ml reduce_balanced.mli scope.ml
+   scope.mli sexp_of.ml snapshot.ml snapshot.mli stabilization_num.ml
+   stabilization_num.mli state.ml step_function_node.ml
    step_function_node.mli types.ml unordered_array_fold.ml
    unordered_array_fold.mli var.ml var.mli)
  (deps

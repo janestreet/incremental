@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     This module is almost the external interface of the [Expert], but defunctorized, so

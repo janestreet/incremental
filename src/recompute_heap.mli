@@ -1,3 +1,5 @@
+@@ portable
+
 (** A module internal to Incremental. Users should see {!Incremental_intf}.
 
     The recompute heap holds the set of nodes such that [Node.needs_to_be_computed]. It is
