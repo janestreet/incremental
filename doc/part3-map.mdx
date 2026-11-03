@@ -236,7 +236,7 @@ over our outer, symbol map.  Here's an attempt to do just that.
     let orders_by_symbol = index_by_symbol orders in
     Incr_map.mapi orders_by_symbol ~f:(fun ~key:_ ~data -> shares data)
 Line 3, characters 67-71:
-Error: This expression has type
+Error: The value data has type
          Order.t Core.Map.M(Order.Id).t =
            (Order.Id.t, Order.t, Order.Id.comparator_witness) Map.t
        but an expression was expected of type

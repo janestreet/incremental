@@ -4,4 +4,4 @@
  (libraries core incremental core_kernel.reversed_list
    textutils_kernel.text_block)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

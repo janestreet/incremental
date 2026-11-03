@@ -105,10 +105,20 @@ let link (type a) t (node : a Node.t) =
   Uniform_array.unsafe_set t.nodes_by_height height (This (Node.Packed.T node))
 ;;
 
+(* With OxCaml extensions, phys_same can be applied directly to the or_null value. Without
+   OxCaml extensions, or_null is option-like, so phys_same has to be applied to the
+   contents of each [This] constructor. *)
+let or_null_phys_same (a : _ Or_null.t) (b : _ Or_null.t) =
+  match a, b with
+  | This a, This b -> phys_same a b
+  | Null, Null -> true
+  | _, _ -> false
+;;
+
 let unlink (type a) t (node : a Node.t) =
   let prev = node.prev_in_recompute_heap in
   let next = node.next_in_recompute_heap in
-  if phys_same
+  if or_null_phys_same
        (This node)
        (Uniform_array.get t.nodes_by_height node.height_in_recompute_heap)
   then Uniform_array.unsafe_set t.nodes_by_height node.height_in_recompute_heap next;

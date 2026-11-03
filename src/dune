@@ -5,5 +5,5 @@
    core_kernel.thread_safe_queue core_kernel.timing_wheel
    core_kernel.weak_hashtbl)
  (preprocess
-  (pps ppx_jane ppx_optcomp))
+  (pps ppx_jane -compare-require-explicit-locality ppx_optcomp))
  (preprocessor_deps debug.mlh))
