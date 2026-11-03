@@ -10,7 +10,7 @@
 open! Core
 open! Import
 
-type t = private int [@@deriving compare, sexp_of]
+type t = private int [@@deriving compare ~localize, sexp_of]
 
 include Equal.S with type t := t
 include Invariant.S with type t := t
@@ -25,7 +25,7 @@ val add1 : t -> t
 val to_int : t -> int
 
 module For_analyzer : sig
-  type nonrec t = t [@@deriving sexp, compare]
+  type nonrec t = t [@@deriving sexp, compare ~localize]
 
   include Comparable.S with type t := t
 

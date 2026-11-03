@@ -65,7 +65,7 @@ module For_analyzer = struct
     | Compare
     | Equal
     | F
-  [@@deriving sexp, equal]
+  [@@deriving sexp, equal ~localize]
 
   let of_cutoff (c : _ t') =
     match c with

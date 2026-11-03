@@ -15,7 +15,7 @@ module Node_update : sig
     | Changed of 'a * 'a
     | Invalidated
     | Unnecessary
-  [@@deriving compare, sexp_of]
+  [@@deriving compare ~localize, sexp_of]
 end
 
 type 'a t [@@deriving sexp_of]

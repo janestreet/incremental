@@ -7,7 +7,7 @@
 open! Core
 open! Import
 
-type t = private int [@@deriving compare, sexp_of]
+type t = private int [@@deriving compare ~localize, sexp_of]
 
 include Hashable with type t := t
 include Invariant.S with type t := t

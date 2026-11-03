@@ -144,7 +144,7 @@ module Generic = struct
         | Initialized of 'a
         | Changed of 'a * 'a
         | Invalidated
-      [@@deriving compare, sexp_of]
+      [@@deriving compare ~localize, sexp_of]
     end
 
     let on_update_exn t ~(f : _ Update.t -> unit) =

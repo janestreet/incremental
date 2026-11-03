@@ -5,6 +5,6 @@ type t =
   | Ancestors
   | Descendants
   | Both
-[@@deriving sexp, enumerate, compare, equal]
+[@@deriving sexp, enumerate, compare ~localize, equal ~localize]
 
 let arg = Command.Arg_type.create (fun s -> s |> Sexp.Atom |> t_of_sexp)

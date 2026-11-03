@@ -827,7 +827,7 @@ module type S_gen = sig
         | Initialized of 'a
         | Changed of 'a * 'a
         | Invalidated
-      [@@deriving compare, sexp_of]
+      [@@deriving compare ~localize, sexp_of]
     end
 
     val on_update_exn : 'a t -> f:('a Update.t -> unit) -> unit
@@ -842,7 +842,7 @@ module type S_gen = sig
       | Changed of 'a * 'a
       | Invalidated
       | Unnecessary
-    [@@deriving compare, sexp_of]
+    [@@deriving compare ~localize, sexp_of]
   end
 
   val on_update : 'a t -> f:('a Update.t -> unit) -> unit
@@ -1475,7 +1475,7 @@ module type Incremental = sig @@ portable
         | Initialized of 'a
         | Changed of 'a * 'a (** [Changed (old_value, new_value)] *)
         | Invalidated
-      [@@deriving compare, sexp_of]
+      [@@deriving compare ~localize, sexp_of]
     end
 
     (** [on_update_exn t ~f] calls [f] after the current stabilization and after each
@@ -1528,7 +1528,7 @@ module type Incremental = sig @@ portable
       | Changed of 'a * 'a (** [Changed (old_value, new_value)] *)
       | Invalidated
       | Unnecessary
-    [@@deriving compare, sexp_of]
+    [@@deriving compare ~localize, sexp_of]
   end
 
   (** [on_update t ~f] is similar to [Observer.on_update_exn], but it does not cause [t]
@@ -1997,13 +1997,13 @@ module type Incremental = sig @@ portable
   end
 
   (** [Make] returns a new incremental implementation. [Make] uses [Config.Default ()]. *)
-  module Make () : S
+  module (Make @@ nonportable) () : S
 
-  module Config : Config_intf.Config
+  module (Config @@ nonportable) : Config_intf.Config
 
   module type Incremental_config = Config.Incremental_config
 
-  module Make_with_config (C : Incremental_config) () : S
+  module (Make_with_config @@ nonportable) (C : Incremental_config) () : S
 
   (*_ See the Jane Street Style Guide for an explanation of [Private] submodules:
 

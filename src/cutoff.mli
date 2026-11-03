@@ -34,7 +34,7 @@ module For_analyzer : sig
     | Compare
     | Equal
     | F
-  [@@deriving sexp, equal]
+  [@@deriving sexp, equal ~localize]
 
   val of_cutoff : _ t' -> t
   val to_string : t -> string

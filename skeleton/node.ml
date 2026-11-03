@@ -8,7 +8,7 @@ type t =
   ; bind_children : Node_id.t list [@sexp.list]
   ; user_info : Dot_user_info.t option [@sexp.option]
   ; recomputed_at : Stabilization_num.t
-  ; cutoff : Cutoff.t [@default Cutoff.Phys_equal] [@sexp_drop_default.equal]
+  ; cutoff : Cutoff.t [@default Cutoff.Phys_equal] [@sexp_drop_default.equal.local]
   ; changed_at : Stabilization_num.t
   ; height : int
   }

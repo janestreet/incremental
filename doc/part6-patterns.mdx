@@ -180,7 +180,7 @@ Now, the question comes of how we weave them together.  Here's a first attempt.
     | Host_view hosts -> view_failed_hosts hosts
     | Service_view services -> view_failed_services services
 Line 3, characters 44-49:
-Error: This expression has type
+Error: The value hosts has type
          Host.t Core.Map.M(Hostname).t =
            (Hostname.t, Host.t, Hostname.comparator_witness) Map.t
        but an expression was expected of type

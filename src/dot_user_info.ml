@@ -2,7 +2,7 @@ open Core
 open! Import
 
 module String_list = struct
-  type t = string list [@@deriving compare, sexp]
+  type t = string list [@@deriving compare ~localize, sexp]
   type comparator_witness = String.comparator_witness List.comparator_witness
 
   let comparator = List.comparator String.comparator

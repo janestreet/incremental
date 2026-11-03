@@ -3,4 +3,4 @@
  (public_name incremental.memoize)
  (libraries core incremental janestreet_lru_cache)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

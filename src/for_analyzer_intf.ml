@@ -9,7 +9,7 @@ module type S = sig @@ portable
       | Compare
       | Equal
       | F
-    [@@deriving sexp, equal]
+    [@@deriving sexp, equal ~localize]
 
     val to_string : t -> string
   end
